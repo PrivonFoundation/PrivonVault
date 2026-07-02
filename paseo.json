@@ -1,0 +1,13 @@
+{
+  "worktree": {
+    "setup": "npm ci --legacy-peer-deps",
+    "teardown": "rm -rf node_modules .vite"
+  },
+  "scripts": {
+    "web": {
+      "type": "service",
+      "command": "npm run dev -- --port $PASEO_PORT",
+      "port": 5173
+    }
+  }
+}

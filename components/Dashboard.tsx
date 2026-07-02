@@ -4,10 +4,12 @@ import {
   Plus, FolderPlus, Database, Search, Trash2, Settings, Home, MoreVertical, 
   Folder, Image as ImageIcon, Music, FileText, ArrowLeft, Video, X,
   Pause, Play, SkipBack, SkipForward, ListMusic, ChevronDown, 
-  Shuffle, Heart, Repeat, Share2, Menu, Moon, Lock, Copy, Move
+  Shuffle, Heart, Repeat, Share2, Menu, Moon, Lock, Copy, Move,
+  HardDrive, Clock, FilePlus, ShieldCheck
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LiquidGlassOverlay } from './LiquidGlassOverlay';
+import dashboardMascot from '../assets/welcome.webm';
 import { db, DBItem, getVaultKey } from '../crypto-core/db';
 import { is_safe_image_url as isSafeImageUrl, decrypt, base64_encode, metadata_encrypt, metadata_decrypt } from '../crypto-core/index';
 import { FileSystemItem, ViewState, AppTheme, ThemeConfig, ThemeCategory } from '../types';
@@ -18,7 +20,7 @@ import { FullPlayer } from './FullPlayer';
 import { FileItem } from './FileItem';
 import { CustomizeModal } from './CustomizeModal';
 import { FileActionMenu } from './FileActionMenu';
-import { TopActions } from './TopActions';
+import { WidgetCarousel } from './WidgetCarousel';
 import { PinModal } from './PinModal';
 import { EncryptionModal } from './EncryptionModal';
 import { DecryptModal } from './DecryptModal';
@@ -210,6 +212,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [deviceStorage, setDeviceStorage] = useState<{ quota: number; usage: number } | null>(null);
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [showAddMenu, setShowAddMenu] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
@@ -955,60 +958,71 @@ export const Dashboard: React.FC<DashboardProps> = ({
           {currentView === 'dashboard' && (
              <motion.div key="dashboard-view" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col h-full pb-32 relative">
                
-               <TopActions 
-                  activeTab={activeTab}
-                  isCreatingFolder={isCreatingFolder}
-                  newFolderName={newFolderName}
-                  folderInputRef={folderInputRef}
-                  onAddFile={() => fileInputRef.current?.click()}
-                  onStartFolderCreation={startFolderCreation}
-                  onNewFolderNameChange={setNewFolderName}
-                  onConfirmFolderCreation={confirmFolderCreation}
-                  onCancelFolderCreation={cancelFolderCreation}
-                  onNavigateView={handleViewNavigation} 
-               />
-
-                <main className="flex-1 px-5 overflow-y-auto pb-8">
-                   {isSelectionMode && (
-                     <motion.div 
-                       initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
-                       className="mb-4 p-4 rounded-2xl bg-neon-green/10 border border-neon-green/30 flex items-center justify-between"
-                     >
-                        <div className="flex items-center gap-3">
-                          <span className="text-neon-green font-bold">{selectedItems.size}</span>
-                          <span className="text-zinc-400 text-sm">{t('selectedCount')}</span>
-                        </div>
-                       <div className="flex items-center gap-2">
-                         <button onClick={handleCopySelected} className="p-2 rounded-lg bg-zinc-800 hover:bg-zinc-700">
-                           <Copy size={18} className="text-white" />
-                         </button>
-                         <button onClick={handleMoveSelected} className="p-2 rounded-lg bg-zinc-800 hover:bg-zinc-700">
-                           <Move size={18} className="text-white" />
-                         </button>
-                         <button onClick={handleDeleteSelected} className="p-2 rounded-lg bg-red-500/20 hover:bg-red-500/30">
-                           <Trash2 size={18} className="text-red-500" />
-                         </button>
-                          <button onClick={() => { setIsSelectionMode(false); setSelectedItems(new Set()); }} className="px-3 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white text-sm font-bold">
-                            {t('cancel')}
+                <div className="flex-1 overflow-y-auto pb-8">
+                  {/* OVERVIEW — shown when activeTab === 'files' */}
+                  {activeTab === 'files' ? (
+                    <div className="px-5">
+                      {/* Settings + Mascot + Greeting */}
+                      <div className="pt-3 flex items-start justify-between">
+                        <div className="pt-2">
+                          <button
+                            onClick={() => handleViewNavigation('settings')}
+                            className="w-10 h-10 flex items-center justify-center rounded-xl transition-all active:scale-95 relative overflow-hidden border border-white/10"
+                            style={{
+                              background: 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 100%)',
+                              backdropFilter: 'blur(12px) saturate(180%)',
+                              WebkitBackdropFilter: 'blur(12px) saturate(180%)',
+                              boxShadow: '0 4px 20px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.08)',
+                            }}
+                          >
+                            <LiquidGlassOverlay intensity="subtle" />
+                            <Settings size={18} className="relative z-10 text-primary" />
                           </button>
-                       </div>
-                     </motion.div>
-                   )}
-                   {activeTab === 'files' && (
-                      <div className="flex flex-col pb-4">
-                        <div className="flex items-center gap-2.5 mb-5">
-                          {currentFolderId === null ? (
-                            <><Home size={22} className="text-primary" /><span className="font-bold text-lg text-primary">{t('files')}</span></>
-                          ) : (
-                            <div className="flex items-center gap-2">
-                              <button onClick={() => { if(currentFolderId) { const p = items.find(i => i.id === currentFolderId)?.parentId || null; setCurrentFolderId(p); }}} className="flex items-center gap-1 hover:opacity-70 transition-opacity text-primary"><ArrowLeft size={20} /><span className="font-bold text-lg">{t('files')}</span></button>
-                              <span className="text-muted">/</span>
-                              <span className="font-bold text-lg text-primary">{items.find(i => i.id === currentFolderId)?.name}</span>
-                            </div>
-                          )}
+                          <h1 className="text-2xl font-black mt-4" style={{ color: 'var(--text-main)' }}>
+                            {t('goodMorning')}
+                          </h1>
+                          <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                            {t('vaultSecure')}
+                          </p>
                         </div>
-                        {visibleItems.map((item) => (
-                            <FileItem 
+                        <div className="w-56 h-56 -mr-4 -mt-2 shrink-0">
+                          <video src={dashboardMascot} autoPlay loop muted playsInline className="w-full h-full object-contain drop-shadow-2xl" />
+                        </div>
+                      </div>
+
+                      <WidgetCarousel
+                        storageStats={storageStats}
+                        formatBytes={formatBytes}
+                        trashItems={trashItems}
+                        recentItems={visibleItems.filter(i => i.type !== 'system').slice(0, 5)}
+                        onNavigateView={handleViewNavigation}
+                        onNavigateItem={handleNavigate}
+                      />
+
+                      <div className="mt-6 mb-6">
+                        <h2 className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: 'var(--text-muted)' }}>{t('files')}</h2>
+
+                        <div className="flex flex-col gap-2">
+                          <FileItem
+                            item={{ id: '__vault__', parentId: null, type: 'folder', name: t('vault'), date: '', isTrashed: false, isFavorite: false }}
+                            onAction={() => {}}
+                            onClick={() => setCurrentView('vault')}
+                            theme={appTheme}
+                          />
+                          <FileItem
+                            item={{ id: '__backup__', parentId: null, type: 'folder', name: t('backup'), date: '', isTrashed: false, isFavorite: false }}
+                            onAction={() => {}}
+                            onClick={() => setCurrentView('backup')}
+                            theme={appTheme}
+                          />
+
+                          {visibleItems.filter(i => i.type !== 'system').length === 0 ? (
+                            <div className="text-center py-10">
+                              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{t('noFilesYet')}</p>
+                            </div>
+                          ) : (
+                            visibleItems.filter(i => i.type !== 'system').slice(0, 5).map((item) => (
+                              <FileItem 
                                 key={item.id} item={item} onAction={(act) => handleItemAction(act, item)} 
                                 onOpenMenu={() => { if(item.type !== 'system') setMenuOpenItem(item); }} 
                                 onClick={() => isSelectionMode ? handleItemSelect(item.id) : handleNavigate(item)} 
@@ -1017,41 +1031,70 @@ export const Dashboard: React.FC<DashboardProps> = ({
                                 onRenameChange={setRenameValue} onRenameConfirm={handleRenameConfirm}
                                 onRenameCancel={() => setRenamingId(null)}
                                 isSelected={selectedItems.has(item.id)}
-                            />
-                        ))}
+                              />
+                            ))
+                          )}
+                        </div>
                       </div>
-                  )}
+                    </div>
+                  ) : null}
 
                   {activeTab === 'gallery' && (
-                      <GalleryView items={items} onNavigate={handleNavigate} theme={appTheme} onDecrypt={decryptOnDemand} decryptedUrls={decryptedUrls} />
+                    <GalleryView items={items} onNavigate={handleNavigate} theme={appTheme} onDecrypt={decryptOnDemand} decryptedUrls={decryptedUrls} />
                   )}
 
                   {activeTab === 'music' && (
-                      <MusicView items={items} onPlay={(item) => { setCurrentPlayingItem(item); setIsPlaying(true); }} currentSong={currentPlayingItem} isPlaying={isPlaying} theme={appTheme} />
+                    <MusicView items={items} onPlay={(item) => { setCurrentPlayingItem(item); setIsPlaying(true); }} currentSong={currentPlayingItem} isPlaying={isPlaying} theme={appTheme} />
                   )}
 
                   {activeTab === 'docs' && (
-                      (() => {
-                        const docItems = items.filter(i => i.category === 'doc');
-                        return docItems.length === 0 ? (
-                          <div className="flex-1 flex flex-col items-center justify-center text-muted px-8 pt-10">
-                            <div className="w-20 h-20 rounded-full bg-surface border border-border flex items-center justify-center mb-5">
-                              <FileText size={36} className="opacity-30" />
-                            </div>
-                            <h4 className="text-sm font-bold text-primary text-center mb-2">{t('documentsComingSoon')}</h4>
-                            <p className="text-[11px] text-zinc-500 text-center leading-relaxed max-w-xs">{t('documentsComingSoonDesc')}</p>
+                    (() => {
+                      const docItems = items.filter(i => i.category === 'doc');
+                      return docItems.length === 0 ? (
+                        <div className="flex-1 flex flex-col items-center justify-center text-muted px-8 pt-10">
+                          <div className="w-20 h-20 rounded-full bg-surface border border-border flex items-center justify-center mb-5">
+                            <FileText size={36} className="opacity-30" />
                           </div>
-                        ) : (
-                          <div className="flex flex-col gap-2">
-                              <p className="text-[10px] font-black text-muted uppercase tracking-widest mb-2 px-1">{t('encryptedDocuments')}</p>
-                              {docItems.map(item => (
-                                  <FileItem key={item.id} item={item} onAction={(act) => handleItemAction(act, item)} onOpenMenu={() => { if(item.type !== 'system') setMenuOpenItem(item); }} onClick={() => handleNavigate(item)} theme={appTheme} />
-                              ))}
-                          </div>
-                        );
-                      })()
+                          <h4 className="text-sm font-bold text-primary text-center mb-2">{t('documentsComingSoon')}</h4>
+                          <p className="text-[11px] text-zinc-500 text-center leading-relaxed max-w-xs">{t('documentsComingSoonDesc')}</p>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col gap-2 px-5 pt-4">
+                          <p className="text-[10px] font-black text-muted uppercase tracking-widest mb-2 px-1">{t('encryptedDocuments')}</p>
+                          {docItems.map(item => (
+                            <FileItem key={item.id} item={item} onAction={(act) => handleItemAction(act, item)} onOpenMenu={() => { if(item.type !== 'system') setMenuOpenItem(item); }} onClick={() => handleNavigate(item)} theme={appTheme} />
+                          ))}
+                        </div>
+                      );
+                    })()
                   )}
-               </main>
+
+                  {isSelectionMode && (
+                    <motion.div 
+                      initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
+                      className="mx-5 mb-4 p-4 rounded-2xl bg-neon-green/10 border border-neon-green/30 flex items-center justify-between"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="text-neon-green font-bold">{selectedItems.size}</span>
+                        <span className="text-zinc-400 text-sm">{t('selectedCount')}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button onClick={handleCopySelected} className="p-2 rounded-lg bg-zinc-800 hover:bg-zinc-700">
+                          <Copy size={18} className="text-white" />
+                        </button>
+                        <button onClick={handleMoveSelected} className="p-2 rounded-lg bg-zinc-800 hover:bg-zinc-700">
+                          <Move size={18} className="text-white" />
+                        </button>
+                        <button onClick={handleDeleteSelected} className="p-2 rounded-lg bg-red-500/20 hover:bg-red-500/30">
+                          <Trash2 size={18} className="text-red-500" />
+                        </button>
+                        <button onClick={() => { setIsSelectionMode(false); setSelectedItems(new Set()); }} className="px-3 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white text-sm font-bold">
+                          {t('cancel')}
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </div>
 
                 <AnimatePresence>
                   {currentPlayingItem && !isFullPlayerOpen && (
@@ -1130,7 +1173,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 <nav className="fixed bottom-0 left-0 right-0 z-40 pointer-events-none"
                   style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom, 16px))' }}
                 >
-                  <div className="mx-auto max-w-[260px] pointer-events-auto">
+                  <div className="mx-auto max-w-[320px] pointer-events-auto">
                     <div className="rounded-[28px] px-3 py-2.5 relative overflow-hidden"
                       style={{
                         background: 'linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.03) 100%)',
@@ -1143,12 +1186,72 @@ export const Dashboard: React.FC<DashboardProps> = ({
                       <div className="flex justify-around items-center relative z-10">
                         <NavButton active={activeTab === 'files'} onClick={() => setActiveTab('files')} icon={<Folder />} label={t('files')} />
                         <NavButton active={activeTab === 'gallery'} onClick={() => setActiveTab('gallery')} icon={<ImageIcon />} label={t('gallery')} />
+                        <motion.button
+                          onClick={() => setShowAddMenu(true)}
+                          className="relative flex items-center justify-center w-12 h-12 -mt-4"
+                          whileTap={{ scale: 0.85 }}
+                          transition={{ type: 'spring', stiffness: 400, damping: 17 }}
+                        >
+                          <div className="absolute inset-0 rounded-full bg-neon-green/90 shadow-lg shadow-neon-green/30" />
+                          <Plus size={24} strokeWidth={3} className="relative z-10 text-black" />
+                        </motion.button>
                         <NavButton active={activeTab === 'music'} onClick={() => setActiveTab('music')} icon={<Music />} label={t('music')} />
                         <NavButton active={activeTab === 'docs'} onClick={() => setActiveTab('docs')} icon={<FileText />} label={t('documentsTab')} />
                       </div>
                     </div>
                   </div>
                 </nav>
+
+                <AnimatePresence>
+                  {showAddMenu && (
+                    <>
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
+                        onClick={() => setShowAddMenu(false)}
+                      />
+                      <motion.div
+                        initial={{ y: '100%' }}
+                        animate={{ y: 0 }}
+                        exit={{ y: '100%' }}
+                        transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                        className="fixed bottom-0 left-0 right-0 z-50 rounded-t-3xl overflow-hidden"
+                        style={{
+                          background: 'linear-gradient(135deg, rgba(30,30,30,0.95) 0%, rgba(20,20,20,0.98) 100%)',
+                          backdropFilter: 'blur(24px) saturate(180%)',
+                          WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+                          boxShadow: '0 -8px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08)',
+                        }}
+                      >
+                        <div className="px-6 py-5 space-y-3" style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom, 24px))' }}>
+                          <div className="w-10 h-1 bg-white/20 rounded-full mx-auto mb-4" />
+                          <button
+                            onClick={() => { setShowAddMenu(false); fileInputRef.current?.click(); }}
+                            className="w-full flex items-center gap-4 p-4 rounded-2xl transition-all active:scale-[0.97] border border-white/5"
+                            style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%)' }}
+                          >
+                            <div className="w-10 h-10 rounded-xl bg-neon-green/15 flex items-center justify-center">
+                              <FilePlus size={20} className="text-neon-green" />
+                            </div>
+                            <span className="text-sm font-bold text-primary">{t('addFile')}</span>
+                          </button>
+                          <button
+                            onClick={() => { setShowAddMenu(false); startFolderCreation(); }}
+                            className="w-full flex items-center gap-4 p-4 rounded-2xl transition-all active:scale-[0.97] border border-white/5"
+                            style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%)' }}
+                          >
+                            <div className="w-10 h-10 rounded-xl bg-neon-green/15 flex items-center justify-center">
+                              <FolderPlus size={20} className="text-neon-green" />
+                            </div>
+                            <span className="text-sm font-bold text-primary">{t('addFolder')}</span>
+                          </button>
+                        </div>
+                      </motion.div>
+                    </>
+                  )}
+                </AnimatePresence>
              </motion.div>
           )}
 
