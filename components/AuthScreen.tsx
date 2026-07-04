@@ -6,7 +6,7 @@ import crytoLogo from '../assets/PrivonVault.png';
 import welcomeVideo from '../assets/welcome.webm';
 import threatModelVideo from '../assets/threat-model.webm';
 import { AutoDestructCountdown } from './AutoDestructCountdown';
-import { LiquidGlassOverlay } from './LiquidGlassOverlay';
+
 import type { AutoDestructCountdownHandle } from './AutoDestructCountdown';
 import {
   derive_key,
@@ -493,87 +493,26 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
               transition={{ duration: 0.5, ease: 'easeOut' }}
               className="absolute inset-0 overflow-hidden bg-background"
             >
-              {/* Blobs — organic shapes */}
-              <div className="absolute -top-20 -left-20 w-72 h-72 opacity-30" style={{ backgroundColor: '#505050', borderRadius: '60% 40% 70% 30% / 50% 60% 40% 50%' }} />
-              <div className="absolute -top-10 -left-10 w-48 h-48 opacity-20" style={{ backgroundColor: '#505050', borderRadius: '50% 60% 40% 60% / 60% 40% 60% 40%' }} />
-              <div className="absolute -top-16 -right-16 w-64 h-64 opacity-25" style={{ backgroundColor: '#505050', borderRadius: '40% 60% 50% 50% / 50% 40% 60% 50%' }} />
-              <div className="absolute -bottom-40 -right-32 w-72 h-72 opacity-[0.04]" style={{ backgroundColor: '#505050', borderRadius: '55% 45% 60% 40% / 45% 55% 45% 55%' }} />
-              <div className="absolute -bottom-32 -left-16 w-56 h-56 opacity-8" style={{ backgroundColor: '#505050', borderRadius: '45% 55% 35% 65% / 55% 45% 55% 45%' }} />
-              <div className="absolute top-[55%] -right-10 w-40 h-40 opacity-8" style={{ backgroundColor: '#505050', borderRadius: '65% 35% 55% 45% / 40% 60% 40% 60%' }} />
+              {/* Gradient base — silver/white top, black bottom */}
+              <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, #ffffff 0%, #e8e8e8 15%, #b0b0b0 30%, #505050 50%, #1a1a1a 70%, #0a0a0a 85%, #000000 100%)' }} />
 
-              {/* Gradient accent strips */}
-              <div className="absolute top-16 left-0 w-24 h-[1px] opacity-20" style={{ background: 'linear-gradient(to right, var(--accent-color), transparent)' }} />
-              <div className="absolute top-20 left-0 w-16 h-[1px] opacity-12" style={{ background: 'linear-gradient(to right, var(--accent-color), transparent)' }} />
-              <div className="absolute bottom-32 right-0 w-20 h-[1px] opacity-15" style={{ background: 'linear-gradient(to left, var(--accent-color), transparent)' }} />
-              <div className="absolute bottom-28 right-0 w-14 h-[1px] opacity-10" style={{ background: 'linear-gradient(to left, var(--accent-color), transparent)' }} />
+              {/* Metal reflections — soft blurred light streaks */}
+              <div className="absolute pointer-events-none" style={{ top: '-20%', left: '10%', width: '120px', height: '180%', background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.25) 20%, rgba(0,0,0,0.4) 35%, rgba(0,0,0,0.15) 60%, rgba(0,0,0,0) 100%)', transform: 'rotate(12deg)', filter: 'blur(18px)' }} />
+              <div className="absolute pointer-events-none" style={{ top: '-15%', left: '35%', width: '80px', height: '170%', background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.15) 25%, rgba(0,0,0,0.3) 40%, rgba(0,0,0,0.1) 65%, rgba(0,0,0,0) 100%)', transform: 'rotate(8deg)', filter: 'blur(22px)' }} />
+              <div className="absolute pointer-events-none" style={{ top: '-25%', left: '58%', width: '100px', height: '190%', background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.2) 18%, rgba(0,0,0,0.35) 32%, rgba(0,0,0,0.12) 55%, rgba(0,0,0,0) 100%)', transform: 'rotate(15deg)', filter: 'blur(15px)' }} />
+              <div className="absolute pointer-events-none" style={{ top: '-10%', left: '78%', width: '90px', height: '160%', background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.18) 22%, rgba(0,0,0,0.28) 38%, rgba(0,0,0,0.08) 62%, rgba(0,0,0,0) 100%)', transform: 'rotate(10deg)', filter: 'blur(20px)' }} />
 
-              {/* Vertical accent strips */}
-              <div className="absolute top-0 left-[15%] w-[1px] h-20 opacity-12" style={{ background: 'linear-gradient(to bottom, var(--accent-color), transparent)' }} />
-              <div className="absolute bottom-0 right-[18%] w-[1px] h-16 opacity-10" style={{ background: 'linear-gradient(to top, var(--accent-color), transparent)' }} />
+              {/* Metallic blobs — top zone */}
+              <div className="absolute w-96 h-96 opacity-40" style={{ top: '-15%', left: '-10%', background: 'radial-gradient(circle, #d4d4d4 0%, transparent 70%)', borderRadius: '60% 40% 70% 30% / 50% 60% 40% 50%', animation: 'blobFloat1 20s ease-in-out infinite', filter: 'blur(60px)' }} />
+              <div className="absolute w-80 h-80 opacity-35" style={{ top: '-5%', right: '-5%', background: 'radial-gradient(circle, #c0c0c0 0%, transparent 70%)', borderRadius: '40% 60% 50% 50% / 50% 40% 60% 50%', animation: 'blobFloat2 25s ease-in-out infinite', filter: 'blur(50px)' }} />
+              <div className="absolute w-64 h-64 opacity-30" style={{ top: '10%', left: '25%', background: 'radial-gradient(circle, #e0e0e0 0%, transparent 70%)', borderRadius: '50% 60% 40% 60% / 60% 40% 60% 40%', animation: 'blobFloat3 18s ease-in-out infinite', filter: 'blur(45px)' }} />
 
-              {/* Dot grids — premium texture */}
-              <div className="absolute top-32 left-6 grid grid-cols-4 gap-2 opacity-20">
-                {Array.from({ length: 16 }).map((_, i) => (
-                  <div key={i} className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: 'var(--accent-color)' }} />
-                ))}
-              </div>
-              <div className="absolute bottom-48 right-8 grid grid-cols-4 gap-2 opacity-15">
-                {Array.from({ length: 16 }).map((_, i) => (
-                  <div key={i} className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: 'var(--accent-color)' }} />
-                ))}
-              </div>
-              <div className="absolute top-[65%] left-10 grid grid-cols-3 gap-1.5 opacity-10">
-                {Array.from({ length: 9 }).map((_, i) => (
-                  <div key={i} className="w-1 h-1 rounded-full" style={{ backgroundColor: 'var(--accent-color)' }} />
-                ))}
-              </div>
-              <div className="absolute top-16 right-[30%] grid grid-cols-5 gap-1.5 opacity-8">
-                {Array.from({ length: 10 }).map((_, i) => (
-                  <div key={i} className="w-1 h-1 rounded-full" style={{ backgroundColor: 'var(--accent-color)' }} />
-                ))}
-              </div>
+              {/* Dark blobs — bottom zone */}
+              <div className="absolute w-80 h-80 opacity-30" style={{ bottom: '-10%', right: '-10%', background: 'radial-gradient(circle, #1a1a1a 0%, transparent 70%)', borderRadius: '55% 45% 60% 40% / 45% 55% 45% 55%', animation: 'blobFloat2 28s ease-in-out infinite', filter: 'blur(50px)' }} />
+              <div className="absolute w-64 h-64 opacity-20" style={{ bottom: '5%', left: '-5%', background: 'radial-gradient(circle, #2a2a2a 0%, transparent 70%)', borderRadius: '45% 55% 35% 65% / 55% 45% 55% 45%', animation: 'blobFloat3 22s ease-in-out infinite', filter: 'blur(40px)' }} />
 
-              {/* Scattered circles — various sizes & styles */}
-              <div className="absolute top-24 right-20 w-3 h-3 rounded-full" style={{ border: '1px solid var(--accent-color)', opacity: 0.2 }} />
-              <div className="absolute top-40 left-16 w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--accent-color)', opacity: 0.25 }} />
-              <div className="absolute bottom-64 left-8 w-4 h-4 rounded-full" style={{ border: '1px solid var(--accent-color)', opacity: 0.15 }} />
-              <div className="absolute top-[45%] left-[12%] w-6 h-6 rounded-full" style={{ border: '1px solid var(--accent-color)', opacity: 0.08 }} />
-              <div className="absolute top-[30%] right-[10%] w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--accent-color)', opacity: 0.15 }} />
-              <div className="absolute bottom-[25%] right-[15%] w-3 h-3 rounded-full" style={{ border: '1.5px solid var(--accent-color)', opacity: 0.12 }} />
-              <div className="absolute top-[60%] left-[25%] w-1.5 h-1.5 rounded-full" style={{ backgroundColor: 'var(--accent-color)', opacity: 0.2 }} />
-              <div className="absolute bottom-[40%] left-[35%] w-2 h-2 rounded-full" style={{ border: '1px solid var(--accent-color)', opacity: 0.1 }} />
-
-              {/* Plus / cross marks */}
-              <div className="absolute top-[28%] left-[8%] opacity-12" style={{ color: 'var(--accent-color)' }}>
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.2">
-                  <line x1="7" y1="0" x2="7" y2="14" />
-                  <line x1="0" y1="7" x2="14" y2="7" />
-                </svg>
-              </div>
-              <div className="absolute bottom-[35%] right-[8%] opacity-10" style={{ color: 'var(--accent-color)' }}>
-                <svg width="10" height="10" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.2">
-                  <line x1="7" y1="0" x2="7" y2="14" />
-                  <line x1="0" y1="7" x2="14" y2="7" />
-                </svg>
-              </div>
-              <div className="absolute top-[70%] right-[22%] opacity-8" style={{ color: 'var(--accent-color)' }}>
-                <svg width="8" height="8" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
-                  <line x1="7" y1="0" x2="7" y2="14" />
-                  <line x1="0" y1="7" x2="14" y2="7" />
-                </svg>
-              </div>
-
-              {/* Diamond shapes */}
-              <div className="absolute top-[18%] right-[28%] w-2 h-2 opacity-12" style={{ backgroundColor: 'var(--accent-color)', transform: 'rotate(45deg)' }} />
-              <div className="absolute bottom-[30%] left-[20%] w-1.5 h-1.5 opacity-10" style={{ backgroundColor: 'var(--accent-color)', transform: 'rotate(45deg)' }} />
-              <div className="absolute top-[50%] right-[5%] w-2.5 h-2.5 opacity-8" style={{ border: '1px solid var(--accent-color)', transform: 'rotate(45deg)' }} />
-
-              {/* Ring outlines — premium depth */}
-              <div className="absolute top-[38%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 rounded-full opacity-[0.04]" style={{ backgroundColor: 'var(--accent-color)' }} />
-              <div className="absolute top-[38%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 rounded-full opacity-[0.03]" style={{ border: '1px solid var(--accent-color)' }} />
-              <div className="absolute top-[38%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 rounded-full opacity-[0.02]" style={{ border: '1px solid var(--accent-color)' }} />
-              <div className="absolute -top-10 left-[40%] w-20 h-20 rounded-full opacity-[0.06]" style={{ border: '1px solid var(--accent-color)' }} />
-              <div className="absolute bottom-16 right-[30%] w-14 h-14 rounded-full opacity-[0.05]" style={{ border: '1px solid var(--accent-color)' }} />
+              {/* Noise texture — premium grain */}
+              <div className="absolute inset-0 pointer-events-none opacity-[0.03]" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 256 256\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.8\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23n)\' opacity=\'1\'/%3E%3C/svg%3E")', backgroundRepeat: 'repeat', backgroundSize: '128px 128px' }} />
 
               {/* Content */}
               <div className="relative z-10 flex flex-col items-center h-full px-6 pt-20 pb-8">
@@ -755,87 +694,26 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
               transition={{ duration: 0.5, ease: 'easeOut' }}
               className="absolute inset-0 overflow-hidden bg-background"
             >
-              {/* Blobs — organic shapes */}
-              <div className="absolute -top-20 -left-20 w-72 h-72 opacity-30" style={{ backgroundColor: '#505050', borderRadius: '60% 40% 70% 30% / 50% 60% 40% 50%' }} />
-              <div className="absolute -top-10 -left-10 w-48 h-48 opacity-20" style={{ backgroundColor: '#505050', borderRadius: '50% 60% 40% 60% / 60% 40% 60% 40%' }} />
-              <div className="absolute -top-16 -right-16 w-64 h-64 opacity-25" style={{ backgroundColor: '#505050', borderRadius: '40% 60% 50% 50% / 50% 40% 60% 50%' }} />
-              <div className="absolute -bottom-40 -right-32 w-72 h-72 opacity-[0.04]" style={{ backgroundColor: '#505050', borderRadius: '55% 45% 60% 40% / 45% 55% 45% 55%' }} />
-              <div className="absolute -bottom-32 -left-16 w-56 h-56 opacity-8" style={{ backgroundColor: '#505050', borderRadius: '45% 55% 35% 65% / 55% 45% 55% 45%' }} />
-              <div className="absolute top-[55%] -right-10 w-40 h-40 opacity-8" style={{ backgroundColor: '#505050', borderRadius: '65% 35% 55% 45% / 40% 60% 40% 60%' }} />
+              {/* Gradient base — silver/white top, black bottom */}
+              <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, #ffffff 0%, #e8e8e8 15%, #b0b0b0 30%, #505050 50%, #1a1a1a 70%, #0a0a0a 85%, #000000 100%)' }} />
 
-              {/* Gradient accent strips */}
-              <div className="absolute top-16 left-0 w-24 h-[1px] opacity-20" style={{ background: 'linear-gradient(to right, var(--accent-color), transparent)' }} />
-              <div className="absolute top-20 left-0 w-16 h-[1px] opacity-12" style={{ background: 'linear-gradient(to right, var(--accent-color), transparent)' }} />
-              <div className="absolute bottom-32 right-0 w-20 h-[1px] opacity-15" style={{ background: 'linear-gradient(to left, var(--accent-color), transparent)' }} />
-              <div className="absolute bottom-28 right-0 w-14 h-[1px] opacity-10" style={{ background: 'linear-gradient(to left, var(--accent-color), transparent)' }} />
+              {/* Metal reflections — soft blurred light streaks */}
+              <div className="absolute pointer-events-none" style={{ top: '-20%', left: '10%', width: '120px', height: '180%', background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.25) 20%, rgba(0,0,0,0.4) 35%, rgba(0,0,0,0.15) 60%, rgba(0,0,0,0) 100%)', transform: 'rotate(12deg)', filter: 'blur(18px)' }} />
+              <div className="absolute pointer-events-none" style={{ top: '-15%', left: '35%', width: '80px', height: '170%', background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.15) 25%, rgba(0,0,0,0.3) 40%, rgba(0,0,0,0.1) 65%, rgba(0,0,0,0) 100%)', transform: 'rotate(8deg)', filter: 'blur(22px)' }} />
+              <div className="absolute pointer-events-none" style={{ top: '-25%', left: '58%', width: '100px', height: '190%', background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.2) 18%, rgba(0,0,0,0.35) 32%, rgba(0,0,0,0.12) 55%, rgba(0,0,0,0) 100%)', transform: 'rotate(15deg)', filter: 'blur(15px)' }} />
+              <div className="absolute pointer-events-none" style={{ top: '-10%', left: '78%', width: '90px', height: '160%', background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.18) 22%, rgba(0,0,0,0.28) 38%, rgba(0,0,0,0.08) 62%, rgba(0,0,0,0) 100%)', transform: 'rotate(10deg)', filter: 'blur(20px)' }} />
 
-              {/* Vertical accent strips */}
-              <div className="absolute top-0 left-[15%] w-[1px] h-20 opacity-12" style={{ background: 'linear-gradient(to bottom, var(--accent-color), transparent)' }} />
-              <div className="absolute bottom-0 right-[18%] w-[1px] h-16 opacity-10" style={{ background: 'linear-gradient(to top, var(--accent-color), transparent)' }} />
+              {/* Metallic blobs — top zone */}
+              <div className="absolute w-96 h-96 opacity-40" style={{ top: '-15%', left: '-10%', background: 'radial-gradient(circle, #d4d4d4 0%, transparent 70%)', borderRadius: '60% 40% 70% 30% / 50% 60% 40% 50%', animation: 'blobFloat1 20s ease-in-out infinite', filter: 'blur(60px)' }} />
+              <div className="absolute w-80 h-80 opacity-35" style={{ top: '-5%', right: '-5%', background: 'radial-gradient(circle, #c0c0c0 0%, transparent 70%)', borderRadius: '40% 60% 50% 50% / 50% 40% 60% 50%', animation: 'blobFloat2 25s ease-in-out infinite', filter: 'blur(50px)' }} />
+              <div className="absolute w-64 h-64 opacity-30" style={{ top: '10%', left: '25%', background: 'radial-gradient(circle, #e0e0e0 0%, transparent 70%)', borderRadius: '50% 60% 40% 60% / 60% 40% 60% 40%', animation: 'blobFloat3 18s ease-in-out infinite', filter: 'blur(45px)' }} />
 
-              {/* Dot grids — premium texture */}
-              <div className="absolute top-32 left-6 grid grid-cols-4 gap-2 opacity-20">
-                {Array.from({ length: 16 }).map((_, i) => (
-                  <div key={i} className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: 'var(--accent-color)' }} />
-                ))}
-              </div>
-              <div className="absolute bottom-48 right-8 grid grid-cols-4 gap-2 opacity-15">
-                {Array.from({ length: 16 }).map((_, i) => (
-                  <div key={i} className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: 'var(--accent-color)' }} />
-                ))}
-              </div>
-              <div className="absolute top-[65%] left-10 grid grid-cols-3 gap-1.5 opacity-10">
-                {Array.from({ length: 9 }).map((_, i) => (
-                  <div key={i} className="w-1 h-1 rounded-full" style={{ backgroundColor: 'var(--accent-color)' }} />
-                ))}
-              </div>
-              <div className="absolute top-16 right-[30%] grid grid-cols-5 gap-1.5 opacity-8">
-                {Array.from({ length: 10 }).map((_, i) => (
-                  <div key={i} className="w-1 h-1 rounded-full" style={{ backgroundColor: 'var(--accent-color)' }} />
-                ))}
-              </div>
+              {/* Dark blobs — bottom zone */}
+              <div className="absolute w-80 h-80 opacity-30" style={{ bottom: '-10%', right: '-10%', background: 'radial-gradient(circle, #1a1a1a 0%, transparent 70%)', borderRadius: '55% 45% 60% 40% / 45% 55% 45% 55%', animation: 'blobFloat2 28s ease-in-out infinite', filter: 'blur(50px)' }} />
+              <div className="absolute w-64 h-64 opacity-20" style={{ bottom: '5%', left: '-5%', background: 'radial-gradient(circle, #2a2a2a 0%, transparent 70%)', borderRadius: '45% 55% 35% 65% / 55% 45% 55% 45%', animation: 'blobFloat3 22s ease-in-out infinite', filter: 'blur(40px)' }} />
 
-              {/* Scattered circles — various sizes & styles */}
-              <div className="absolute top-24 right-20 w-3 h-3 rounded-full" style={{ border: '1px solid var(--accent-color)', opacity: 0.2 }} />
-              <div className="absolute top-40 left-16 w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--accent-color)', opacity: 0.15 }} />
-              <div className="absolute bottom-64 left-8 w-4 h-4 rounded-full" style={{ border: '1px solid var(--accent-color)', opacity: 0.12 }} />
-              <div className="absolute top-[45%] left-[12%] w-6 h-6 rounded-full" style={{ border: '1px solid var(--accent-color)', opacity: 0.08 }} />
-              <div className="absolute top-[30%] right-[10%] w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--accent-color)', opacity: 0.12 }} />
-              <div className="absolute bottom-[25%] right-[15%] w-3 h-3 rounded-full" style={{ border: '1.5px solid var(--accent-color)', opacity: 0.12 }} />
-              <div className="absolute top-[60%] left-[25%] w-1.5 h-1.5 rounded-full" style={{ backgroundColor: 'var(--accent-color)', opacity: 0.15 }} />
-              <div className="absolute bottom-[40%] left-[35%] w-2 h-2 rounded-full" style={{ border: '1px solid var(--accent-color)', opacity: 0.08 }} />
-
-              {/* Plus / cross marks */}
-              <div className="absolute top-[28%] left-[8%] opacity-10" style={{ color: 'var(--accent-color)' }}>
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.2">
-                  <line x1="7" y1="0" x2="7" y2="14" />
-                  <line x1="0" y1="7" x2="14" y2="7" />
-                </svg>
-              </div>
-              <div className="absolute bottom-[35%] right-[8%] opacity-8" style={{ color: 'var(--accent-color)' }}>
-                <svg width="10" height="10" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.2">
-                  <line x1="7" y1="0" x2="7" y2="14" />
-                  <line x1="0" y1="7" x2="14" y2="7" />
-                </svg>
-              </div>
-              <div className="absolute top-[70%] right-[22%] opacity-8" style={{ color: 'var(--accent-color)' }}>
-                <svg width="8" height="8" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
-                  <line x1="7" y1="0" x2="7" y2="14" />
-                  <line x1="0" y1="7" x2="14" y2="7" />
-                </svg>
-              </div>
-
-              {/* Diamond shapes */}
-              <div className="absolute top-[18%] right-[28%] w-2 h-2 opacity-10" style={{ backgroundColor: 'var(--accent-color)', transform: 'rotate(45deg)' }} />
-              <div className="absolute bottom-[30%] left-[20%] w-1.5 h-1.5 opacity-8" style={{ backgroundColor: 'var(--accent-color)', transform: 'rotate(45deg)' }} />
-              <div className="absolute top-[50%] right-[5%] w-2.5 h-2.5 opacity-8" style={{ border: '1px solid var(--accent-color)', transform: 'rotate(45deg)' }} />
-
-              {/* Ring outlines — premium depth */}
-              <div className="absolute top-[30%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 rounded-full opacity-[0.04]" style={{ backgroundColor: 'var(--accent-color)' }} />
-              <div className="absolute top-[30%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 rounded-full opacity-[0.03]" style={{ border: '1px solid var(--accent-color)' }} />
-              <div className="absolute top-[30%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 rounded-full opacity-[0.02]" style={{ border: '1px solid var(--accent-color)' }} />
-              <div className="absolute -top-10 left-[40%] w-20 h-20 rounded-full opacity-[0.06]" style={{ border: '1px solid var(--accent-color)' }} />
-              <div className="absolute bottom-16 right-[30%] w-14 h-14 rounded-full opacity-[0.05]" style={{ border: '1px solid var(--accent-color)' }} />
+              {/* Noise texture — premium grain */}
+              <div className="absolute inset-0 pointer-events-none opacity-[0.03]" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 256 256\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.8\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23n)\' opacity=\'1\'/%3E%3C/svg%3E")', backgroundRepeat: 'repeat', backgroundSize: '128px 128px' }} />
 
               {/* Content */}
               <div className="relative z-10 flex flex-col items-center h-full px-6 pt-16 pb-8 overflow-y-auto">
@@ -1262,7 +1140,6 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
         animate={{ y: 0, opacity: 1 }}
         className={`w-full max-w-md glass-card border ${isLocked ? 'border-red-500/50' : 'border-white/10'} rounded-3xl p-5 relative mt-6 md:mt-10 overflow-hidden`}
       >
-        {!isLocked && <LiquidGlassOverlay />}
         <div className="relative z-10">
         <AnimatePresence mode="wait">
           {isRecoveryMode ? (

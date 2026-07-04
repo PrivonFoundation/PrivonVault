@@ -262,3 +262,29 @@ input[type="color"]::-webkit-color-swatch {
   border: none;
   border-radius: 9999px;
 }
+
+/* Blob floating animations for onboarding */
+@keyframes blobFloat1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(30px, -20px) scale(1.05); }
+  50% { transform: translate(-20px, 30px) scale(0.95); }
+  75% { transform: translate(15px, 15px) scale(1.02); }
+}
+
+@keyframes blobFloat2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(-25px, 20px) scale(1.08); }
+  66% { transform: translate(20px, -25px) scale(0.92); }
+}
+
+@keyframes blobFloat3 {
+  0%, 100% { transform: translate(0, 0) scale(1) rotate(0deg); }
+  50% { transform: translate(20px, -20px) scale(1.1) rotate(5deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  @keyframes blobFloat1 { 0%, 100% { transform: none; } }
+  @keyframes blobFloat2 { 0%, 100% { transform: none; } }
+  @keyframes blobFloat3 { 0%, 100% { transform: none; } }
+  .absolute[style*="blobFloat"] { animation: none !important; }
+}
