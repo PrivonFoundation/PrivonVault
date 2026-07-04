@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Eye, EyeOff, Loader2, ShieldCheck, Timer, Key, Sparkles, Edit3, Copy, Check, ChevronRight, Target, Shield, ShieldAlert, Skull, AlertTriangle, HelpCircle } from 'lucide-react';
+import { Eye, EyeOff, Loader2, ShieldCheck, Timer, Key, Sparkles, Edit3, Copy, Check, ChevronRight, Target, Shield, ShieldAlert, Skull, Lock, Fingerprint } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useI18n } from '../locales/i18nContext';
 import crytoLogo from '../assets/PrivonVault.png';
+import welcomeVideo from '../assets/welcome.webm';
+import threatModelVideo from '../assets/threat-model.webm';
 import { AutoDestructCountdown } from './AutoDestructCountdown';
-import { LiquidGlassOverlay } from './LiquidGlassOverlay';
+
 import type { AutoDestructCountdownHandle } from './AutoDestructCountdown';
 import {
   derive_key,
@@ -49,7 +51,6 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
   const [setupStep, setSetupStep] = useState<'welcome' | 'create' | 'threat'>('welcome');
   const [selectedTier, setSelectedTier] = useState<number | null>(null);
   const [infoTier, setInfoTier] = useState<number | null>(null);
-  const [blockedTier, setBlockedTier] = useState<number | null>(null);
   const [confirmTier, setConfirmTier] = useState<number | null>(null);
   const [copied, setCopied] = useState(false);
 
@@ -177,7 +178,11 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
       setError(t('passwordsDoNotMatch'));
       return;
     }
-    setSetupStep('threat');
+    const tierId = confirmTier;
+    if (tierId === null) return;
+    const tier = TIERS.find(t => t.id === tierId);
+    if (!tier) return;
+    completeSetup(tier.config.argon, tierId);
   };
 
   const completeSetup = async (argonParams: { iterations: number; memoryKib: number; parallelism: number }, tierId: number) => {
@@ -341,11 +346,28 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
     argonPin: { iterations: 19, memoryKib: 262144, parallelism: 1 },
   };
 
+  const THREAT_MODEL_TIER5 = {
+    autoBlurSeconds: 1,
+    autoLockSeconds: 3,
+    failedAttemptsThreshold: 2,
+    progressiveLockSeconds: 0,
+    autoDestructEnabled: true,
+    autoDestructAttempts: 3,
+    autoDestructInactivity: 21600,
+    destructCountdownSeconds: 10,
+    minPasswordLength: 64,
+    settingsPasswordRequired: true,
+    vaultPinAllowed: false,
+    backupFilenameRandom: true,
+    recoveryFilenameRandom: true,
+    argon: { iterations: 19, memoryKib: 262144, parallelism: 1 },
+    argonRecovery: { iterations: 19, memoryKib: 262144, parallelism: 1 },
+    argonPin: { iterations: 19, memoryKib: 262144, parallelism: 1 },
+  };
+
   const TIERS = [
     { id: 1, icon: Target, nameKey: 'tier1Name', descKey: 'tier1Desc', blocked: false, config: THREAT_MODEL_TIER1 },
-    { id: 2, icon: Shield, nameKey: 'tier2Name', descKey: 'tier2Desc', blocked: true, config: THREAT_MODEL_TIER2 },
-    { id: 3, icon: ShieldAlert, nameKey: 'tier3Name', descKey: 'tier3Desc', blocked: true, config: THREAT_MODEL_TIER3 },
-    { id: 4, icon: Skull, nameKey: 'tier4Name', descKey: 'tier4Desc', blocked: true, config: THREAT_MODEL_TIER4 },
+    { id: 5, icon: ShieldAlert, nameKey: 'advancedProtection', descKey: 'advancedProtectionDesc', blocked: true, config: THREAT_MODEL_TIER5 },
   ] as const;
 
   const WORD_LIST = [
@@ -468,42 +490,115 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.18, ease: 'easeOut' }}
-              className="flex flex-col items-center justify-center px-6 h-full"
+              transition={{ duration: 0.5, ease: 'easeOut' }}
+              className="absolute inset-0 overflow-hidden bg-background"
             >
-              <div className="flex flex-col items-center space-y-3 md:space-y-4">
-                <div className="relative w-36 h-36 md:w-48 md:h-48">
-                  <div className="absolute -inset-4 md:-inset-6 blur-[80px] md:blur-[120px] rounded-full animate-pulse" style={{ backgroundColor: `rgba(${accentRgb}, 0.3)` }} />
-                  <img src={crytoLogo} alt="Privon Vault" className="w-full h-full object-contain" style={{ filter: `drop-shadow(0 0 40px rgba(${accentRgb}, 0.6)) drop-shadow(0 0 80px rgba(${accentRgb}, 0.3))` }} />
-                </div>
-                <div className="text-xl md:text-2xl font-bold tracking-tight">
-                  <span className="text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.4)]">{t('crytoPrefix')}</span>
-                  <span className="drop-shadow-[0_0_12px_rgba(212,212,216,0.5)]" style={{ color: accentColor }}>{t('toolSuffix')}</span>
-                </div>
-                <p className="text-zinc-400 text-xs text-center mb-1">{t('allInOnePrivacyTagline')}</p>
-              </div>
+              {/* Gradient base — silver/white top, black bottom */}
+              <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, #ffffff 0%, #e8e8e8 15%, #b0b0b0 30%, #505050 50%, #1a1a1a 70%, #0a0a0a 85%, #000000 100%)' }} />
 
-              <div className="w-full max-w-sm glass-card border border-white/10 rounded-2xl p-4 mt-5 space-y-2.5">
-                <div className="flex items-center gap-3 p-2.5 rounded-xl bg-zinc-900/50">
-                  <ShieldCheck size={16} className="text-neon-green shrink-0" />
-                  <span className="text-xs text-zinc-300">{t('argon2idAES')}</span>
-                </div>
-                <div className="flex items-center gap-3 p-2.5 rounded-xl bg-zinc-900/50">
-                  <ShieldCheck size={16} className="text-neon-green shrink-0" />
-                  <span className="text-xs text-zinc-300">{t('clientSide')}</span>
-                </div>
-                <div className="flex items-center gap-3 p-2.5 rounded-xl bg-zinc-900/50">
-                  <Key size={16} className="text-neon-green shrink-0" />
-                  <span className="text-xs text-zinc-300">{t('min30Chars')}</span>
-                </div>
-              </div>
+              {/* Metal reflections — soft blurred light streaks */}
+              <div className="absolute pointer-events-none" style={{ top: '-20%', left: '10%', width: '120px', height: '180%', background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.25) 20%, rgba(0,0,0,0.4) 35%, rgba(0,0,0,0.15) 60%, rgba(0,0,0,0) 100%)', transform: 'rotate(12deg)', filter: 'blur(18px)' }} />
+              <div className="absolute pointer-events-none" style={{ top: '-15%', left: '35%', width: '80px', height: '170%', background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.15) 25%, rgba(0,0,0,0.3) 40%, rgba(0,0,0,0.1) 65%, rgba(0,0,0,0) 100%)', transform: 'rotate(8deg)', filter: 'blur(22px)' }} />
+              <div className="absolute pointer-events-none" style={{ top: '-25%', left: '58%', width: '100px', height: '190%', background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.2) 18%, rgba(0,0,0,0.35) 32%, rgba(0,0,0,0.12) 55%, rgba(0,0,0,0) 100%)', transform: 'rotate(15deg)', filter: 'blur(15px)' }} />
+              <div className="absolute pointer-events-none" style={{ top: '-10%', left: '78%', width: '90px', height: '160%', background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.18) 22%, rgba(0,0,0,0.28) 38%, rgba(0,0,0,0.08) 62%, rgba(0,0,0,0) 100%)', transform: 'rotate(10deg)', filter: 'blur(20px)' }} />
 
-              <button onClick={() => setSetupStep('create')}
-                className="mt-5 w-full max-w-sm py-3 rounded-xl text-black font-bold text-sm flex items-center justify-center gap-2 hover:opacity-90 transition-all active:scale-[0.98]"
-                style={{ backgroundColor: accentColor, boxShadow: `0 0 20px rgba(${accentRgb}, 0.3)` }}
-              >
-                {t('continueButton')} <ChevronRight size={18} />
-              </button>
+              {/* Metallic blobs — top zone */}
+              <div className="absolute w-96 h-96 opacity-40" style={{ top: '-15%', left: '-10%', background: 'radial-gradient(circle, #d4d4d4 0%, transparent 70%)', borderRadius: '60% 40% 70% 30% / 50% 60% 40% 50%', animation: 'blobFloat1 20s ease-in-out infinite', filter: 'blur(60px)' }} />
+              <div className="absolute w-80 h-80 opacity-35" style={{ top: '-5%', right: '-5%', background: 'radial-gradient(circle, #c0c0c0 0%, transparent 70%)', borderRadius: '40% 60% 50% 50% / 50% 40% 60% 50%', animation: 'blobFloat2 25s ease-in-out infinite', filter: 'blur(50px)' }} />
+              <div className="absolute w-64 h-64 opacity-30" style={{ top: '10%', left: '25%', background: 'radial-gradient(circle, #e0e0e0 0%, transparent 70%)', borderRadius: '50% 60% 40% 60% / 60% 40% 60% 40%', animation: 'blobFloat3 18s ease-in-out infinite', filter: 'blur(45px)' }} />
+
+              {/* Dark blobs — bottom zone */}
+              <div className="absolute w-80 h-80 opacity-30" style={{ bottom: '-10%', right: '-10%', background: 'radial-gradient(circle, #1a1a1a 0%, transparent 70%)', borderRadius: '55% 45% 60% 40% / 45% 55% 45% 55%', animation: 'blobFloat2 28s ease-in-out infinite', filter: 'blur(50px)' }} />
+              <div className="absolute w-64 h-64 opacity-20" style={{ bottom: '5%', left: '-5%', background: 'radial-gradient(circle, #2a2a2a 0%, transparent 70%)', borderRadius: '45% 55% 35% 65% / 55% 45% 55% 45%', animation: 'blobFloat3 22s ease-in-out infinite', filter: 'blur(40px)' }} />
+
+              {/* Noise texture — premium grain */}
+              <div className="absolute inset-0 pointer-events-none opacity-[0.03]" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 256 256\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.8\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23n)\' opacity=\'1\'/%3E%3C/svg%3E")', backgroundRepeat: 'repeat', backgroundSize: '128px 128px' }} />
+
+              {/* Content */}
+              <div className="relative z-10 flex flex-col items-center h-full px-6 pt-20 pb-8">
+
+                {/* Paw icon */}
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.5, delay: 0.15 }}
+                  className="glass-card w-12 h-12 rounded-full flex items-center justify-center mb-4"
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="var(--accent-color)">
+                    <ellipse cx="8" cy="7" rx="2.5" ry="3" />
+                    <ellipse cx="16" cy="7" rx="2.5" ry="3" />
+                    <ellipse cx="4.5" cy="12" rx="2" ry="2.5" />
+                    <ellipse cx="19.5" cy="12" rx="2" ry="2.5" />
+                    <path d="M12 22c-4 0-7-3-7-6 0-2 1.5-3.5 3-4 1-.3 2.5-.5 4-.5s3 .2 4 .5c1.5.5 3 2 3 4 0 3-3 6-7 6z" />
+                  </svg>
+                </motion.div>
+
+                {/* Title */}
+                <motion.h1
+                  className="text-3xl md:text-4xl font-black tracking-tight text-center mb-1"
+                  style={{ color: '#ffffff' }}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.25 }}
+                >
+                  {t('setupWelcomeTitle')}
+                </motion.h1>
+
+                {/* Subtitle */}
+                <motion.p
+                  className="text-sm md:text-base text-center max-w-[280px] leading-relaxed"
+                  style={{ color: '#ffffff', opacity: 0.7 }}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.35 }}
+                >
+                  {t('welcomeSubtitleText')}
+                </motion.p>
+
+                {/* Mascot - video, centered */}
+                <motion.div
+                  className="flex-1 flex items-center justify-center w-full"
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.7, delay: 0.3 }}
+                >
+                  <div className="relative w-full max-w-[528px]">
+                    <video src={welcomeVideo} autoPlay loop muted playsInline className="w-full h-auto object-contain" />
+                  </div>
+                </motion.div>
+
+                {/* Button */}
+                <motion.button
+                  onClick={() => setSetupStep('threat')}
+                  className="w-full max-w-xs flex items-center justify-center gap-3 py-4 rounded-[28px] font-bold text-sm transition-all duration-300 active:scale-[0.97]"
+                  style={{ backgroundColor: 'var(--accent-color)', color: 'var(--bg-main)', boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.5 }}
+                  whileHover={{ scale: 1.02, boxShadow: '0 12px 40px rgba(0,0,0,0.18)' }}
+                  whileTap={{ scale: 0.97 }}
+                >
+                  {t('welcomeLetsStart')}
+                  <span className="w-7 h-7 rounded-full flex items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.1)' }}>
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M3 8h10M9 4l4 4-4 4" />
+                    </svg>
+                  </span>
+                </motion.button>
+
+                {/* Pagination dots */}
+                <motion.div
+                  className="flex items-center gap-2 mt-5"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.5, delay: 0.7 }}
+                >
+                  <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: 'var(--accent-color)' }} />
+                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--border-color)' }} />
+                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--border-color)' }} />
+                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--border-color)' }} />
+                </motion.div>
+              </div>
             </motion.div>
           ) : setupStep === 'create' ? (
             <motion.div
@@ -545,7 +640,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
                   </motion.div>
                 )}
 
-                <button type="button" onClick={() => { setSetupStep('welcome'); setPassword(''); setConfirmPassword(''); setError(null); }}
+                <button type="button" onClick={() => { setSetupStep('threat'); setPassword(''); setConfirmPassword(''); setError(null); }}
                   className="text-[10px] text-zinc-500 hover:text-white transition-colors block"
                 >← {t('backButton')}</button>
 
@@ -596,121 +691,177 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.18, ease: 'easeOut' }}
-              className="flex flex-col items-center justify-center px-6 h-full"
+              transition={{ duration: 0.5, ease: 'easeOut' }}
+              className="absolute inset-0 overflow-hidden bg-background"
             >
-              <div className="flex flex-col items-center space-y-2 md:space-y-3 mb-4">
-                <div className="relative w-36 h-36 md:w-48 md:h-48">
-                  <div className="absolute -inset-4 md:-inset-6 blur-[80px] md:blur-[120px] rounded-full animate-pulse" style={{ backgroundColor: `rgba(${accentRgb}, 0.3)` }} />
-                  <img src={crytoLogo} alt="Privon Vault" className="w-full h-full object-contain" style={{ filter: `drop-shadow(0 0 40px rgba(${accentRgb}, 0.6)) drop-shadow(0 0 80px rgba(${accentRgb}, 0.3))` }} />
-                </div>
-                <div className="text-xl md:text-2xl font-bold tracking-tight">
-                  <span className="text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.4)]">{t('crytoPrefix')}</span>
-                  <span className="drop-shadow-[0_0_12px_rgba(212,212,216,0.5)]" style={{ color: accentColor }}>{t('toolSuffix')}</span>
-                </div>
-                <p className="text-zinc-400 text-xs text-center">{t('threatModelDesc')}</p>
-              </div>
+              {/* Gradient base — silver/white top, black bottom */}
+              <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, #ffffff 0%, #e8e8e8 15%, #b0b0b0 30%, #505050 50%, #1a1a1a 70%, #0a0a0a 85%, #000000 100%)' }} />
 
-              <div className="w-full max-w-sm space-y-2">
-                {TIERS.map((tier) => {
-                  const Icon = tier.icon;
-                  const isSelected = selectedTier === tier.id;
-                  const isBlocked = tier.blocked;
-                  const showBlockedWarning = blockedTier === tier.id && isBlocked;
-                  const showInfo = infoTier === tier.id;
-                  return (
-                    <div key={tier.id}>
-                      <div
-                        onClick={() => {
-                          if (isBlocked) {
-                            setBlockedTier(tier.id);
-                            setSelectedTier(null);
-                          } else {
-                            setSelectedTier(tier.id);
-                            setBlockedTier(null);
-                          }
-                          setInfoTier(null);
-                        }}
-                        className={`w-full glass-card border rounded-2xl p-3 text-left transition-all active:scale-[0.98] flex items-center gap-3 cursor-pointer ${
-                          isSelected
-                            ? 'border-neon-green/50 bg-neon-green/5'
-                            : showBlockedWarning
-                            ? 'border-red-500/50 bg-red-500/5'
-                            : 'border-white/10 hover:border-white/20'
-                        }`}
-                      >
-                        <div className={`p-2 rounded-xl shrink-0 ${
-                          isSelected ? 'bg-neon-green/20 text-neon-green' :
-                          isBlocked ? 'bg-zinc-800 text-zinc-500' : 'bg-zinc-800 text-zinc-300'
-                        }`}>
-                          <Icon size={18} />
+              {/* Metal reflections — soft blurred light streaks */}
+              <div className="absolute pointer-events-none" style={{ top: '-20%', left: '10%', width: '120px', height: '180%', background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.25) 20%, rgba(0,0,0,0.4) 35%, rgba(0,0,0,0.15) 60%, rgba(0,0,0,0) 100%)', transform: 'rotate(12deg)', filter: 'blur(18px)' }} />
+              <div className="absolute pointer-events-none" style={{ top: '-15%', left: '35%', width: '80px', height: '170%', background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.15) 25%, rgba(0,0,0,0.3) 40%, rgba(0,0,0,0.1) 65%, rgba(0,0,0,0) 100%)', transform: 'rotate(8deg)', filter: 'blur(22px)' }} />
+              <div className="absolute pointer-events-none" style={{ top: '-25%', left: '58%', width: '100px', height: '190%', background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.2) 18%, rgba(0,0,0,0.35) 32%, rgba(0,0,0,0.12) 55%, rgba(0,0,0,0) 100%)', transform: 'rotate(15deg)', filter: 'blur(15px)' }} />
+              <div className="absolute pointer-events-none" style={{ top: '-10%', left: '78%', width: '90px', height: '160%', background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.18) 22%, rgba(0,0,0,0.28) 38%, rgba(0,0,0,0.08) 62%, rgba(0,0,0,0) 100%)', transform: 'rotate(10deg)', filter: 'blur(20px)' }} />
+
+              {/* Metallic blobs — top zone */}
+              <div className="absolute w-96 h-96 opacity-40" style={{ top: '-15%', left: '-10%', background: 'radial-gradient(circle, #d4d4d4 0%, transparent 70%)', borderRadius: '60% 40% 70% 30% / 50% 60% 40% 50%', animation: 'blobFloat1 20s ease-in-out infinite', filter: 'blur(60px)' }} />
+              <div className="absolute w-80 h-80 opacity-35" style={{ top: '-5%', right: '-5%', background: 'radial-gradient(circle, #c0c0c0 0%, transparent 70%)', borderRadius: '40% 60% 50% 50% / 50% 40% 60% 50%', animation: 'blobFloat2 25s ease-in-out infinite', filter: 'blur(50px)' }} />
+              <div className="absolute w-64 h-64 opacity-30" style={{ top: '10%', left: '25%', background: 'radial-gradient(circle, #e0e0e0 0%, transparent 70%)', borderRadius: '50% 60% 40% 60% / 60% 40% 60% 40%', animation: 'blobFloat3 18s ease-in-out infinite', filter: 'blur(45px)' }} />
+
+              {/* Dark blobs — bottom zone */}
+              <div className="absolute w-80 h-80 opacity-30" style={{ bottom: '-10%', right: '-10%', background: 'radial-gradient(circle, #1a1a1a 0%, transparent 70%)', borderRadius: '55% 45% 60% 40% / 45% 55% 45% 55%', animation: 'blobFloat2 28s ease-in-out infinite', filter: 'blur(50px)' }} />
+              <div className="absolute w-64 h-64 opacity-20" style={{ bottom: '5%', left: '-5%', background: 'radial-gradient(circle, #2a2a2a 0%, transparent 70%)', borderRadius: '45% 55% 35% 65% / 55% 45% 55% 45%', animation: 'blobFloat3 22s ease-in-out infinite', filter: 'blur(40px)' }} />
+
+              {/* Noise texture — premium grain */}
+              <div className="absolute inset-0 pointer-events-none opacity-[0.03]" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 256 256\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.8\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23n)\' opacity=\'1\'/%3E%3C/svg%3E")', backgroundRepeat: 'repeat', backgroundSize: '128px 128px' }} />
+
+              {/* Content */}
+              <div className="relative z-10 flex flex-col items-center h-full px-6 pt-16 pb-8 overflow-y-auto">
+
+                {/* Threat model video */}
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.7, delay: 0.2 }}
+                  className="w-full max-w-[200px] mb-3"
+                >
+                  <video src={threatModelVideo} autoPlay loop muted playsInline className="w-full h-auto object-contain" />
+                </motion.div>
+
+                {/* Title */}
+                <motion.h1
+                  className="text-2xl md:text-3xl font-black tracking-tight text-center mb-1"
+                  style={{ color: 'var(--text-main)' }}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.3 }}
+                >
+                  {t('threatModelTitle')}
+                </motion.h1>
+
+                {/* Subtitle */}
+                <motion.p
+                  className="text-xs text-center max-w-[280px] leading-relaxed mb-5"
+                  style={{ color: 'var(--text-main)', opacity: 0.5 }}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.4 }}
+                >
+                  {t('threatModelDesc')}
+                </motion.p>
+
+                {/* Tier cards */}
+                <motion.div
+                  className="w-full max-w-sm space-y-4 mb-4"
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.5 }}
+                >
+                  {/* Everyday Privacy - recommended */}
+                  <div
+                    onClick={() => { setSelectedTier(1); setInfoTier(null); }}
+                    className="glass-card w-full rounded-[24px] p-5 transition-all cursor-pointer active:scale-[0.98]"
+                    style={{
+                      borderColor: selectedTier === 1 ? 'var(--accent-color)' : undefined,
+                      boxShadow: selectedTier === 1 ? '0 8px 32px rgba(var(--accent-rgb), 0.12), 0 2px 8px rgba(0,0,0,0.06)' : undefined,
+                    }}
+                  >
+                    <div className="flex items-center gap-3.5">
+                      <div className="p-3 rounded-[16px] shrink-0" style={{
+                        backgroundColor: selectedTier === 1 ? 'rgba(var(--accent-rgb), 0.15)' : 'rgba(255,255,255,0.08)',
+                        color: selectedTier === 1 ? 'var(--accent-color)' : '#ffffff',
+                      }}>
+                        <Target size={22} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[15px] font-bold" style={{
+                            color: selectedTier === 1 ? 'var(--accent-color)' : '#ffffff',
+                          }}>{t('tier1Name')}</span>
+                          <span className="text-[10px] px-2.5 py-0.5 rounded-full font-semibold tracking-wide" style={{
+                            backgroundColor: 'rgba(var(--accent-rgb), 0.15)',
+                            color: 'var(--accent-color)',
+                          }}>{t('tierRecommended')}</span>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className={`text-xs font-semibold ${
-                              isSelected ? 'text-neon-green' : isBlocked ? 'text-zinc-500' : 'text-white'
-                            }`}>{t(tier.nameKey as any)}</span>
-                            {isSelected && (
-                              <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-neon-green/20 text-neon-green font-medium">{t('tierRecommended')}</span>
-                            )}
-                            {isBlocked && (
-                              <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-zinc-800 text-zinc-500 font-medium">{t('tierNotAvailable')}</span>
-                            )}
-                          </div>
-                          <p className={`text-[10px] mt-0.5 ${
-                            isBlocked ? 'text-zinc-600' : 'text-zinc-400'
-                          }`}>{t(tier.descKey as any)}</p>
-                        </div>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setInfoTier(showInfo ? null : tier.id);
-                          }}
-                          className={`p-1.5 rounded-lg transition-colors shrink-0 ${
-                            showInfo ? 'bg-neon-green/20 text-neon-green' : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800'
-                          }`}
-                          aria-label="View security settings"
-                        >
-                          <HelpCircle size={14} />
-                        </button>
+                        <p className="text-[12px] mt-1.5 leading-relaxed" style={{ color: 'rgba(255,255,255,0.65)' }}>{t('tier1Desc')}</p>
                       </div>
                     </div>
-                  );
-                })}
-              </div>
+                  </div>
 
-              {blockedTier !== null && (() => {
-                const tier = TIERS.find(t => t.id === blockedTier);
-                if (!tier) return null;
-                return (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
-                    onClick={() => setBlockedTier(null)}
+                  {/* Hardened - blocked */}
+                  <a
+                    href="https://github.com/privonn/PrivonVault/blob/main/docs%2FSECURITY.md"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="glass-card w-full rounded-[24px] p-5 transition-all cursor-pointer active:scale-[0.98] opacity-60 block"
                   >
-                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.95, y: 10 }}
-                      animate={{ opacity: 1, scale: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                      onClick={(e) => e.stopPropagation()}
-                      className="relative w-full max-w-xs glass-card border border-red-500/20 rounded-2xl p-5"
-                    >
-                      <div className="flex items-start gap-3">
-                        <div className="p-2 rounded-xl bg-red-500/20 text-red-400 shrink-0 mt-0.5">
-                          <AlertTriangle size={18} />
-                        </div>
-                        <div>
-                          <p className="text-xs font-bold text-red-400 mb-2">{t('auditLimitationTitle')}</p>
-                          <p className="text-[10px] text-red-300/80 leading-relaxed">{t('auditLimitationBody')}</p>
-                        </div>
+                    <div className="flex items-center gap-3.5">
+                      <div className="p-3 rounded-[16px] shrink-0" style={{
+                        backgroundColor: 'rgba(255,255,255,0.08)',
+                        color: 'rgba(255,255,255,0.5)',
+                      }}>
+                        <ShieldAlert size={22} />
                       </div>
-                    </motion.div>
-                  </motion.div>
-                );
-              })()}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[15px] font-bold" style={{ color: '#ffffff' }}>{t('advancedProtection')}</span>
+                          <span className="text-[9px] px-2 py-0.5 rounded-full font-medium" style={{
+                            backgroundColor: 'rgba(255,255,255,0.08)',
+                            color: 'rgba(255,255,255,0.5)',
+                          }}>{t('tierNotAvailable')}</span>
+                        </div>
+                        <p className="text-[12px] mt-1.5 leading-relaxed" style={{ color: 'rgba(255,255,255,0.5)' }}>{t('advancedProtectionDesc')}</p>
+                      </div>
+                    </div>
+                  </a>
+                </motion.div>
+
+                {/* Back button */}
+                <motion.button
+                  type="button"
+                  onClick={() => { setSetupStep('welcome'); setSelectedTier(null); }}
+                  className="text-[11px] mb-3 transition-colors"
+                  style={{ color: 'var(--text-muted)' }}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.5, delay: 0.6 }}
+                >
+                  ← {t('backButton')}
+                </motion.button>
+
+                {/* Continue button */}
+                <motion.button
+                  onClick={() => { if (!selectedTier) return; setConfirmTier(selectedTier); }}
+                  disabled={!selectedTier}
+                  className="w-full max-w-xs flex items-center justify-center gap-3 py-4 rounded-[28px] font-bold text-sm transition-all duration-300 active:scale-[0.97] disabled:grayscale disabled:opacity-50"
+                  style={{ backgroundColor: 'var(--accent-color)', color: 'var(--bg-main)', boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.65 }}
+                  whileHover={{ scale: 1.02, boxShadow: '0 12px 40px rgba(0,0,0,0.18)' }}
+                  whileTap={{ scale: 0.97 }}
+                >
+                  {t('continueButton')}
+                  <span className="w-7 h-7 rounded-full flex items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.1)' }}>
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M3 8h10M9 4l4 4-4 4" />
+                    </svg>
+                  </span>
+                </motion.button>
+
+                {/* Pagination dots */}
+                <motion.div
+                  className="flex items-center gap-2 mt-5"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.5, delay: 0.8 }}
+                >
+                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--border-color)' }} />
+                  <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: 'var(--accent-color)' }} />
+                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--border-color)' }} />
+                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--border-color)' }} />
+                </motion.div>
+              </div>
 
               {infoTier !== null && (() => {
                 const tier = TIERS.find(t => t.id === infoTier);
@@ -954,14 +1105,9 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
                         ))}
                       </div>
                       <button
-                        onClick={async () => {
-                          if (password.length < (cfg as any).minPasswordLength) {
-                            setError(t('passwordTooShort'));
-                            return;
-                          }
-                          setConfirmTier(null);
+                        onClick={() => {
                           if (tier) onApplyThreatModel?.(cfg);
-                          await completeSetup(cfg.argon, confirmTier);
+                          setSetupStep('create');
                         }}
                         className="mt-3 text-[10px] text-zinc-400 hover:text-white transition-colors flex items-center justify-center gap-1 w-full"
                       >
@@ -971,41 +1117,6 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
                   </motion.div>
                 );
               })()}
-
-              {isProcessing ? (
-                <div className="mt-4 w-full max-w-sm glass-card border border-white/10 rounded-2xl p-5 space-y-4">
-                  <div className="flex items-center gap-3">
-                    <Loader2 size={18} className="animate-spin text-neon-green shrink-0" />
-                    <span className="text-xs text-zinc-300 font-medium">{setupProgressLabel}</span>
-                  </div>
-                  <div className="w-full h-2 rounded-full bg-zinc-800 overflow-hidden">
-                    <div
-                      className="h-full rounded-full transition-all duration-300 ease-out"
-                      style={{ backgroundColor: accentColor, width: `${Math.max(setupProgress, 2)}%` }}
-                    />
-                  </div>
-                  <p className="text-[10px] text-zinc-500 text-right">{setupProgress}%</p>
-                </div>
-              ) : (
-                <div className="mt-4 w-full max-w-sm">
-                  <button
-                    onClick={() => {
-                      if (!selectedTier) return;
-                      setConfirmTier(selectedTier);
-                    }}
-                    disabled={!selectedTier}
-                    className="w-full py-3 rounded-xl text-black font-bold text-sm flex items-center justify-center gap-2 hover:opacity-90 transition-all active:scale-[0.98] disabled:grayscale disabled:opacity-50"
-                    style={{ backgroundColor: accentColor, boxShadow: `0 0 20px rgba(${accentRgb}, 0.3)` }}
-                  >
-                    {t('continueButton')} <ChevronRight size={18} />
-                  </button>
-                </div>
-              )}
-
-              <button
-                onClick={() => { setSetupStep('create'); setSelectedTier(null); setBlockedTier(null); }}
-                className="mt-3 text-[10px] text-zinc-500 hover:text-white transition-colors"
-              >← {t('backButton')}</button>
             </motion.div>
           )}
         </AnimatePresence>
@@ -1029,7 +1140,6 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
         animate={{ y: 0, opacity: 1 }}
         className={`w-full max-w-md glass-card border ${isLocked ? 'border-red-500/50' : 'border-white/10'} rounded-3xl p-5 relative mt-6 md:mt-10 overflow-hidden`}
       >
-        {!isLocked && <LiquidGlassOverlay />}
         <div className="relative z-10">
         <AnimatePresence mode="wait">
           {isRecoveryMode ? (
