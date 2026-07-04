@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Eye, EyeOff, Loader2, ShieldCheck, Timer, Key, Sparkles, Edit3, Copy, Check, ChevronRight, Target, Shield, ShieldAlert, Skull, Lock, Fingerprint } from 'lucide-react';
+import { Eye, EyeOff, Loader2, ShieldCheck, Timer, Key, Sparkles, Edit3, Copy, Check, ChevronRight, Target, ShieldAlert } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useI18n } from '../locales/i18nContext';
 import crytoLogo from '../assets/PrivonVault.png';
