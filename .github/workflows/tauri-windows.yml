@@ -48,7 +48,7 @@ jobs:
         run: (Get-Content src-tauri/tauri.conf.json) -replace '"2.5.0-beta"', '"2.5.0"' | Set-Content src-tauri/tauri.conf.json
 
       - name: Build and Release
-        uses: tauri-apps/tauri-action@84b9d35b5fc46c1e45415bdb6144030364f7ebc5
+        uses: tauri-apps/tauri-action@1deb371b0cd8bd54025b384f1cd735e725c4060f
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
