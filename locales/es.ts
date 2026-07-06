@@ -104,6 +104,7 @@ export const translations: Translations = {
   passwordTooShort: 'La contraseña debe tener al menos 30 caracteres.',
   saveAndContinue: 'Guardar y Continuar',
   setupWelcomeTitle: 'Bienvenido a Privon Vault',
+  welcomeLetsStart: 'Empecemos',
   setupCreateTitle: 'Crea tu contraseña Maestra',
   setupGeneratePwd: 'Generar contraseña',
   setupCreatePhrase: 'Crear frase',

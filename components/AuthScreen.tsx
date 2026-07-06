@@ -3,8 +3,8 @@ import { Eye, EyeOff, Loader2, ShieldCheck, Timer, Key, Sparkles, Edit3, Copy, C
 import { motion, AnimatePresence } from 'framer-motion';
 import { useI18n } from '../locales/i18nContext';
 import crytoLogo from '../assets/PrivonVault.png';
-import welcomeVideo from '../assets/welcome.webm';
-import threatModelVideo from '../assets/threat-model.webm';
+const welcomeVideo = undefined;
+const threatModelVideo = undefined;
 import { AutoDestructCountdown } from './AutoDestructCountdown';
 
 import type { AutoDestructCountdownHandle } from './AutoDestructCountdown';
@@ -552,7 +552,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6, delay: 0.35 }}
                 >
-                  {t('welcomeSubtitleText')}
+                  All-in-One Privacy
                 </motion.p>
 
                 {/* Mascot - video, centered */}
@@ -563,7 +563,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
                   transition={{ duration: 0.7, delay: 0.3 }}
                 >
                   <div className="relative w-full max-w-[528px]">
-                    <video src={welcomeVideo} autoPlay loop muted playsInline className="w-full h-auto object-contain" />
+                    {welcomeVideo ? <video src={welcomeVideo} autoPlay loop muted playsInline className="w-full h-auto object-contain" /> : <div className="w-full aspect-video rounded-2xl" style={{ backgroundColor: 'var(--glass-bg)' }} />}
                   </div>
                 </motion.div>
 
@@ -725,7 +725,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
                   transition={{ duration: 0.7, delay: 0.2 }}
                   className="w-full max-w-[200px] mb-3"
                 >
-                  <video src={threatModelVideo} autoPlay loop muted playsInline className="w-full h-auto object-contain" />
+                  {threatModelVideo ? <video src={threatModelVideo} autoPlay loop muted playsInline className="w-full h-auto object-contain" /> : <div className="w-full aspect-square rounded-2xl" style={{ backgroundColor: 'var(--glass-bg)' }} />}
                 </motion.div>
 
                 {/* Title */}

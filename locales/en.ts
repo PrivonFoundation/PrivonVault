@@ -88,6 +88,7 @@ export const translations: Translations = {
   passwordTooShort: 'Password must be at least 30 characters.',
   saveAndContinue: 'Save and Continue',
   setupWelcomeTitle: 'Welcome to Privon Vault',
+  welcomeLetsStart: "Let's Start",
   setupCreateTitle: 'Create Your Master Password',
   setupGeneratePwd: 'Generate Password',
   setupCreatePhrase: 'Create Passphrase',

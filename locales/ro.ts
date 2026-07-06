@@ -104,6 +104,7 @@ export const translations: Translations = {
   passwordTooShort: 'Parola trebuie să aibă cel puțin 30 de caractere.',
   saveAndContinue: 'Salvează și continuă',
   setupWelcomeTitle: 'Bun venit în Privon Vault',
+  welcomeLetsStart: 'Să începem',
   setupCreateTitle: 'Creează-ți parola Master',
   setupGeneratePwd: 'Generează parolă',
   setupCreatePhrase: 'Creează frază',
