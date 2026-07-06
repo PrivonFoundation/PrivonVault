@@ -2,7 +2,6 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { ShieldAlert, Download, X, KeyRound } from 'lucide-react';
 import { useI18n } from '../locales/i18nContext';
-import { LiquidGlassOverlay } from './LiquidGlassOverlay';
 
 interface RecoveryCodesModalProps {
   codes: string[];
@@ -20,7 +19,6 @@ export const RecoveryCodesModal: React.FC<RecoveryCodesModalProps> = ({ codes, o
         exit={{ scale: 0.9, opacity: 0 }}
         className="w-full max-w-lg glass-card rounded-[40px] p-8 relative overflow-hidden"
       >
-          <LiquidGlassOverlay />
         <div className="flex flex-col items-center mb-6">
           <div className="w-16 h-16 rounded-2xl bg-yellow-500/10 text-yellow-500 flex items-center justify-center mb-4">
             <KeyRound size={32} />

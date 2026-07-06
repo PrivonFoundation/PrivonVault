@@ -3,7 +3,6 @@ import React from 'react';
 import { Plus, FolderPlus, Database, Search, Trash2, Settings } from 'lucide-react';
 import { ViewState } from '../types';
 import { useI18n } from '../locales/i18nContext';
-import { LiquidGlassOverlay } from './LiquidGlassOverlay';
 import crytoLogo from '../assets/PrivonVault.png';
 
 interface TopActionsProps {
@@ -69,7 +68,6 @@ export const TopActions: React.FC<TopActionsProps> = ({
                 boxShadow: '0 4px 20px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.1)',
               }}
             >
-              <LiquidGlassOverlay intensity="subtle" />
               <Plus size={18} strokeWidth={3} className="relative z-10 drop-shadow-[0_0_8px_rgba(34,197,94,0.6)]" />
               <span className="relative z-10 drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]">{t('addFile')}</span>
             </button>
@@ -84,7 +82,6 @@ export const TopActions: React.FC<TopActionsProps> = ({
                 boxShadow: '0 4px 20px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.08)',
               }}
             >
-              <LiquidGlassOverlay intensity="subtle" />
               <FolderPlus size={18} className="relative z-10" />
               <span className="relative z-10">
                 {isCreatingFolder ? (
@@ -116,7 +113,6 @@ export const TopActions: React.FC<TopActionsProps> = ({
                 boxShadow: '0 4px 20px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.08)',
               }}
             >
-              <LiquidGlassOverlay intensity="subtle" />
               <Database size={18} className="relative z-10" />
             </button>
           </div>
@@ -133,7 +129,6 @@ export const TopActions: React.FC<TopActionsProps> = ({
                 boxShadow: '0 4px 20px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.08)',
               }}
             >
-              <LiquidGlassOverlay intensity="subtle" />
               <Search size={18} className="relative z-10" />
             </button>
             <button 
@@ -146,7 +141,6 @@ export const TopActions: React.FC<TopActionsProps> = ({
                 boxShadow: '0 4px 20px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.08)',
               }}
             >
-              <LiquidGlassOverlay intensity="subtle" />
               <Trash2 size={18} className="relative z-10" />
             </button>
             <button 
@@ -159,7 +153,6 @@ export const TopActions: React.FC<TopActionsProps> = ({
                 boxShadow: '0 4px 20px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.08)',
               }}
             >
-              <LiquidGlassOverlay intensity="subtle" />
               <Settings size={18} className="relative z-10" />
             </button>
           </div>

@@ -4,7 +4,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Delete, Lock, ShieldAlert, CheckCircle, X } from 'lucide-react';
 import { validate_pin, get_backoff_time, pin_verify, get_argon_params } from '../crypto-core/index';
 import { useI18n } from '../locales/i18nContext';
-import { LiquidGlassOverlay } from './LiquidGlassOverlay';
 
 interface PinModalProps {
   mode: 'setup' | 'unlock' | 'disable';
@@ -142,7 +141,6 @@ export const PinModal: React.FC<PinModalProps> = ({ mode, onSuccess, onClose, sa
         exit={{ scale: 0.9, opacity: 0 }}
         className="w-full max-w-sm glass-card rounded-[40px] p-8 relative overflow-hidden"
       >
-          <LiquidGlassOverlay />
         <div className="flex flex-col items-center mb-8">
           <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-4 ${lockUntil ? 'bg-red-500/10 text-red-500 animate-pulse' : 'bg-neon-green/10 text-neon-green'}`}>
             {lockUntil ? <ShieldAlert size={32} /> : <Lock size={32} />}

@@ -193,7 +193,6 @@ CrytoTool/
 │   ├── Dashboard.tsx (1203ln)    # Main shell + view router + modals
 │   ├── ui.tsx (662ln)            # Shared primitives
 │   ├── AutoDestructCountdown     # Self-destruct timer
-│   ├── LiquidGlassOverlay        # Glass overlay effect
 │   └── views/ (8 views)
 │
 ├── utils/

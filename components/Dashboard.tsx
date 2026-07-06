@@ -7,7 +7,6 @@ import {
   Shuffle, Heart, Repeat, Share2, Menu, Moon, Lock, Copy, Move
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LiquidGlassOverlay } from './LiquidGlassOverlay';
 import { db, DBItem, getVaultKey } from '../crypto-core/db';
 import { is_safe_image_url as isSafeImageUrl, decrypt, base64_encode, metadata_encrypt, metadata_decrypt } from '../crypto-core/index';
 import { FileSystemItem, ViewState, AppTheme, ThemeConfig, ThemeCategory } from '../types';
@@ -1139,7 +1138,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
                         boxShadow: '0 12px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.06), inset 0 1px 0 rgba(255,255,255,0.12)',
                       }}
                     >
-                      <LiquidGlassOverlay intensity="medium" />
                       <div className="flex justify-around items-center relative z-10">
                         <NavButton active={activeTab === 'files'} onClick={() => setActiveTab('files')} icon={<Folder />} label={t('files')} />
                         <NavButton active={activeTab === 'gallery'} onClick={() => setActiveTab('gallery')} icon={<ImageIcon />} label={t('gallery')} />

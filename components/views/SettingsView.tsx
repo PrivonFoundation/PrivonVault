@@ -17,7 +17,6 @@ import { THEME_COLLECTIONS, CATEGORY_KEYS, getAllThemes } from '../../styles/the
 import { FONT_LIST, FONT_CATEGORIES, getFontsByCategory } from '../../styles/fonts';
 import { LANGUAGES } from '../../locales';
 import { useI18n } from '../../locales/i18nContext';
-import { LiquidGlassOverlay } from '../LiquidGlassOverlay';
 
 interface SettingsViewProps {
   onBack: () => void;
@@ -198,7 +197,6 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
             className="absolute inset-0 bg-black/80 backdrop-blur-sm"
           />
           <div className="relative w-full max-w-sm glass-card rounded-[32px] overflow-hidden p-6">
-              <LiquidGlassOverlay />
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white shadow-lg">
                 <Lock size={20} />
@@ -236,7 +234,6 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                 <h3 className={`text-[10px] font-black uppercase tracking-[0.2em] mb-4 flex items-center gap-2 text-muted`}><Monitor size={14} />{t('themes')}</h3>
                 <div className="grid grid-cols-2 gap-4 mb-4">
                     <div onClick={props.openThemes} className="p-5 rounded-[24px] glass-card cursor-pointer hover:border-neon-green/50 transition-all group relative overflow-hidden flex flex-col justify-between h-40">
-                        <LiquidGlassOverlay />
                         <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                             <LayoutGrid size={64} className="text-primary" />
                         </div>
@@ -249,7 +246,6 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                         </div>
                     </div>
                     <div onClick={props.openFonts} className="p-5 rounded-[24px] glass-card cursor-pointer hover:border-neon-green/50 transition-all group relative overflow-hidden flex flex-col justify-between h-40">
-                        <LiquidGlassOverlay />
                         <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                             <Type size={64} className="text-primary" />
                         </div>
@@ -266,15 +262,14 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                 <button onClick={() => {
                   const darkTheme = THEME_COLLECTIONS.Dark[0];
                   props.applyFullTheme(darkTheme);
-                }} className={`py-2.5 rounded-lg flex items-center justify-center gap-1.5 text-[10px] font-black uppercase tracking-widest transition-all relative overflow-hidden ${props.appTheme === 'dark' ? 'glass-pressed text-primary' : 'text-muted hover:text-primary'}`}><LiquidGlassOverlay intensity="subtle" /><span className="relative z-10 flex items-center justify-center gap-1.5"><Moon size={12} />{t('darkMode')}</span></button>
+                }} className={`py-2.5 rounded-lg flex items-center justify-center gap-1.5 text-[10px] font-black uppercase tracking-widest transition-all relative overflow-hidden ${props.appTheme === 'dark' ? 'glass-pressed text-primary' : 'text-muted hover:text-primary'}`}><span className="relative z-10 flex items-center justify-center gap-1.5"><Moon size={12} />{t('darkMode')}</span></button>
                 <button onClick={() => {
                   const lightTheme = THEME_COLLECTIONS.Light[0];
                   props.applyFullTheme(lightTheme);
-                }} className={`py-2.5 rounded-lg flex items-center justify-center gap-1.5 text-[10px] font-black uppercase tracking-widest transition-all relative overflow-hidden ${props.appTheme === 'light' ? 'glass-pressed text-primary' : 'text-muted hover:text-primary'}`}><LiquidGlassOverlay intensity="subtle" /><span className="relative z-10 flex items-center justify-center gap-1.5"><Sun size={12} />{t('lightMode')}</span></button>
-                <button onClick={() => props.setAppTheme('system')} className={`py-2.5 rounded-lg flex items-center justify-center gap-1.5 text-[10px] font-black uppercase tracking-widest transition-all relative overflow-hidden ${props.appTheme === 'system' ? 'glass-pressed text-primary' : 'text-muted hover:text-primary'}`}><LiquidGlassOverlay intensity="subtle" /><span className="relative z-10 flex items-center justify-center gap-1.5"><Monitor size={12} />{t('systemButton')}</span></button>
+                }} className={`py-2.5 rounded-lg flex items-center justify-center gap-1.5 text-[10px] font-black uppercase tracking-widest transition-all relative overflow-hidden ${props.appTheme === 'light' ? 'glass-pressed text-primary' : 'text-muted hover:text-primary'}`}><span className="relative z-10 flex items-center justify-center gap-1.5"><Sun size={12} />{t('lightMode')}</span></button>
+                <button onClick={() => props.setAppTheme('system')} className={`py-2.5 rounded-lg flex items-center justify-center gap-1.5 text-[10px] font-black uppercase tracking-widest transition-all relative overflow-hidden ${props.appTheme === 'system' ? 'glass-pressed text-primary' : 'text-muted hover:text-primary'}`}><span className="relative z-10 flex items-center justify-center gap-1.5"><Monitor size={12} />{t('systemButton')}</span></button>
                 </div>
                 <div className="relative mt-4 p-4 rounded-2xl glass-card overflow-hidden">
-                  <LiquidGlassOverlay />
                 <div className="flex items-center gap-2 mb-3">
                     <PaintBucket size={14} className="text-muted" />
                     <span className="text-[10px] font-black uppercase tracking-widest text-muted">{t('accentManual')}</span>
@@ -294,7 +289,6 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                 </div>
 
                 <div className="relative mt-4 p-4 rounded-2xl glass-card overflow-hidden">
-                  <LiquidGlassOverlay />
                   <div className="flex items-center gap-2 mb-3">
                     <Sparkles size={14} className="text-muted" />
                     <span className="text-[10px] font-black uppercase tracking-widest text-muted">{t('glassIntensity' as any)}</span>
@@ -318,7 +312,6 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
             <section>
                 <h3 className={`text-[10px] font-black uppercase tracking-[0.2em] mb-4 flex items-center gap-2 text-muted`}><Globe size={14} /> {t('languageAndRegion')}</h3>
                 <div className={`p-5 rounded-[32px] glass-card space-y-4 relative overflow-hidden ${isLangOpen || isRegionOpen ? 'z-50' : ''}`}>
-                      <LiquidGlassOverlay />
                     <div className="absolute top-0 right-0 p-8 opacity-[0.03] pointer-events-none">
                         <Globe size={120} className="text-primary" />
                     </div>
@@ -328,7 +321,6 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                         onClick={() => { setIsLangOpen(!isLangOpen); setIsRegionOpen(false); }}
                         className="w-full h-16 px-4 rounded-2xl border border-border cursor-pointer flex items-center justify-between bg-surface hover:border-neon-green/50 hover:bg-surface/80 transition-all group shadow-sm relative overflow-hidden"
                     >
-                        <LiquidGlassOverlay intensity="subtle" />
                         <div className="flex items-center gap-4 relative z-10">
                             <div className="w-8 h-8 rounded-lg bg-black border border-border flex items-center justify-center text-muted group-hover:text-neon-green group-hover:border-neon-green transition-colors">
                                 <Languages size={18} />
@@ -415,7 +407,6 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                         onClick={() => { setIsRegionOpen(!isRegionOpen); setIsLangOpen(false); }}
                         className="w-full h-16 px-4 rounded-2xl border border-border cursor-pointer flex items-center justify-between bg-surface hover:border-neon-green/50 hover:bg-surface/80 transition-all group shadow-sm relative overflow-hidden"
                     >
-                        <LiquidGlassOverlay intensity="subtle" />
                         <div className="flex items-center gap-4 relative z-10">
                             <div className="w-8 h-8 rounded-lg bg-black border border-border flex items-center justify-center text-muted group-hover:text-neon-green group-hover:border-neon-green transition-colors">
                                 <MapPin size={18} />
@@ -486,8 +477,8 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
             <section>
                 <h3 className={`text-[10px] font-black uppercase tracking-[0.2em] mb-4 flex items-center gap-2 text-muted`}><Shield size={14} /> {t('securityAndInfo')}</h3>
                 <div className="relative p-6 rounded-[32px] glass-card space-y-8 overflow-hidden">
-                  <LiquidGlassOverlay />
-                
+
+
 {/* --- VAULT (NEW) --- */}
 {props.vaultSettings.vaultPinAllowed !== false && (
 <div className="pb-6 border-b border-border">
@@ -771,7 +762,6 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                         onClick={props.onOpenAbout}
                         className="w-full py-4 mt-2 rounded-xl bg-surface border border-border flex items-center justify-between px-6 hover:border-neon-green hover:bg-surface/80 group transition-all relative overflow-hidden"
                     >
-                        <LiquidGlassOverlay intensity="subtle" />
                         <span className="relative z-10 flex items-center justify-between w-full">
                             <div className="flex items-center gap-4">
                                 <div className="p-2 bg-black rounded-full border border-border text-neon-green group-hover:scale-110 transition-transform">

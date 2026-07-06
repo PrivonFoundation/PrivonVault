@@ -14,7 +14,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FileSystemItem, AppTheme } from '../types';
 import { is_safe_image_url as isSafeImageUrl } from '../crypto-core/index';
 import { useI18n } from '../locales/i18nContext';
-import { LiquidGlassOverlay } from './LiquidGlassOverlay';
 
 // Map namespaces
 const ICON_PACKS: Record<string, any> = {
@@ -161,7 +160,6 @@ export const FileItem: React.FC<{
       onClick={!isRenaming ? onClick : undefined}
       className={`relative w-full p-4 rounded-2xl transition-all duration-200 cursor-pointer mb-4 glass-card overflow-hidden hover:-translate-y-1 ${isRenaming ? 'border-neon-green ring-1 ring-neon-green' : isSelected ? 'border-neon-green ring-2 ring-neon-green' : 'active:scale-[0.98]'}`}
     >
-        <LiquidGlassOverlay />
       {isSelected && (
         <div className="absolute top-2 right-2 w-5 h-5 bg-neon-green rounded-full flex items-center justify-center">
           <LucideIcons.Check size={12} className="text-black" />

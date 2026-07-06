@@ -14,7 +14,6 @@ import {
   vault_encrypt_keys, vault_decrypt_keys,
   random_bytes,
 } from '../crypto-core/index';
-import { LiquidGlassOverlay } from './LiquidGlassOverlay';
 
 type TierKey = 'low' | 'mid' | 'flagship';
 type AlgoEntry = { id: CryptoAlgorithm; name: string; desc: string; badge: string };
@@ -325,7 +324,6 @@ export const EncryptionModal: React.FC<EncryptionModalProps> = ({ isOpen, onClos
             className="relative w-full max-w-[95vw] md:max-w-lg glass-card rounded-lg md:rounded-2xl overflow-hidden flex flex-col max-h-[95vh] md:max-h-[85vh]"
             onClick={(e) => e.stopPropagation()}
         >
-            <LiquidGlassOverlay />
             {/* Header */}
             <div className="px-3 py-2 md:px-6 md:py-4 border-b border-zinc-800 bg-zinc-900/50 flex items-center justify-between shrink-0">
                 <div className="flex items-center gap-2 md:gap-3">
@@ -393,9 +391,8 @@ export const EncryptionModal: React.FC<EncryptionModalProps> = ({ isOpen, onClos
                                  onClick={() => setSelectedAlgo('AES-GCM-Stream')}
                                  className={`w-full p-2 md:p-4 rounded border md:rounded-xl text-left relative overflow-hidden ${selectedAlgo === 'AES-GCM-Stream' ? 'bg-neon-green/10 border-neon-green' : 'bg-zinc-900/50 border-zinc-800'}`}
                              >
-                                 <LiquidGlassOverlay intensity="subtle" />
-                                 <div className="relative z-10">
-                                     <div className="flex items-center gap-2">
+                                    <div className="relative z-10">
+                                        <div className="flex items-center gap-2">
                                          <div className={`w-5 h-5 md:w-10 md:h-10 rounded md:rounded-xl flex items-center justify-center ${selectedAlgo === 'AES-GCM-Stream' ? 'bg-neon-green/20 text-neon-green' : 'bg-zinc-800 text-zinc-500'}`}>
                                              <Zap size={8} className="md:size-[18px]" />
                                          </div>
@@ -429,9 +426,8 @@ export const EncryptionModal: React.FC<EncryptionModalProps> = ({ isOpen, onClos
                                           onClick={() => setSelectedAlgo(algo.id)}
                                           className={`p-2 md:p-4 rounded border md:rounded-xl text-left relative overflow-hidden ${selectedAlgo === algo.id ? 'bg-neon-green/5 border-neon-green' : 'bg-zinc-900 border-zinc-800'}`}
                                       >
-                                          <LiquidGlassOverlay intensity="subtle" />
-                                          <div className="relative z-10">
-                                              <div className="flex justify-between items-start mb-0.5 md:mb-2">
+                                        <div className="relative z-10">
+                                            <div className="flex justify-between items-start mb-0.5 md:mb-2">
                                                   <span className="text-[9px] md:text-sm font-bold text-zinc-300">{algo.name}</span>
                                                    <div className="flex items-center gap-1 md:gap-2">
                                                        <span
@@ -535,16 +531,14 @@ export const EncryptionModal: React.FC<EncryptionModalProps> = ({ isOpen, onClos
                                onClick={() => setStep('key')}
                                className="px-5 md:px-10 py-2.5 md:py-3 rounded-lg md:rounded-xl bg-white text-black text-[10px] md:text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 relative overflow-hidden"
                            >
-                               <LiquidGlassOverlay intensity="subtle" />
-                               <span className="relative z-10">{t('continueButton')} →</span>
+                                <span className="relative z-10">{t('continueButton')} →</span>
                            </button>
                        ) : (
                            <button
                                onClick={handleEncrypt}
                                className="px-5 md:px-10 py-2.5 md:py-3 rounded-lg md:rounded-xl bg-white text-black text-[10px] md:text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 relative overflow-hidden"
                            >
-                               <LiquidGlassOverlay intensity="subtle" />
-                               <span className="relative z-10">{t('encrypt')} →</span>
+                                <span className="relative z-10">{t('encrypt')} →</span>
                            </button>
                        )}
                 </div>

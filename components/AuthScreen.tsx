@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Eye, EyeOff, Loader2, ShieldCheck, Timer, Key, Sparkles, Edit3, Copy, Check, ChevronRight, Target, ShieldAlert } from 'lucide-react';
+import { Eye, EyeOff, Loader2, ShieldCheck, Timer, Key, Sparkles, Edit3, Copy, Check, ChevronRight, Target, ShieldAlert, Lock, FolderOpen, RefreshCw, Code2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useI18n } from '../locales/i18nContext';
 import crytoLogo from '../assets/PrivonVault.png';
@@ -48,7 +48,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
   const [isProcessing, setIsProcessing] = useState(false);
   const [timeLeft, setTimeLeft] = useState(0);
   const [isDestructing, setIsDestructing] = useState(false);
-  const [setupStep, setSetupStep] = useState<'welcome' | 'create' | 'threat'>('welcome');
+  const [setupStep, setSetupStep] = useState<'welcome' | 'intro' | 'create'>('welcome');
   const [selectedTier, setSelectedTier] = useState<number | null>(null);
   const [infoTier, setInfoTier] = useState<number | null>(null);
   const [confirmTier, setConfirmTier] = useState<number | null>(null);
@@ -178,8 +178,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
       setError(t('passwordsDoNotMatch'));
       return;
     }
-    const tierId = confirmTier;
-    if (tierId === null) return;
+    const tierId = confirmTier ?? 1;
     const tier = TIERS.find(t => t.id === tierId);
     if (!tier) return;
     completeSetup(tier.config.argon, tierId);
@@ -569,7 +568,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
 
                 {/* Button */}
                 <motion.button
-                  onClick={() => setSetupStep('threat')}
+                  onClick={() => setSetupStep('intro')}
                   className="w-full max-w-xs flex items-center justify-center gap-3 py-4 rounded-[28px] font-bold text-sm transition-all duration-300 active:scale-[0.97]"
                   style={{ backgroundColor: 'var(--accent-color)', color: 'var(--bg-main)', boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }}
                   initial={{ opacity: 0, y: 12 }}
@@ -640,7 +639,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
                   </motion.div>
                 )}
 
-                <button type="button" onClick={() => { setSetupStep('threat'); setPassword(''); setConfirmPassword(''); setError(null); }}
+                <button type="button" onClick={() => { setSetupStep('intro'); setPassword(''); setConfirmPassword(''); setError(null); }}
                   className="text-[10px] text-zinc-500 hover:text-white transition-colors block"
                 >← {t('backButton')}</button>
 
@@ -687,157 +686,95 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
             </motion.div>
           ) : (
             <motion.div
-              key="threat"
+              key="intro"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.5, ease: 'easeOut' }}
               className="absolute inset-0 overflow-hidden bg-background"
             >
-              {/* Gradient base — silver/white top, black bottom */}
               <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, #ffffff 0%, #e8e8e8 15%, #b0b0b0 30%, #505050 50%, #1a1a1a 70%, #0a0a0a 85%, #000000 100%)' }} />
-
-              {/* Metal reflections — soft blurred light streaks */}
               <div className="absolute pointer-events-none" style={{ top: '-20%', left: '10%', width: '120px', height: '180%', background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.25) 20%, rgba(0,0,0,0.4) 35%, rgba(0,0,0,0.15) 60%, rgba(0,0,0,0) 100%)', transform: 'rotate(12deg)', filter: 'blur(18px)' }} />
               <div className="absolute pointer-events-none" style={{ top: '-15%', left: '35%', width: '80px', height: '170%', background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.15) 25%, rgba(0,0,0,0.3) 40%, rgba(0,0,0,0.1) 65%, rgba(0,0,0,0) 100%)', transform: 'rotate(8deg)', filter: 'blur(22px)' }} />
               <div className="absolute pointer-events-none" style={{ top: '-25%', left: '58%', width: '100px', height: '190%', background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.2) 18%, rgba(0,0,0,0.35) 32%, rgba(0,0,0,0.12) 55%, rgba(0,0,0,0) 100%)', transform: 'rotate(15deg)', filter: 'blur(15px)' }} />
               <div className="absolute pointer-events-none" style={{ top: '-10%', left: '78%', width: '90px', height: '160%', background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.18) 22%, rgba(0,0,0,0.28) 38%, rgba(0,0,0,0.08) 62%, rgba(0,0,0,0) 100%)', transform: 'rotate(10deg)', filter: 'blur(20px)' }} />
-
-              {/* Metallic blobs — top zone */}
               <div className="absolute w-96 h-96 opacity-40" style={{ top: '-15%', left: '-10%', background: 'radial-gradient(circle, #d4d4d4 0%, transparent 70%)', borderRadius: '60% 40% 70% 30% / 50% 60% 40% 50%', animation: 'blobFloat1 20s ease-in-out infinite', filter: 'blur(60px)' }} />
               <div className="absolute w-80 h-80 opacity-35" style={{ top: '-5%', right: '-5%', background: 'radial-gradient(circle, #c0c0c0 0%, transparent 70%)', borderRadius: '40% 60% 50% 50% / 50% 40% 60% 50%', animation: 'blobFloat2 25s ease-in-out infinite', filter: 'blur(50px)' }} />
               <div className="absolute w-64 h-64 opacity-30" style={{ top: '10%', left: '25%', background: 'radial-gradient(circle, #e0e0e0 0%, transparent 70%)', borderRadius: '50% 60% 40% 60% / 60% 40% 60% 40%', animation: 'blobFloat3 18s ease-in-out infinite', filter: 'blur(45px)' }} />
-
-              {/* Dark blobs — bottom zone */}
               <div className="absolute w-80 h-80 opacity-30" style={{ bottom: '-10%', right: '-10%', background: 'radial-gradient(circle, #1a1a1a 0%, transparent 70%)', borderRadius: '55% 45% 60% 40% / 45% 55% 45% 55%', animation: 'blobFloat2 28s ease-in-out infinite', filter: 'blur(50px)' }} />
               <div className="absolute w-64 h-64 opacity-20" style={{ bottom: '5%', left: '-5%', background: 'radial-gradient(circle, #2a2a2a 0%, transparent 70%)', borderRadius: '45% 55% 35% 65% / 55% 45% 55% 45%', animation: 'blobFloat3 22s ease-in-out infinite', filter: 'blur(40px)' }} />
-
-              {/* Noise texture — premium grain */}
               <div className="absolute inset-0 pointer-events-none opacity-[0.03]" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 256 256\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.8\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23n)\' opacity=\'1\'/%3E%3C/svg%3E")', backgroundRepeat: 'repeat', backgroundSize: '128px 128px' }} />
 
-              {/* Content */}
               <div className="relative z-10 flex flex-col items-center h-full px-6 pt-16 pb-8 overflow-y-auto">
-
-                {/* Threat model video */}
                 <motion.div
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ duration: 0.7, delay: 0.2 }}
-                  className="w-full max-w-[200px] mb-3"
+                  className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4"
+                  style={{ backgroundColor: 'rgba(var(--accent-rgb), 0.15)' }}
                 >
-                  {threatModelVideo ? <video src={threatModelVideo} autoPlay loop muted playsInline className="w-full h-auto object-contain" /> : <div className="w-full aspect-square rounded-2xl" style={{ backgroundColor: 'var(--glass-bg)' }} />}
+                  <ShieldCheck size={32} style={{ color: 'var(--accent-color)' }} />
                 </motion.div>
 
-                {/* Title */}
                 <motion.h1
-                  className="text-2xl md:text-3xl font-black tracking-tight text-center mb-1"
-                  style={{ color: 'var(--text-main)' }}
+                  className="text-2xl md:text-3xl font-black tracking-tight text-center mb-2"
+                  style={{ color: '#ffffff' }}
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6, delay: 0.3 }}
                 >
-                  {t('threatModelTitle')}
+                  Privon Vault
                 </motion.h1>
 
-                {/* Subtitle */}
                 <motion.p
-                  className="text-xs text-center max-w-[280px] leading-relaxed mb-5"
-                  style={{ color: 'var(--text-main)', opacity: 0.5 }}
+                  className="text-sm text-center max-w-[300px] leading-relaxed mb-6"
+                  style={{ color: 'rgba(255,255,255,0.95)' }}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6, delay: 0.4 }}
                 >
-                  {t('threatModelDesc')}
+                  All-in-One Privacy — no tracking, no ads, no data collection
                 </motion.p>
 
-                {/* Tier cards */}
                 <motion.div
-                  className="w-full max-w-sm space-y-4 mb-4"
-                  initial={{ opacity: 0, y: 16 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: 0.5 }}
+                  className="w-full max-w-sm space-y-3 mb-6"
+                  variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.15 } } }}
+                  initial="hidden"
+                  animate="visible"
                 >
-                  {/* Everyday Privacy - recommended */}
-                  <div
-                    onClick={() => { setSelectedTier(1); setInfoTier(null); }}
-                    className="glass-card w-full rounded-[24px] p-5 transition-all cursor-pointer active:scale-[0.98]"
-                    style={{
-                      borderColor: selectedTier === 1 ? 'var(--accent-color)' : undefined,
-                      boxShadow: selectedTier === 1 ? '0 8px 32px rgba(var(--accent-rgb), 0.12), 0 2px 8px rgba(0,0,0,0.06)' : undefined,
-                    }}
-                  >
-                    <div className="flex items-center gap-3.5">
-                      <div className="p-3 rounded-[16px] shrink-0" style={{
-                        backgroundColor: selectedTier === 1 ? 'rgba(var(--accent-rgb), 0.15)' : 'rgba(255,255,255,0.08)',
-                        color: selectedTier === 1 ? 'var(--accent-color)' : '#ffffff',
-                      }}>
-                        <Target size={22} />
+                  {([
+                    { icon: EyeOff, title: 'Total Privacy', desc: 'Everything you store stays encrypted on your device. Nobody — not even us — can see your files.' },
+                    { icon: Code2, title: 'Open Source', desc: 'Privon Vault is a free, open-source project. The source code is public, auditable, and licensed under AGPL-3.0.' },
+                    { icon: FolderOpen, title: 'All-in-One Vault', desc: 'Secure vault, file manager, photo gallery, music player, and document viewer — all in one place.' },
+                    { icon: RefreshCw, title: 'Backup & Restore', desc: 'Encrypted backups — your data stays safe even if you lose access.' },
+                  ] as const).map((item, i) => (
+                    <motion.div
+                      key={i}
+                      variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0 } }}
+                      className="glass-card rounded-[16px] p-3.5 flex items-start gap-3"
+                    >
+                      <span className="shrink-0 mt-0.5" style={{ color: 'var(--accent-color)' }}><item.icon size={20} /></span>
+                      <div>
+                        <p className="text-sm font-semibold text-white">{item.title}</p>
+                        <p className="text-[11px] leading-relaxed" style={{ color: 'rgba(255,255,255,0.55)' }}>{item.desc}</p>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-[15px] font-bold" style={{
-                            color: selectedTier === 1 ? 'var(--accent-color)' : '#ffffff',
-                          }}>{t('tier1Name')}</span>
-                          <span className="text-[10px] px-2.5 py-0.5 rounded-full font-semibold tracking-wide" style={{
-                            backgroundColor: 'rgba(var(--accent-rgb), 0.15)',
-                            color: 'var(--accent-color)',
-                          }}>{t('tierRecommended')}</span>
-                        </div>
-                        <p className="text-[12px] mt-1.5 leading-relaxed" style={{ color: 'rgba(255,255,255,0.65)' }}>{t('tier1Desc')}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Hardened - blocked */}
-                  <a
-                    href="https://github.com/privonn/PrivonVault/blob/main/docs%2FSECURITY.md"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="glass-card w-full rounded-[24px] p-5 transition-all cursor-pointer active:scale-[0.98] opacity-60 block"
-                  >
-                    <div className="flex items-center gap-3.5">
-                      <div className="p-3 rounded-[16px] shrink-0" style={{
-                        backgroundColor: 'rgba(255,255,255,0.08)',
-                        color: 'rgba(255,255,255,0.5)',
-                      }}>
-                        <ShieldAlert size={22} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-[15px] font-bold" style={{ color: '#ffffff' }}>{t('advancedProtection')}</span>
-                          <span className="text-[9px] px-2 py-0.5 rounded-full font-medium" style={{
-                            backgroundColor: 'rgba(255,255,255,0.08)',
-                            color: 'rgba(255,255,255,0.5)',
-                          }}>{t('tierNotAvailable')}</span>
-                        </div>
-                        <p className="text-[12px] mt-1.5 leading-relaxed" style={{ color: 'rgba(255,255,255,0.5)' }}>{t('advancedProtectionDesc')}</p>
-                      </div>
-                    </div>
-                  </a>
+                    </motion.div>
+                  ))}
                 </motion.div>
 
-                {/* Back button */}
                 <motion.button
-                  type="button"
-                  onClick={() => { setSetupStep('welcome'); setSelectedTier(null); }}
-                  className="text-[11px] mb-3 transition-colors"
-                  style={{ color: 'var(--text-muted)' }}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.5, delay: 0.6 }}
-                >
-                  ← {t('backButton')}
-                </motion.button>
-
-                {/* Continue button */}
-                <motion.button
-                  onClick={() => { if (!selectedTier) return; setConfirmTier(selectedTier); }}
-                  disabled={!selectedTier}
-                  className="w-full max-w-xs flex items-center justify-center gap-3 py-4 rounded-[28px] font-bold text-sm transition-all duration-300 active:scale-[0.97] disabled:grayscale disabled:opacity-50"
+                  onClick={() => {
+                    setSelectedTier(1);
+                    setConfirmTier(1);
+                    const tier = TIERS.find(t => t.id === 1);
+                    if (tier) onApplyThreatModel?.(tier.config);
+                    setSetupStep('create');
+                  }}
+                  className="w-full max-w-xs flex items-center justify-center gap-3 py-4 rounded-[28px] font-bold text-sm transition-all duration-300 active:scale-[0.97]"
                   style={{ backgroundColor: 'var(--accent-color)', color: 'var(--bg-main)', boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }}
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: 0.65 }}
+                  transition={{ duration: 0.6, delay: 0.7 }}
                   whileHover={{ scale: 1.02, boxShadow: '0 12px 40px rgba(0,0,0,0.18)' }}
                   whileTap={{ scale: 0.97 }}
                 >
@@ -849,7 +786,6 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
                   </span>
                 </motion.button>
 
-                {/* Pagination dots */}
                 <motion.div
                   className="flex items-center gap-2 mt-5"
                   initial={{ opacity: 0 }}
@@ -859,267 +795,11 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
                   <div className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--border-color)' }} />
                   <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: 'var(--accent-color)' }} />
                   <div className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--border-color)' }} />
-                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--border-color)' }} />
                 </motion.div>
               </div>
-
-              {infoTier !== null && (() => {
-                const tier = TIERS.find(t => t.id === infoTier);
-                if (!tier) return null;
-                const cfg = tier.config;
-                const fmtInactivity = (s: number) => {
-                  if (s === 0) return t('inactivityOff');
-                  if (s < 60) return `${s}s`;
-                  if (s < 3600) return `${Math.floor(s / 60)}m`;
-                  if (s < 86400) return `${Math.floor(s / 3600)}h`;
-                  return `${Math.floor(s / 86400)}d`;
-                };
-                return (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
-                    onClick={() => setInfoTier(null)}
-                  >
-                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.95, y: 10 }}
-                      animate={{ opacity: 1, scale: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                      onClick={(e) => e.stopPropagation()}
-                      className="relative w-full max-w-xs glass-card border border-white/10 rounded-2xl p-5"
-                    >
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className="p-2 rounded-xl bg-neon-green/20 text-neon-green">
-                          <tier.icon size={18} />
-                        </div>
-                        <div>
-                          <p className="text-xs font-semibold text-white">{t(tier.nameKey as any)}</p>
-                          <p className="text-[9px] text-zinc-500">{t('tierInfoTitle')}</p>
-                        </div>
-                      </div>
-                      <div className="space-y-1.5">
-                        <div className="flex justify-between text-[10px]">
-                          <span className="text-zinc-400">{t('modelBlur')}</span>
-                          <span className="text-white font-medium">{cfg.autoBlurSeconds}s</span>
-                        </div>
-                        <div className="flex justify-between text-[10px]">
-                          <span className="text-zinc-400">{t('modelLock')}</span>
-                          <span className="text-white font-medium">{cfg.autoLockSeconds}s</span>
-                        </div>
-                        <div className="flex justify-between text-[10px]">
-                          <span className="text-zinc-400">{t('modelAttempts')}</span>
-                          <span className="text-white font-medium">{cfg.failedAttemptsThreshold}</span>
-                        </div>
-                        <div className="flex justify-between text-[10px]">
-                          <span className="text-zinc-400">{t('modelLockDur')}</span>
-                          <span className="text-white font-medium">{cfg.progressiveLockSeconds === 0 ? t('recoveryOnly') : `${cfg.progressiveLockSeconds}s`}</span>
-                        </div>
-                        <div className="border-t border-white/5 my-1.5" />
-                        <div className="flex justify-between text-[10px]">
-                          <span className="text-zinc-400">{t('modelDestruct')}</span>
-                          <span className={`font-medium ${cfg.autoDestructEnabled ? 'text-red-400' : 'text-zinc-500'}`}>{cfg.autoDestructEnabled ? t('on') : t('off')}</span>
-                        </div>
-                        {cfg.autoDestructEnabled && (
-                          <>
-                            <div className="flex justify-between text-[10px]">
-                              <span className="text-zinc-400">{t('modelDestructAtt')}</span>
-                              <span className="text-white font-medium">{cfg.autoDestructAttempts}</span>
-                            </div>
-                            <div className="flex justify-between text-[10px]">
-                              <span className="text-zinc-400">{t('modelDestructIn')}</span>
-                              <span className="text-white font-medium">{fmtInactivity(cfg.autoDestructInactivity)}</span>
-                            </div>
-                            <div className="flex justify-between text-[10px]">
-                              <span className="text-zinc-400">{t('modelDestructCount')}</span>
-                              <span className="text-white font-medium">{cfg.destructCountdownSeconds}s</span>
-                            </div>
-                          </>
-                        )}
-                        <div className="border-t border-white/5 my-1.5" />
-                        <div className="space-y-0.5">
-                          <div className="grid grid-cols-4 gap-x-2 text-[8px] text-zinc-600 font-mono mb-0.5">
-                            <span />
-                            <span className="text-right">t</span>
-                            <span className="text-right">m</span>
-                            <span className="text-right">p</span>
-                          </div>
-                          {([
-                            { label: 'master', params: cfg.argon },
-                            { label: 'recovery', params: cfg.argonRecovery },
-                            { label: 'PIN', params: cfg.argonPin },
-                          ] as const).map(({ label, params }) => {
-                            const mem = (params.memoryKib / 1024).toFixed(0);
-                            return (
-                              <div key={label} className="grid grid-cols-4 gap-x-2 text-[9px] font-mono">
-                                <span className="text-zinc-500">{label}</span>
-                                <span className="text-zinc-300 text-right">{params.iterations}</span>
-                                <span className="text-zinc-300 text-right">{mem}M</span>
-                                <span className="text-zinc-300 text-right">{params.parallelism}</span>
-                              </div>
-                            );
-                          })}
-                        </div>
-                        <div className="border-t border-white/5 my-1.5" />
-                        <div className="space-y-0.5">
-                          {([
-                            { label: 'min pwd', value: `${cfg.minPasswordLength} chars` },
-                            { label: 'settings pwd', value: cfg.settingsPasswordRequired ? 'required' : 'optional' },
-                            { label: 'vault PIN', value: cfg.vaultPinAllowed ? 'allowed' : 'disabled' },
-                            { label: 'backup name', value: cfg.backupFilenameRandom ? 'random' : 'descriptive' },
-                            { label: 'recovery file', value: cfg.recoveryFilenameRandom ? 'random' : 'descriptive' },
-                          ] as const).map(({ label, value }) => (
-                            <div key={label} className="flex justify-between text-[9px]">
-                              <span className="text-zinc-500">{label}</span>
-                              <span className="text-zinc-300">{value}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-1.5 mt-4 pt-3 border-t border-white/5">
-                        {cfg.autoDestructEnabled ? (
-                          <span className="text-[9px] text-red-400/70">{t('warning')}: {t('auditLimitationTitle')}</span>
-                        ) : (
-                          <span className="text-[9px] text-zinc-600">{t('auditLimitationTitle')}</span>
-                        )}
-                      </div>
-                    </motion.div>
-                  </motion.div>
-                );
-              })()}
-
-              {confirmTier !== null && (() => {
-                const tier = TIERS.find(t => t.id === confirmTier);
-                if (!tier) return null;
-                const cfg = tier.config;
-                const Icon = tier.icon;
-                const fmtInactivity = (s: number) => {
-                  if (s === 0) return t('inactivityOff');
-                  if (s < 60) return `${s}s`;
-                  if (s < 3600) return `${Math.floor(s / 60)}m`;
-                  if (s < 86400) return `${Math.floor(s / 3600)}h`;
-                  return `${Math.floor(s / 86400)}d`;
-                };
-                return (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
-                    onClick={() => setConfirmTier(null)}
-                  >
-                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.95, y: 10 }}
-                      animate={{ opacity: 1, scale: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                      onClick={(e) => e.stopPropagation()}
-                      className="relative w-full max-w-xs glass-card border border-white/10 rounded-2xl p-5"
-                    >
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className="p-2 rounded-xl bg-neon-green/20 text-neon-green">
-                          <Icon size={18} />
-                        </div>
-                        <div>
-                          <p className="text-xs font-semibold text-white">{t(tier.nameKey as any)}</p>
-                          <p className="text-[9px] text-zinc-500">{t('tierInfoTitle')}</p>
-                        </div>
-                      </div>
-                      <div className="space-y-1.5">
-                        <div className="flex justify-between text-[10px]">
-                          <span className="text-zinc-400">{t('modelBlur')}</span>
-                          <span className="text-white font-medium">{cfg.autoBlurSeconds}s</span>
-                        </div>
-                        <div className="flex justify-between text-[10px]">
-                          <span className="text-zinc-400">{t('modelLock')}</span>
-                          <span className="text-white font-medium">{cfg.autoLockSeconds}s</span>
-                        </div>
-                        <div className="flex justify-between text-[10px]">
-                          <span className="text-zinc-400">{t('modelAttempts')}</span>
-                          <span className="text-white font-medium">{cfg.failedAttemptsThreshold}</span>
-                        </div>
-                        <div className="flex justify-between text-[10px]">
-                          <span className="text-zinc-400">{t('modelLockDur')}</span>
-                          <span className="text-white font-medium">{cfg.progressiveLockSeconds === 0 ? t('recoveryOnly') : `${cfg.progressiveLockSeconds}s`}</span>
-                        </div>
-                        <div className="border-t border-white/5 my-1.5" />
-                        <div className="flex justify-between text-[10px]">
-                          <span className="text-zinc-400">{t('modelDestruct')}</span>
-                          <span className={`font-medium ${cfg.autoDestructEnabled ? 'text-red-400' : 'text-zinc-500'}`}>{cfg.autoDestructEnabled ? t('on') : t('off')}</span>
-                        </div>
-                        {cfg.autoDestructEnabled && (
-                          <>
-                            <div className="flex justify-between text-[10px]">
-                              <span className="text-zinc-400">{t('modelDestructAtt')}</span>
-                              <span className="text-white font-medium">{cfg.autoDestructAttempts}</span>
-                            </div>
-                            <div className="flex justify-between text-[10px]">
-                              <span className="text-zinc-400">{t('modelDestructIn')}</span>
-                              <span className="text-white font-medium">{fmtInactivity(cfg.autoDestructInactivity)}</span>
-                            </div>
-                            <div className="flex justify-between text-[10px]">
-                              <span className="text-zinc-400">{t('modelDestructCount')}</span>
-                              <span className="text-white font-medium">{cfg.destructCountdownSeconds}s</span>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                      <div className="border-t border-white/5 my-1.5" />
-                      <div className="space-y-0.5">
-                        <div className="grid grid-cols-4 gap-x-2 text-[8px] text-zinc-600 font-mono mb-0.5">
-                          <span />
-                          <span className="text-right">t</span>
-                          <span className="text-right">m</span>
-                          <span className="text-right">p</span>
-                        </div>
-                        {([
-                          { label: 'master', params: cfg.argon },
-                          { label: 'recovery', params: cfg.argonRecovery },
-                          { label: 'PIN', params: cfg.argonPin },
-                        ] as const).map(({ label, params }) => {
-                          const mem = (params.memoryKib / 1024).toFixed(0);
-                          return (
-                            <div key={label} className="grid grid-cols-4 gap-x-2 text-[9px] font-mono">
-                              <span className="text-zinc-500">{label}</span>
-                              <span className="text-zinc-300 text-right">{params.iterations}</span>
-                              <span className="text-zinc-300 text-right">{mem}M</span>
-                              <span className="text-zinc-300 text-right">{params.parallelism}</span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                      <div className="border-t border-white/5 my-1.5" />
-                      <div className="space-y-0.5">
-                        {([
-                          { label: 'min pwd', value: `${cfg.minPasswordLength} chars` },
-                          { label: 'settings pwd', value: cfg.settingsPasswordRequired ? 'required' : 'optional' },
-                          { label: 'vault PIN', value: cfg.vaultPinAllowed ? 'allowed' : 'disabled' },
-                          { label: 'backup name', value: cfg.backupFilenameRandom ? 'random' : 'descriptive' },
-                          { label: 'recovery file', value: cfg.recoveryFilenameRandom ? 'random' : 'descriptive' },
-                        ] as const).map(({ label, value }) => (
-                          <div key={label} className="flex justify-between text-[9px]">
-                            <span className="text-zinc-500">{label}</span>
-                            <span className="text-zinc-300">{value}</span>
-                          </div>
-                        ))}
-                      </div>
-                      <button
-                        onClick={() => {
-                          if (tier) onApplyThreatModel?.(cfg);
-                          setSetupStep('create');
-                        }}
-                        className="mt-3 text-[10px] text-zinc-400 hover:text-white transition-colors flex items-center justify-center gap-1 w-full"
-                      >
-                        {t('continueButton')} <ChevronRight size={12} />
-                      </button>
-                    </motion.div>
-                  </motion.div>
-                );
-              })()}
             </motion.div>
           )}
-        </AnimatePresence>
+          </AnimatePresence>
       </div>
     );
   }

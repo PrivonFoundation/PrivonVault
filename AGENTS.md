@@ -161,7 +161,7 @@ CrytoTool/
 │   ├── FileItem.tsx              # 244 lines; file/folder card
 │   ├── FullPlayer.tsx            # full-screen music player
 │   ├── LandingPage.tsx           # 233 lines; marketing page
-│   ├── LiquidGlassOverlay.tsx    # animated glass border overlay
+
 │   ├── PinModal.tsx              # 201 lines; 6-digit PIN vault
 │   ├── RecoveryCodesModal.tsx    # 69 lines; shows 10 codes + download
 │   ├── SplashScreen.tsx          # 147 lines; animated SVG lock + checkmark
