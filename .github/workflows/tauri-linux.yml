@@ -125,8 +125,10 @@ jobs:
           sudo sysctl -w user.max_user_namespaces=15000 || true
           STDERR_LOG=$(mktemp)
           timeout 600 ./quick-sharun.sh "${{ steps.locate.outputs.binary }}" 2> "$STDERR_LOG"
+          EXIT_CODE=$?
           grep -v "tr: write error: Broken pipe" "$STDERR_LOG" >&2 || true
           rm -f "$STDERR_LOG"
+          exit $EXIT_CODE
           echo "---"
           echo "Generated AppImage:"
           ls -la *.AppImage
