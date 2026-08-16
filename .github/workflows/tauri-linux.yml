@@ -100,6 +100,11 @@ jobs:
           "$APPIMAGETOOL_BIN" --version
           echo "APPIMAGETOOL_BIN=$APPIMAGETOOL_BIN" >> "$GITHUB_ENV"
 
+      - name: Install desktop-file-utils (required by appimagetool)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y desktop-file-utils
+
       - name: Build truly-portable AppImage with quick-sharun
         env:
           DEPLOY_GTK: 1
