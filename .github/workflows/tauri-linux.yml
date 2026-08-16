@@ -110,6 +110,7 @@ jobs:
           DEPLOY_PULSE: 1
           OUTPUT_APPIMAGE: 1
           APPIMAGE_NAME: PrivonVault
+          STRACE_BINARY: privon-vault
           APPIMAGETOOL: ${{ env.APPIMAGETOOL_BIN }}
           VERSION: ${{ github.ref_name }}
           DESKTOP: ${{ github.workspace }}/src-tauri/privon.desktop
@@ -122,7 +123,7 @@ jobs:
           # Increase namespace limits to prevent ENOSPC errors
           sudo sysctl -w user.max_user_namespaces=15000 || true
           STDERR_LOG=$(mktemp)
-          ./quick-sharun.sh "${{ steps.locate.outputs.binary }}" 2> "$STDERR_LOG"
+          timeout 600 ./quick-sharun.sh "${{ steps.locate.outputs.binary }}" 2> "$STDERR_LOG"
           grep -v "tr: write error: Broken pipe" "$STDERR_LOG" >&2 || true
           rm -f "$STDERR_LOG"
           echo "---"
