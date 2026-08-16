@@ -156,14 +156,25 @@ jobs:
           gpg --verify SHA256SUMS.asc SHA256SUMS
 
       - name: Upload AppImage + checksums + signature to release
+        if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65
         with:
-          tagName: ${{ github.ref_name }}
-          releaseName: 'PrivonVault ${{ github.ref_name }}'
-          releaseBody: 'PrivonVault ${{ github.ref_name }}'
-          releaseDraft: true
+          tag_name: ${{ github.ref_name }}
+          name: 'PrivonVault ${{ github.ref_name }}'
+          body: 'PrivonVault ${{ github.ref_name }}'
+          draft: true
           prerelease: false
           files: |
+            *.AppImage
+            SHA256SUMS
+            SHA256SUMS.asc
+
+      - name: Upload AppImage artifact (branch builds)
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: PrivonVault-linux-appimage
+          path: |
             *.AppImage
             SHA256SUMS
             SHA256SUMS.asc
