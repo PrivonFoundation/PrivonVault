@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { Eye, EyeOff, Loader2, ShieldCheck, Timer, Key, Sparkles, Edit3, Copy, Check, ChevronRight, Target, ShieldAlert, Lock, FolderOpen, RefreshCw, Code2 } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Eye, EyeOff, Loader2, ShieldCheck, Timer, Key, Sparkles, Edit3, Copy, Check, ChevronRight, Target, ShieldAlert, Lock, FolderOpen, RefreshCw, Code2, Smartphone } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useI18n } from '../locales/i18nContext';
-import crytoLogo from '../assets/PrivonVault.png';
-const welcomeVideo = undefined;
+import logoImg from '../assets/logo.png';
+import welcomeImg from '../assets/welcome.png';
+import snowBenefitsImg from '../assets/snow-benefits.png';
 const threatModelVideo = undefined;
 import { AutoDestructCountdown } from './AutoDestructCountdown';
 
@@ -20,6 +21,7 @@ import {
   decrypt,
   get_argon_params,
 } from '../crypto-core/index';
+import { getDeviceKey, storeDeviceKey } from '../utils/deviceKey';
 import { setVaultKey } from '../crypto-core/db';
 import type { CryptoMetadata, VaultWrappers } from '../types';
 
@@ -32,14 +34,12 @@ interface AuthScreenProps {
     count: number;
   };
   onResetWithRecovery: (code: string, newPassword: string) => Promise<{ success: boolean; error?: string }>;
-  destructRef: React.RefObject<AutoDestructCountdownHandle | null>;
-  onDestructComplete: () => void;
   onNewCodes?: (codes: string[]) => void;
   onStoreMasterKey?: (key: Uint8Array) => void;
-  onApplyThreatModel?: (config: { autoBlurSeconds: number; autoLockSeconds: number; failedAttemptsThreshold: number; progressiveLockSeconds: number; autoDestructEnabled: boolean; autoDestructAttempts: number; autoDestructInactivity: number; destructCountdownSeconds: number; minPasswordLength?: number; settingsPasswordRequired?: boolean; vaultPinAllowed?: boolean }) => void;
+  onApplyThreatModel?: (config: { autoBlurSeconds: number; autoLockSeconds: number; failedAttemptsThreshold: number; progressiveLockSeconds: number; vaultPinAllowed?: boolean }) => void;
 }
 
-export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockUntil, onFailedAttempt, recoverySettings, onResetWithRecovery, destructRef, onDestructComplete, onNewCodes, onStoreMasterKey, onApplyThreatModel }) => {
+export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockUntil, onFailedAttempt, recoverySettings, onResetWithRecovery, onNewCodes, onStoreMasterKey, onApplyThreatModel }) => {
   const { t } = useI18n();
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -47,12 +47,13 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
   const [error, setError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [timeLeft, setTimeLeft] = useState(0);
-  const [isDestructing, setIsDestructing] = useState(false);
   const [setupStep, setSetupStep] = useState<'welcome' | 'intro' | 'create'>('welcome');
   const [selectedTier, setSelectedTier] = useState<number | null>(null);
   const [infoTier, setInfoTier] = useState<number | null>(null);
   const [confirmTier, setConfirmTier] = useState<number | null>(null);
   const [copied, setCopied] = useState(false);
+  const [deviceKeyMode, setDeviceKeyMode] = useState(false);
+  const deviceUnlockAttemptedRef = useRef(false);
 
   const [setupProgress, setSetupProgress] = useState(0);
   const [setupProgressLabel, setSetupProgressLabel] = useState('');
@@ -69,13 +70,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
     return `${parseInt(c.slice(0, 2), 16)}, ${parseInt(c.slice(2, 4), 16)}, ${parseInt(c.slice(4, 6), 16)}`;
   })();
 
-  const themeConfig = (() => {
-    try {
-      const saved = localStorage.getItem('app_theme_config');
-      return saved ? JSON.parse(saved) : null;
-    } catch { return null; }
-  })();
-  const bgMain = themeConfig?.['--bg-main'] || '#000000';
+
 
   useEffect(() => {
     if (!lockUntil) {
@@ -95,9 +90,48 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
 
   const isLocked = timeLeft > 0;
 
+  useEffect(() => {
+    if (isSetup || isLocked) return;
+    if (localStorage.getItem('privon_auth_mode') !== 'device') return;
+    if (deviceUnlockAttemptedRef.current) return;
+    deviceUnlockAttemptedRef.current = true;
+    let cancelled = false;
+
+    (async () => {
+      setIsProcessing(true);
+      setError(null);
+      const deviceKey = await getDeviceKey();
+      if (cancelled) return;
+      if (!deviceKey) {
+        const wrappersRaw = localStorage.getItem('privon_vault_wrappers');
+        const wrappers: VaultWrappers | null = wrappersRaw ? JSON.parse(wrappersRaw) : null;
+        setError(wrappers?.master ? t('deviceKeyUnavailable') : t('deviceKeyUnavailableNoPassword'));
+        setIsProcessing(false);
+        return;
+      }
+      try {
+        const wrappersRaw = localStorage.getItem('privon_vault_wrappers');
+        const wrappers: VaultWrappers | null = wrappersRaw ? JSON.parse(wrappersRaw) : null;
+        if (!wrappers?.device) throw new Error('missing device wrapper');
+        const mvkBytes = await unwrap_raw_key(JSON.stringify(wrappers.device), deviceKey);
+        deviceKey.fill(0);
+        setVaultKey(mvkBytes);
+        mvkBytes.fill(0);
+        onUnlock();
+      } catch {
+        if (!cancelled) {
+          setError(t('deviceKeyUnlockFailed'));
+          setIsProcessing(false);
+        }
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [isSetup, isLocked, onUnlock, t]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isLocked && !isDestructing) return;
+    if (isLocked && !false) return;
     setError(null);
     setIsProcessing(true);
     await new Promise(r => setTimeout(r, 16));
@@ -130,7 +164,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
           } catch (err) {
             setError(t('wrongPassword'));
             setPassword('');
-            if (!isDestructing) onFailedAttempt();
+            if (!false) onFailedAttempt();
           }
         } else {
           const saltB64 = localStorage.getItem('privon_salt');
@@ -156,7 +190,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
           } catch (err) {
             setError(t('wrongPassword'));
             setPassword('');
-            if (!isDestructing) onFailedAttempt();
+            if (!false) onFailedAttempt();
           }
         }
     } catch (err) {
@@ -170,7 +204,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
   const handleCreateFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    if (password.length < 30) {
+    const hasPassword = password.length > 0;
+    if (hasPassword && password.length < 30) {
       setError(t('passwordTooShort'));
       return;
     }
@@ -189,6 +224,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
     setError(null);
 
     const yieldToReact = () => new Promise(r => setTimeout(r, 16));
+    const useDeviceKey = deviceKeyMode;
+    const hasPassword = password.length >= 30;
 
     try {
       setSetupProgress(2);
@@ -197,16 +234,41 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
       const mvkBytes = await generate_vault_key();
       const codes = generate_recovery_codes();
 
-      setSetupProgress(10);
-      setSetupProgressLabel('Deriving master key...');
-      await yieldToReact();
       const masterSalt = window.crypto.getRandomValues(new Uint8Array(16));
-      const masterKey = derive_key(new TextEncoder().encode(password), masterSalt, argonParams.iterations, argonParams.memoryKib, argonParams.parallelism, 32);
+      let masterWrapper: { ciphertext: string; iv: string } | null = null;
+      let deviceWrapper: { ciphertext: string; iv: string } | null = null;
 
-      setSetupProgress(30);
-      setSetupProgressLabel('Wrapping master key...');
-      await yieldToReact();
-      const masterWrapper = JSON.parse(await wrap_raw_key(mvkBytes, masterKey));
+      if (hasPassword) {
+        setSetupProgress(10);
+        setSetupProgressLabel('Deriving master key...');
+        await yieldToReact();
+        const masterKey = derive_key(new TextEncoder().encode(password), masterSalt, argonParams.iterations, argonParams.memoryKib, argonParams.parallelism, 32);
+
+        setSetupProgress(30);
+        setSetupProgressLabel('Wrapping master key...');
+        await yieldToReact();
+        masterWrapper = JSON.parse(await wrap_raw_key(mvkBytes, masterKey));
+      }
+
+      if (useDeviceKey) {
+        setSetupProgress(32);
+        setSetupProgressLabel('Securing device key...');
+        await yieldToReact();
+        const deviceKey = await generate_vault_key();
+        deviceWrapper = JSON.parse(await wrap_raw_key(mvkBytes, deviceKey));
+        const stored = await storeDeviceKey(deviceKey);
+        deviceKey.fill(0);
+        if (stored) {
+          localStorage.setItem('privon_auth_mode', 'device');
+        } else {
+          deviceWrapper = null;
+          if (!hasPassword) {
+            setError(t('deviceKeyUnavailable'));
+            setIsProcessing(false);
+            return;
+          }
+        }
+      }
 
       setSetupProgress(35);
       setSetupProgressLabel('Generating recovery codes...');
@@ -247,7 +309,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
         tier: tierId,
       };
       const wrappers: VaultWrappers = {
-        master: masterWrapper,
+        ...(masterWrapper ? { master: masterWrapper } : {}),
+        ...(deviceWrapper ? { device: deviceWrapper } : {}),
         recovery: recoveryWrappers,
       };
 
@@ -256,7 +319,6 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
 
       setVaultKey(mvkBytes);
       mvkBytes.fill(0);
-      onStoreMasterKey?.(masterKey);
       onNewCodes?.(codes);
       setSetupProgress(100);
       setSetupProgressLabel('Done!');
@@ -471,7 +533,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
       <div className={`absolute -inset-4 md:-inset-6 blur-[80px] md:blur-[120px] rounded-full animate-pulse transition-all duration-700 ${isLocked ? 'bg-red-500/20' : ''}`} style={{ backgroundColor: isLocked ? undefined : `rgba(${accentRgb}, 0.3)` }} />
       <div className={`absolute inset-0 md:inset-2 blur-2xl md:blur-3xl rounded-full ${isLocked ? 'bg-red-500/10' : ''}`} style={{ backgroundColor: isLocked ? undefined : `rgba(${accentRgb}, 0.2)` }} />
       <img
-        src={crytoLogo}
+        src={logoImg}
         alt="Privon Vault"
         className={`w-full h-full object-contain transition-all duration-500 ${isLocked ? 'opacity-50 grayscale' : ''}`}
         style={{ filter: isLocked ? 'none' : `drop-shadow(0 0 40px rgba(${accentRgb}, 0.6)) drop-shadow(0 0 80px rgba(${accentRgb}, 0.3)) drop-shadow(0 0 120px rgba(${accentRgb}, 0.15))` }}
@@ -514,7 +576,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
               <div className="absolute inset-0 pointer-events-none opacity-[0.03]" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 256 256\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.8\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23n)\' opacity=\'1\'/%3E%3C/svg%3E")', backgroundRepeat: 'repeat', backgroundSize: '128px 128px' }} />
 
               {/* Content */}
-              <div className="relative z-10 flex flex-col items-center h-full px-6 pt-20 pb-8">
+              <div className="relative z-10 flex flex-col items-center h-full px-6 pt-12 pb-8">
 
                 {/* Paw icon */}
                 <motion.div
@@ -545,13 +607,13 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
 
                 {/* Subtitle */}
                 <motion.p
-                  className="text-sm md:text-base text-center max-w-[280px] leading-relaxed"
-                  style={{ color: '#ffffff', opacity: 0.7 }}
+                  className="text-sm md:text-base text-center max-w-sm leading-relaxed glass-card rounded-2xl px-5 py-3"
+                  style={{ color: '#ffffff' }}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6, delay: 0.35 }}
                 >
-                  All-in-One Privacy
+                  Hi! I'm Snow. Welcome to Privon Vault! I'll help keep your files private. Everything you store stays encrypted on your device, and only you hold the key.
                 </motion.p>
 
                 {/* Mascot - video, centered */}
@@ -561,8 +623,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ duration: 0.7, delay: 0.3 }}
                 >
-                  <div className="relative w-full max-w-[528px]">
-                    {welcomeVideo ? <video src={welcomeVideo} autoPlay loop muted playsInline className="w-full h-auto object-contain" /> : <div className="w-full aspect-video rounded-2xl" style={{ backgroundColor: 'var(--glass-bg)' }} />}
+                  <div className="relative w-full max-w-[800px]">
+                    <img src={welcomeImg} alt="Welcome" className="w-full h-auto object-contain rounded-2xl" />
                   </div>
                 </motion.div>
 
@@ -611,11 +673,12 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
               <div className="flex flex-col items-center space-y-2 md:space-y-3 mb-4">
                 <div className="relative w-36 h-36 md:w-48 md:h-48">
                   <div className="absolute -inset-4 md:-inset-6 blur-[80px] md:blur-[120px] rounded-full animate-pulse" style={{ backgroundColor: `rgba(${accentRgb}, 0.3)` }} />
-                  <img src={crytoLogo} alt="Privon Vault" className="w-full h-full object-contain" style={{ filter: `drop-shadow(0 0 40px rgba(${accentRgb}, 0.6)) drop-shadow(0 0 80px rgba(${accentRgb}, 0.3))` }} />
+                  <img src={logoImg} alt="Privon Vault" className="w-full h-full object-contain" style={{ filter: `drop-shadow(0 0 40px rgba(${accentRgb}, 0.6)) drop-shadow(0 0 80px rgba(${accentRgb}, 0.3))` }} />
                 </div>
                 <div className="text-xl md:text-2xl font-bold tracking-tight">
                   <span className="text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.4)]">{t('crytoPrefix')}</span>
-                  <span className="drop-shadow-[0_0_12px_rgba(212,212,216,0.5)]" style={{ color: accentColor }}>{t('toolSuffix')}</span>
+                  {' '}
+                  <span className="text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.4)]">{t('toolSuffix')}</span>
                 </div>
                 <p className="text-zinc-400 text-xs text-center">{t('setupCreateTitle')}</p>
               </div>
@@ -633,6 +696,25 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
                   ><Edit3 size={18} className="text-neon-green" /><span className="text-[10px] text-zinc-300 font-medium text-center leading-tight">{t('setupTypeManual')}</span></button>
                 </div>
 
+                <button
+                  type="button"
+                  onClick={() => setDeviceKeyMode(!deviceKeyMode)}
+                  className={`w-full flex items-center gap-3 p-2.5 rounded-xl border transition-all active:scale-[0.98] ${deviceKeyMode ? 'bg-neon-green/10 border-neon-green/40' : 'bg-zinc-900/50 border-zinc-800 hover:border-zinc-600'}`}
+                >
+                  <Smartphone size={18} className={deviceKeyMode ? 'text-neon-green' : 'text-zinc-400'} />
+                  <div className="flex-1 text-left">
+                    <p className={`text-xs font-semibold ${deviceKeyMode ? 'text-neon-green' : 'text-zinc-300'}`}>{t('deviceKeySetup')}</p>
+                    <p className="text-[10px] text-zinc-500 leading-tight">{t('deviceKeySetupDesc')}</p>
+                  </div>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${deviceKeyMode ? 'bg-neon-green/20 text-neon-green' : 'bg-zinc-800 text-zinc-500'}`}>{deviceKeyMode ? t('on') : t('off')}</span>
+                </button>
+
+                {deviceKeyMode && (
+                  <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} className="p-2 rounded-lg bg-red-500/10 border border-red-500/20">
+                    <p className="text-red-400 text-[10px] text-center leading-relaxed">⚠️ {t('deviceKeyWarning')}</p>
+                  </motion.div>
+                )}
+
                 {(password || confirmPassword) && (
                   <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
                     <p className="text-amber-400 text-[10px] text-center leading-relaxed">⚠️ {t('setupCopyWarning')}</p>
@@ -645,7 +727,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
 
                 <form onSubmit={handleCreateFormSubmit} className="space-y-2.5">
                   <div className="space-y-1">
-                    <label className="text-xs text-muted font-medium ml-1">{t('masterPassword')}</label>
+                    <label className="text-xs text-muted font-medium ml-1">{deviceKeyMode ? t('deviceKeyPasswordOptional') : t('masterPassword')}</label>
                     <div className="relative">
                       <input type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)}
                         placeholder={t('enterPasswordField')}
@@ -707,56 +789,33 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
 
               <div className="relative z-10 flex flex-col items-center h-full px-6 pt-16 pb-8 overflow-y-auto">
                 <motion.div
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.7, delay: 0.2 }}
-                  className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4"
-                  style={{ backgroundColor: 'rgba(var(--accent-rgb), 0.15)' }}
-                >
-                  <ShieldCheck size={32} style={{ color: 'var(--accent-color)' }} />
-                </motion.div>
-
-                <motion.h1
-                  className="text-2xl md:text-3xl font-black tracking-tight text-center mb-2"
-                  style={{ color: '#ffffff' }}
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: 0.3 }}
-                >
-                  Privon Vault
-                </motion.h1>
-
-                <motion.p
-                  className="text-sm text-center max-w-[300px] leading-relaxed mb-6"
-                  style={{ color: 'rgba(255,255,255,0.95)' }}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: 0.4 }}
-                >
-                  All-in-One Privacy — no tracking, no ads, no data collection
-                </motion.p>
-
-                <motion.div
                   className="w-full max-w-sm space-y-3 mb-6"
                   variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.15 } } }}
                   initial="hidden"
                   animate="visible"
                 >
                   {([
-                    { icon: EyeOff, title: 'Total Privacy', desc: 'Everything you store stays encrypted on your device. Nobody — not even us — can see your files.' },
-                    { icon: Code2, title: 'Open Source', desc: 'Privon Vault is a free, open-source project. The source code is public, auditable, and licensed under AGPL-3.0.' },
-                    { icon: FolderOpen, title: 'All-in-One Vault', desc: 'Secure vault, file manager, photo gallery, music player, and document viewer — all in one place.' },
-                    { icon: RefreshCw, title: 'Backup & Restore', desc: 'Encrypted backups — your data stays safe even if you lose access.' },
+                    { icon: null, image: snowBenefitsImg, title: 'Total Privacy', desc: 'Everything you store stays encrypted on your device. Nobody — not even us — can see your files.' },
+                    { icon: Code2, image: null, title: 'Open Source', desc: 'Privon Vault is a free, open-source project. The source code is public, auditable, and licensed under AGPL-3.0.' },
+                    { icon: FolderOpen, image: null, title: 'All-in-One Vault', desc: 'Secure vault, file manager, photo gallery, music player, and document viewer — all in one place.' },
+                    { icon: RefreshCw, image: null, title: 'Backup & Restore', desc: 'Encrypted backups — your data stays safe even if you lose access.' },
                   ] as const).map((item, i) => (
                     <motion.div
                       key={i}
                       variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0 } }}
-                      className="glass-card rounded-[16px] p-3.5 flex items-start gap-3"
+                      className="glass-card rounded-[16px] p-3.5 flex flex-col gap-3"
                     >
-                      <span className="shrink-0 mt-0.5" style={{ color: 'var(--accent-color)' }}><item.icon size={20} /></span>
-                      <div>
-                        <p className="text-sm font-semibold text-white">{item.title}</p>
-                        <p className="text-[11px] leading-relaxed" style={{ color: 'rgba(255,255,255,0.55)' }}>{item.desc}</p>
+                      {item.image && (
+                        <img src={item.image} alt={item.title} className="w-full h-auto rounded-xl scale-105" />
+                      )}
+                      <div className="flex items-start gap-3">
+                        {item.icon && (
+                          <span className="shrink-0 mt-0.5" style={{ color: 'var(--accent-color)' }}><item.icon size={20} /></span>
+                        )}
+                        <div>
+                          <p className="text-sm font-semibold text-white">{item.title}</p>
+                          <p className="text-[11px] leading-relaxed" style={{ color: 'rgba(255,255,255,0.55)' }}>{item.desc}</p>
+                        </div>
                       </div>
                     </motion.div>
                   ))}
@@ -810,7 +869,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
         <Logo />
         <div className="text-2xl md:text-3xl font-bold tracking-tight">
           <span className={`font-bold tracking-tight ${isLocked ? 'text-red-500' : 'text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.4)]'}`}>{t('crytoPrefix')}</span>
-          <span className={isLocked ? '' : 'drop-shadow-[0_0_12px_rgba(212,212,216,0.5)]'} style={{ color: isLocked ? '#ef4444' : accentColor }}>{t('toolSuffix')}</span>
+          {' '}
+          <span className={isLocked ? 'text-red-500' : 'text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.4)]'}>{t('toolSuffix')}</span>
         </div>
         <p className={`text-sm tracking-wide ${isLocked ? 'text-muted' : 'text-zinc-400 drop-shadow-[0_0_8px_rgba(161,161,170,0.3)]'}`}>{t('allInOnePrivacyTagline')}</p>
       </div>
@@ -999,9 +1059,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
                 </p>
               </div>
 
-              <AutoDestructCountdown ref={destructRef} onComplete={onDestructComplete} onStateChange={setIsDestructing} />
-
-              {isLocked && !isDestructing && (
+              {isLocked && !false && (
                 <motion.div
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
@@ -1012,17 +1070,17 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
                 </motion.div>
               )}
 
-              <form onSubmit={handleSubmit} className={`space-y-4 ${isLocked && !isDestructing ? 'opacity-30 pointer-events-none grayscale' : ''}`}>
+              <form onSubmit={handleSubmit} className={`space-y-4 ${isLocked && !false ? 'opacity-30 pointer-events-none grayscale' : ''}`}>
                 <div className="space-y-1.5">
                   <label className="text-sm text-muted font-medium ml-1">{t('masterPassword')}</label>
                   <div className="relative group">
                     <input
-                      disabled={isProcessing || (isLocked && !isDestructing)}
+                      disabled={isProcessing || (isLocked && !false)}
                       type={showPassword ? "text" : "password"}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder={t('enterPasswordField')}
-                      className={`w-full bg-surface border ${isDestructing ? 'border-red-500/50 focus:border-red-500' : 'border-border focus:border-primary'} text-primary rounded-xl pl-4 pr-20 py-3 focus:outline-none transition-all placeholder:text-muted disabled:opacity-50`}
+                      className={`w-full bg-surface border ${false ? 'border-red-500/50 focus:border-red-500' : 'border-border focus:border-primary'} text-primary rounded-xl pl-4 pr-20 py-3 focus:outline-none transition-all placeholder:text-muted disabled:opacity-50`}
                       autoFocus
                     />
                     <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-3 text-muted">
@@ -1041,7 +1099,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
                   <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="space-y-1.5">
                     <label className="text-sm text-muted font-medium ml-1">{t('confirmPassword')}</label>
                     <input
-                      disabled={isProcessing || (isLocked && !isDestructing)}
+                      disabled={isProcessing || (isLocked && !false)}
                       type={showPassword ? "text" : "password"}
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
@@ -1059,9 +1117,9 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
 
                 <button
                   type="submit"
-                  disabled={isProcessing || (isLocked && !isDestructing)}
-                  className={`w-full text-black font-bold text-base py-3 rounded-xl hover:opacity-90 transition-all flex items-center justify-center gap-2 active:scale-[0.99] disabled:grayscale disabled:opacity-50 ${isDestructing ? 'bg-red-500 hover:bg-red-400' : isLocked ? 'bg-zinc-800' : ''}`}
-                  style={{ backgroundColor: isDestructing ? undefined : (isLocked ? undefined : accentColor), boxShadow: isDestructing ? '0 0 20px rgba(239,68,68,0.4)' : (isLocked ? undefined : `0 0 15px rgba(${accentRgb}, 0.3)`) }}
+                  disabled={isProcessing || (isLocked && !false)}
+                  className={`w-full text-black font-bold text-base py-3 rounded-xl hover:opacity-90 transition-all flex items-center justify-center gap-2 active:scale-[0.99] disabled:grayscale disabled:opacity-50 ${false ? 'bg-red-500 hover:bg-red-400' : isLocked ? 'bg-zinc-800' : ''}`}
+                  style={{ backgroundColor: false ? undefined : (isLocked ? undefined : accentColor), boxShadow: false ? '0 0 20px rgba(239,68,68,0.4)' : (isLocked ? undefined : `0 0 15px rgba(${accentRgb}, 0.3)`) }}
                 >
                   {isProcessing ? (
                     <>
@@ -1077,7 +1135,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
                 </button>
               </form>
 
-              {!isSetup && !isLocked && !isDestructing && recoverySettings && recoverySettings.count > 0 && (
+              {!isSetup && !isLocked && !false && recoverySettings && recoverySettings.count > 0 && (
                 <div className="mt-4 pt-4 border-t border-white/10">
                   <button
                     type="button"

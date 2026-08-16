@@ -17,8 +17,12 @@ pub fn run() {
     let builder = tauri::Builder::default();
 
     builder
+        .plugin(tauri_plugin_keyring_store::init())
         .invoke_handler(tauri::generate_handler![
             greet,
+            keyring_set,
+            keyring_get,
+            keyring_delete,
             // Primitives
             derive_key,
             aes_gcm_encrypt,
@@ -54,6 +58,7 @@ pub fn run() {
             pin_hash,
             pin_verify,
             get_argon_params,
+            batch_decrypt_metadata,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -62,6 +67,25 @@ pub fn run() {
 #[tauri::command]
 fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
+}
+
+fn keyring_store(app: &tauri::AppHandle) -> tauri_plugin_keyring_store::KeyringStore {
+    tauri_plugin_keyring_store::KeyringStore::new(app.config().identifier.clone())
+}
+
+#[tauri::command]
+fn keyring_set(app: tauri::AppHandle, account: String, secret: Vec<u8>) -> Result<(), String> {
+    keyring_store(&app).set_bytes(&account, &secret).map_err(map_err)
+}
+
+#[tauri::command]
+fn keyring_get(app: tauri::AppHandle, account: String) -> Result<Option<Vec<u8>>, String> {
+    keyring_store(&app).get_bytes(&account).map_err(map_err)
+}
+
+#[tauri::command]
+fn keyring_delete(app: tauri::AppHandle, account: String) -> Result<(), String> {
+    keyring_store(&app).delete(&account).map_err(map_err)
 }
 
 fn map_err<E: std::fmt::Display>(e: E) -> String {
@@ -264,6 +288,61 @@ fn pin_verify(
 #[tauri::command]
 fn get_argon_params(purpose: String, tier: u32) -> Result<String, String> {
     crypto_core::threat_model::get_argon_params(&purpose, tier)
+}
+
+#[derive(serde::Serialize, serde::Deserialize)]
+struct EncryptedMeta {
+    ciphertext: String,
+    iv: String,
+}
+
+#[derive(serde::Serialize, serde::Deserialize)]
+struct BatchDecryptResult {
+    id: String,
+    decrypted_name: String,
+    decrypted_tags: Option<String>,
+    decrypted_artist: Option<String>,
+    decrypted_album: Option<String>,
+    decrypted_cover_url: Option<String>,
+    decrypted_custom_icon: Option<String>,
+    decrypted_external_url: Option<String>,
+}
+
+#[tauri::command]
+fn batch_decrypt_metadata(
+    items: Vec<(String, String)>, // (id, encrypted_meta_json)
+    key: Vec<u8>,
+) -> Result<Vec<BatchDecryptResult>, String> {
+    use std::collections::HashMap;
+    let mut cache: HashMap<String, String> = HashMap::new();
+    let mut results = Vec::with_capacity(items.len());
+    
+    for (id, encrypted_json) in items {
+        let decrypted = if let Some(cached) = cache.get(&encrypted_json) {
+            cached.clone()
+        } else {
+            let result = crypto_core::metadata_crypto::metadata_decrypt(&encrypted_json, &key)
+                .map_err(|e| format!("Failed to decrypt metadata for {}: {}", id, e))?;
+            cache.insert(encrypted_json, result.clone());
+            result
+        };
+        
+        let meta: serde_json::Value = serde_json::from_str(&decrypted)
+            .map_err(|e| format!("Failed to parse metadata for {}: {}", id, e))?;
+        
+        results.push(BatchDecryptResult {
+            id,
+            decrypted_name: meta.get("name").and_then(|v| v.as_str()).unwrap_or("untitled").to_string(),
+            decrypted_tags: meta.get("tags").map(|v| v.to_string()),
+            decrypted_artist: meta.get("artist").and_then(|v| v.as_str()).map(|s| s.to_string()),
+            decrypted_album: meta.get("album").and_then(|v| v.as_str()).map(|s| s.to_string()),
+            decrypted_cover_url: meta.get("coverUrl").and_then(|v| v.as_str()).map(|s| s.to_string()),
+            decrypted_custom_icon: meta.get("customIcon").and_then(|v| v.as_str()).map(|s| s.to_string()),
+            decrypted_external_url: meta.get("externalUrl").and_then(|v| v.as_str()).map(|s| s.to_string()),
+        });
+    }
+    
+    Ok(results)
 }
 
 

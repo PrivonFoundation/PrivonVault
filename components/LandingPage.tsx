@@ -3,7 +3,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { ShieldCheck, Lock, FileText, Image, Music, Database, Key, FolderLock } from 'lucide-react';
 import { useI18n } from '../locales/i18nContext';
-import crytoLogo from '../assets/PrivonVault.png';
+import logoImg from '../assets/logo.png';
 
 const NeonButton: React.FC<{ children: React.ReactNode; primary?: boolean }> = ({ children, primary }) => (
   <button
@@ -38,7 +38,7 @@ const ModernLogo: React.FC = () => {
     <div className="flex items-center gap-4 select-none cursor-pointer group">
       <div className="relative w-16 h-16 flex items-center justify-center bg-black border border-zinc-800 rounded-2xl overflow-hidden group-hover:border-neon-green/50 transition-all duration-300 shadow-[0_0_30px_rgba(var(--accent-rgb),0.15)]">
         <div className="absolute inset-0 blur-2xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ backgroundColor: 'rgba(var(--accent-rgb), 0.15)' }} />
-        <img src={crytoLogo} alt="Privon Vault" className="w-full h-full object-cover relative z-10" />
+        <img src={logoImg} alt="Privon Vault" className="w-full h-full object-cover relative z-10" />
       </div>
       <div className="flex flex-col">
         <span className="font-mono font-black text-2xl tracking-wide leading-none text-white group-hover:text-neon-green transition-colors duration-300">

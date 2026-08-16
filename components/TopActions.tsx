@@ -3,7 +3,7 @@ import React from 'react';
 import { Plus, FolderPlus, Database, Search, Trash2, Settings } from 'lucide-react';
 import { ViewState } from '../types';
 import { useI18n } from '../locales/i18nContext';
-import crytoLogo from '../assets/PrivonVault.png';
+import logoImg from '../assets/logo.png';
 
 interface TopActionsProps {
   activeTab: string;
@@ -34,25 +34,25 @@ export const TopActions: React.FC<TopActionsProps> = ({
   
   if (activeTab !== 'files') {
     return (
-      <header className="px-5 pt-8 pb-4 bg-background">
+      <header className="px-5 pt-8 pb-4 bg-transparent">
         <div className="flex items-center gap-2.5 mb-2">
           <div className="w-16 h-16 flex items-center justify-center">
-            <img src={crytoLogo} alt="Privon Vault" className="w-full h-full object-contain" />
+            <img src={logoImg} alt="Privon Vault" className="w-full h-full object-contain" />
           </div>
-          <h1 className="text-3xl font-bold tracking-tight text-primary">{t('crytoPrefix')}<span className="bg-gradient-to-r from-zinc-300 via-zinc-400 to-zinc-500 bg-clip-text text-transparent drop-shadow-[0_0_8px_rgba(212,212,216,0.3)]">{t('toolSuffix')}</span></h1>
+          <h1 className="text-3xl font-bold tracking-tight text-primary">{t('crytoPrefix')} <span className="text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]">{t('toolSuffix')}</span></h1>
         </div>
       </header>
     );
   }
 
   return (
-    <header className="px-5 pt-8 pb-4 space-y-6 bg-background">
+    <header className="px-5 pt-8 pb-4 space-y-6 bg-transparent">
       {/* LOGO & NAME */}
       <div className="flex items-center gap-3 mb-2">
         <div className="w-16 h-16 flex items-center justify-center">
-          <img src={crytoLogo} alt="Privon Vault" className="w-full h-full object-contain" />
+          <img src={logoImg} alt="Privon Vault" className="w-full h-full object-contain" />
         </div>
-        <h1 className="text-3xl font-bold tracking-tight text-primary">{t('crytoPrefix')}<span className="bg-gradient-to-r from-zinc-300 via-zinc-400 to-zinc-500 bg-clip-text text-transparent drop-shadow-[0_0_8px_rgba(212,212,216,0.3)]">{t('toolSuffix')}</span></h1>
+        <h1 className="text-3xl font-bold tracking-tight text-primary">{t('crytoPrefix')} <span className="text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]">{t('toolSuffix')}</span></h1>
       </div>
 
         <div className="space-y-2.5">
@@ -156,8 +156,6 @@ export const TopActions: React.FC<TopActionsProps> = ({
               <Settings size={18} className="relative z-10" />
             </button>
           </div>
-
-        <p className="text-xs text-muted font-medium pt-1 opacity-80">{t('browseAndManage')}</p>
       </div>
     </header>
   );

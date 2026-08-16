@@ -44,7 +44,7 @@ export const Button: React.FC<ButtonProps> = ({
   disabled,
   ...props
 }) => {
-  const baseClasses = 'font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed';
+  const baseClasses = 'font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2';
   
   const sizeClasses = {
     sm: 'px-3 py-1.5 text-[10px] rounded-lg',
@@ -53,7 +53,7 @@ export const Button: React.FC<ButtonProps> = ({
   };
   
   const variantClasses = {
-    primary: 'bg-neon-green text-black shadow-[0_0_20px_rgba(228,228,231,0.3)] hover:opacity-90 hover:scale-105',
+    primary: 'bg-neon-green text-black shadow-[0_0_20px_rgba(228,228,231,0.3)]',
     secondary: 'bg-surface border border-border text-primary hover:border-neon-green hover:bg-surface/80',
     ghost: 'bg-transparent text-muted hover:text-primary hover:bg-surface',
     danger: 'bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500 hover:text-white',
@@ -61,10 +61,13 @@ export const Button: React.FC<ButtonProps> = ({
   };
   
   return (
-    <button
-      className={`${baseClasses} ${sizeClasses[size]} ${variantClasses[variant]} ${className}`}
+    <motion.button
+      className={`${baseClasses} ${sizeClasses[size]} ${variantClasses[variant]} ${className} disabled:opacity-50 disabled:cursor-not-allowed`}
       disabled={disabled || isLoading}
-      {...props}
+      whileHover={!disabled && !isLoading ? { scale: 1.02, y: -1 } : undefined}
+      whileTap={!disabled && !isLoading ? { scale: 0.96 } : undefined}
+      transition={{ type: 'spring', stiffness: 400, damping: 17 }}
+      {...(props as any)}
     >
       {isLoading ? (
         <>
@@ -78,7 +81,7 @@ export const Button: React.FC<ButtonProps> = ({
           {rightIcon}
         </>
       )}
-    </button>
+    </motion.button>
   );
 };
 

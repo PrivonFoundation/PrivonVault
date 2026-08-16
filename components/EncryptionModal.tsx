@@ -6,6 +6,7 @@ import { FileSystemItem } from '../types';
 import { db, DBItem, getVaultKey } from '../crypto-core/db';
 import type { CryptoAlgorithm } from '../types';
 import { useI18n } from '../locales/i18nContext';
+import snowEncryptionImg from '../assets/snow-encryption.png';
 import {
   encrypt_with_passphrase,
   decrypt,
@@ -490,24 +491,30 @@ export const EncryptionModal: React.FC<EncryptionModalProps> = ({ isOpen, onClos
                          </motion.div>
                      )}
 
-                     {/* STEP 4: PROCESSING */}
-                     {step === 'processing' && (
-                         <motion.div 
-                             key="processing"
-                             initial={{ opacity: 0, scale: 0.9 }}
-                             animate={{ opacity: 1, scale: 1 }}
-                             className="flex flex-col items-center justify-center py-10 space-y-6"
-                         >
-                             <div className="relative">
-                                 <div className="absolute inset-0 bg-neon-green/20 blur-xl rounded-full" />
-                                 <Loader2 size={64} className="text-neon-green animate-spin relative z-10" />
-                             </div>
-                             <div className="text-center">
-                                  <h4 className="text-xl font-bold text-white">{t('encrypting')}</h4>
-                                  <p className="text-zinc-400 text-xs mt-2 font-mono">{t('applyingAlgorithm')} {selectedAlgo}</p>
-                             </div>
-                         </motion.div>
-                     )}
+                      {/* STEP 4: PROCESSING */}
+                      {step === 'processing' && (
+                          <motion.div 
+                              key="processing"
+                              initial={{ opacity: 0, scale: 0.9 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              className="flex flex-col items-center justify-center py-10 space-y-6"
+                          >
+                              <div className="relative">
+                                  <div className="absolute inset-0 bg-neon-green/20 blur-xl rounded-full" />
+                                  <motion.img
+                                    src={snowEncryptionImg}
+                                    alt="Encrypting"
+                                    className="w-48 h-48 object-contain relative z-10"
+                                    animate={{ scale: [1, 1.05, 1] }}
+                                    transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                                  />
+                              </div>
+                              <div className="text-center">
+                                   <h4 className="text-xl font-bold text-white">Snow is encrypting your file</h4>
+                                   <p className="text-zinc-400 text-xs mt-2">Your data is being locked with strong encryption. This will only take a moment!</p>
+                              </div>
+                          </motion.div>
+                      )}
 
                 </AnimatePresence>
             </div>

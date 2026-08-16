@@ -104,12 +104,13 @@ export const BackupView: React.FC<BackupViewProps> = ({ onBack, theme }) => {
           const allowedKeys = new Set([
             'privon_salt', 'privon_iv', 'privon_vault_blob',
             'privon_crypto_metadata', 'privon_vault_wrappers',
+            'privon_auth_mode',
             'privon_vault_pin_hash', 'privon_vault_enabled',
             'privon_ad_enabled', 'privon_ad_attempts', 'privon_ad_inactivity', 'privon_ad_countdown',
             'privon_blur_time', 'privon_lock_time',
             'privon_prog_lock_time', 'privon_prog_attempts',
             'privon_destruct_time',
-            'theme_accent', 'app_theme_config', 'app_font_config', 'app_language', 'app_region',
+            'theme_accent', 'app_language', 'app_region',
           ]);
           Object.entries(data.localStorage).forEach(([k, v]) => {
               if (v && allowedKeys.has(k)) {

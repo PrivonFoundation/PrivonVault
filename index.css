@@ -262,3 +262,33 @@ input[type="color"]::-webkit-color-swatch {
   border: none;
   border-radius: 9999px;
 }
+
+/* Performance: virtualize off-screen file items */
+.file-item {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 56px;
+}
+
+/* Animated gradient orbs */
+@keyframes blobFloat1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(20px, -30px) scale(1.05); }
+  66% { transform: translate(-10px, 20px) scale(0.95); }
+}
+
+@keyframes blobFloat2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(-25px, 15px) scale(1.08); }
+  66% { transform: translate(15px, -20px) scale(0.92); }
+}
+
+@keyframes blobFloat3 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(15px, -15px) scale(1.03); }
+}
+
+/* Smooth scrollbar for Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-color) transparent;
+}

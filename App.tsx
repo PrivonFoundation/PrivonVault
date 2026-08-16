@@ -3,8 +3,6 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { SplashScreen } from './components/SplashScreen';
 import { Dashboard } from './components/Dashboard';
 import { AuthScreen } from './components/AuthScreen';
-import { AutoDestructCountdown } from './components/AutoDestructCountdown';
-import type { AutoDestructCountdownHandle } from './components/AutoDestructCountdown';
 import { db, setVaultKey } from './crypto-core/db';
 import { I18nProvider } from './locales/i18nContext';
 import { pin_hash as hashPin } from './crypto-core/index';
@@ -43,12 +41,6 @@ const App: React.FC = () => {
   const [isBlurred, setIsBlurred] = useState(false);
   const lastActivityRef = useRef(Date.now());
 
-  const [settingsPassword, setSettingsPassword] = useState<string | null>(null);
-
-  const updateSettingsPassword = (pwd: string | null) => {
-    setSettingsPassword(pwd);
-  };
-
   const [vaultEnabled, setVaultEnabled] = useState(() => {
     const saved = localStorage.getItem('privon_vault_enabled');
     return saved !== null ? saved === 'true' : false;
@@ -83,27 +75,6 @@ const App: React.FC = () => {
     const saved = localStorage.getItem('privon_prog_attempts');
     return saved ? parseInt(saved, 10) : 3;
   });
-
-  const [autoDestructEnabled, setAutoDestructEnabled] = useState(() => {
-    return localStorage.getItem('privon_ad_enabled') === 'true';
-  });
-
-  const [autoDestructAttempts, setAutoDestructAttempts] = useState(() => {
-    const saved = localStorage.getItem('privon_ad_attempts');
-    return saved ? parseInt(saved, 10) : 5;
-  });
-
-  const [autoDestructInactivity, setAutoDestructInactivity] = useState(() => {
-    const saved = localStorage.getItem('privon_ad_inactivity');
-    return saved ? parseInt(saved, 10) : 0;
-  });
-
-  const [destructCountdownSeconds, setDestructCountdownSeconds] = useState(() => {
-    const saved = localStorage.getItem('privon_ad_countdown');
-    return saved ? parseInt(saved, 10) : 30;
-  });
-
-  const destructRef = useRef<AutoDestructCountdownHandle>(null);
 
   const [newlyGeneratedCodes, setNewlyGeneratedCodes] = useState<string[] | null>(null);
   const masterKeyRef = useRef<Uint8Array | null>(null);
@@ -142,7 +113,6 @@ const App: React.FC = () => {
   const [lockUntil, setLockUntil] = useState<number | null>(null);
 
   useEffect(() => {
-    if (!isAuthenticated || !autoDestructEnabled || autoDestructInactivity === 0) return;
     const lastActivityKey = 'privon_last_activity';
     const handleActivity = () => {
       lastActivityRef.current = Date.now();
@@ -158,10 +128,6 @@ const App: React.FC = () => {
     const intervalId = setInterval(() => {
       const now = Date.now();
       const elapsed = (now - lastActivityRef.current) / 1000;
-      if (elapsed >= autoDestructInactivity) {
-        performWipe();
-        return;
-      }
       if (elapsed >= autoLockSeconds) {
         handleLock();
         return;
@@ -174,22 +140,7 @@ const App: React.FC = () => {
       events.forEach(event => window.removeEventListener(event, handleActivity));
       clearInterval(intervalId);
     };
-  }, [isAuthenticated, isBlurred, autoBlurSeconds, autoLockSeconds, autoDestructInactivity, autoDestructEnabled]);
-
-  useEffect(() => {
-    if (isAuthenticated || !autoDestructEnabled || autoDestructInactivity === 0) return;
-    const lastActivityKey = 'privon_last_activity';
-    const checkInactivityOnAuthScreen = setInterval(() => {
-      const lastActivity = localStorage.getItem(lastActivityKey);
-      if (lastActivity) {
-        const elapsed = (Date.now() - parseInt(lastActivity, 10)) / 1000;
-        if (elapsed >= autoDestructInactivity) {
-          performWipe();
-        }
-      }
-    }, 1000);
-    return () => clearInterval(checkInactivityOnAuthScreen);
-  }, [isAuthenticated, autoDestructEnabled, autoDestructInactivity]);
+  }, [isAuthenticated, isBlurred, autoBlurSeconds, autoLockSeconds]);
 
   const performWipe = async () => {
     try {
@@ -210,7 +161,6 @@ const App: React.FC = () => {
     setIsBlurred(false);
     setFailedAttempts(0);
     setLockUntil(null);
-    destructRef.current?.cancel();
     lastActivityRef.current = Date.now();
   };
 
@@ -218,10 +168,7 @@ const App: React.FC = () => {
     const newCount = failedAttempts + 1;
     setFailedAttempts(newCount);
 
-    if (autoDestructEnabled && autoDestructAttempts > 0 && newCount >= autoDestructAttempts) {
-      setLockUntil(null);
-      destructRef.current?.trigger(destructCountdownSeconds);
-    } else if (newCount >= failedAttemptsThreshold) {
+    if (newCount >= failedAttemptsThreshold) {
       const lockDuration = progressiveLockSeconds * 1000;
       setLockUntil(Date.now() + lockDuration);
     }
@@ -233,42 +180,6 @@ const App: React.FC = () => {
     setVaultKey(null);
     masterKeyRef.current = null;
   };
-
-  useEffect(() => {
-    if (!isAuthenticated) return;
-
-    const handleActivity = () => {
-      lastActivityRef.current = Date.now();
-      if (isBlurred) setIsBlurred(false);
-    };
-
-    const events = ['mousedown', 'mousemove', 'keydown', 'touchstart', 'scroll'];
-    events.forEach(event => window.addEventListener(event, handleActivity));
-
-    const intervalId = setInterval(() => {
-      const now = Date.now();
-      const elapsed = (now - lastActivityRef.current) / 1000;
-
-      if (autoDestructEnabled && autoDestructInactivity > 0 && elapsed >= autoDestructInactivity) {
-        performWipe();
-        return;
-      }
-
-      if (elapsed >= autoLockSeconds) {
-        handleLock();
-        return;
-      }
-
-      if (elapsed >= autoBlurSeconds) {
-        if (!isBlurred) setIsBlurred(true);
-      }
-    }, 1000);
-
-    return () => {
-      events.forEach(event => window.removeEventListener(event, handleActivity));
-      clearInterval(intervalId);
-    };
-  }, [isAuthenticated, isBlurred, autoBlurSeconds, autoLockSeconds, autoDestructInactivity, autoDestructEnabled]);
 
   const resetMasterPasswordWithRecovery = async (code: string, newPassword: string): Promise<{ success: boolean; error?: string }> => {
     try {
@@ -310,6 +221,7 @@ const App: React.FC = () => {
 
       localStorage.setItem('privon_crypto_metadata', JSON.stringify(meta));
       localStorage.setItem('privon_vault_wrappers', JSON.stringify(wrappers));
+      localStorage.removeItem('privon_auth_mode');
 
       setVaultKey(mvkBytes);
       masterKeyRef.current = newMasterKey;
@@ -365,9 +277,7 @@ const App: React.FC = () => {
 
   const applyThreatModel = (config: {
     autoBlurSeconds: number; autoLockSeconds: number; failedAttemptsThreshold: number;
-    progressiveLockSeconds: number; autoDestructEnabled: boolean; autoDestructAttempts: number;
-    autoDestructInactivity: number; destructCountdownSeconds: number;
-    minPasswordLength?: number; settingsPasswordRequired?: boolean;
+    progressiveLockSeconds: number;
     vaultPinAllowed?: boolean;
   }) => {
     setAutoBlurSeconds(config.autoBlurSeconds);
@@ -378,20 +288,7 @@ const App: React.FC = () => {
     localStorage.setItem('privon_prog_lock_time', config.progressiveLockSeconds.toString());
     setFailedAttemptsThreshold(config.failedAttemptsThreshold);
     localStorage.setItem('privon_prog_attempts', config.failedAttemptsThreshold.toString());
-    setAutoDestructEnabled(config.autoDestructEnabled);
-    localStorage.setItem('privon_ad_enabled', config.autoDestructEnabled.toString());
-    setAutoDestructAttempts(config.autoDestructAttempts);
-    localStorage.setItem('privon_ad_attempts', config.autoDestructAttempts.toString());
-    setAutoDestructInactivity(config.autoDestructInactivity);
-    localStorage.setItem('privon_ad_inactivity', config.autoDestructInactivity.toString());
-    setDestructCountdownSeconds(config.destructCountdownSeconds);
-    localStorage.setItem('privon_ad_countdown', config.destructCountdownSeconds.toString());
 
-    if (config.settingsPasswordRequired && !settingsPassword) {
-      localStorage.setItem('privon_settings_password_required', 'true');
-    } else if (config.settingsPasswordRequired === false) {
-      localStorage.removeItem('privon_settings_password_required');
-    }
     if (config.vaultPinAllowed === false && vaultEnabled) {
       updateVaultSettings(false, null);
     }
@@ -415,9 +312,7 @@ const App: React.FC = () => {
                }}
                 onResetWithRecovery={resetMasterPasswordWithRecovery}
                 onStoreMasterKey={(key) => { masterKeyRef.current = key; }}
-                onApplyThreatModel={applyThreatModel}
-                destructRef={destructRef}
-                onDestructComplete={performWipe}
+                 onApplyThreatModel={applyThreatModel}
                 onNewCodes={(codes) => {
                   setNewlyGeneratedCodes(codes);
                   const tier = (() => { try { return JSON.parse(localStorage.getItem('privon_crypto_metadata') || '{}').tier || 1; } catch { return 1; } })();
@@ -429,11 +324,6 @@ const App: React.FC = () => {
          ) : (
            <motion.div key="dashboard" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="relative h-full">
               <Dashboard
-                settingsLock={{
-                  password: settingsPassword,
-                  setPassword: updateSettingsPassword,
-                  required: localStorage.getItem('privon_settings_password_required') === 'true'
-                }}
                 recoverySettings={{
                   codes: newlyGeneratedCodes,
                   count: recoveryWrappersCount,
@@ -482,29 +372,7 @@ const App: React.FC = () => {
                    setFailedAttemptsThreshold(v);
                    localStorage.setItem('privon_prog_attempts', v.toString());
                  }
-               }}
-                autoDestructSettings={{
-                  enabled: autoDestructEnabled,
-                  setEnabled: (v) => {
-                     setAutoDestructEnabled(v);
-                     localStorage.setItem('privon_ad_enabled', v.toString());
-                  },
-                  attempts: autoDestructAttempts,
-                  setAttempts: (v) => {
-                     setAutoDestructAttempts(v);
-                     localStorage.setItem('privon_ad_attempts', v.toString());
-                  },
-                  inactivitySeconds: autoDestructInactivity,
-                  setInactivitySeconds: (v) => {
-                     setAutoDestructInactivity(v);
-                     localStorage.setItem('privon_ad_inactivity', v.toString());
-                  },
-                  countdownSeconds: destructCountdownSeconds,
-                    setCountdownSeconds: (v: number) => {
-                      setDestructCountdownSeconds(v);
-                      localStorage.setItem('privon_ad_countdown', v.toString());
-                    }
-                 }}
+                }}
                />
 
               <AnimatePresence>
