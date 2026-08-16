@@ -83,8 +83,8 @@ jobs:
 
       - name: Install quick-sharun
         run: |
-          wget -q https://raw.githubusercontent.com/pkgforge-dev/Anylinux-AppImages/0a6a74c362a218b3a8b6bde137bbf8a63d3a8fec/useful-tools/quick-sharun.sh
-           echo "d5558cd419c8d46bdc958064cb97f963d1ea793866414c025906ec15033512ed  quick-sharun.sh" | sha256sum --check
+          wget -q https://raw.githubusercontent.com/pkgforge-dev/Anylinux-AppImages/17acc38983ef60d678208ac418e3cf8bf594ea17/useful-tools/quick-sharun.sh
+           echo "946fe6f4c357f6e50cf5eb6fd11510f2a01f8b8e4b126dee5212ea6f832583b1  quick-sharun.sh" | sha256sum --check
           chmod +x quick-sharun.sh
 
       - name: Install standard appimagetool (probonopd, squashfs format)
