@@ -87,16 +87,18 @@ jobs:
            echo "946fe6f4c357f6e50cf5eb6fd11510f2a01f8b8e4b126dee5212ea6f832583b1  quick-sharun.sh" | sha256sum --check
           chmod +x quick-sharun.sh
 
-      - name: Install standard appimagetool (probonopd, squashfs format)
+      - name: Install standard appimagetool (AppImage/appimagetool, squashfs format)
         run: |
           cd /tmp
-          wget -q https://github.com/probonopd/go-appimage/releases/download/continuous/appimagetool-940-x86_64.AppImage
-          echo "0019dfc4b32d63c1392aa264aed2253c1e0c2fb09216f8e2cc269bbfb8bb49b5  appimagetool-940-x86_64.AppImage" | sha256sum --check
-          chmod +x appimagetool-940-x86_64.AppImage
-          ./appimagetool-940-x86_64.AppImage --appimage-extract > /dev/null
-          ls -la squashfs-root/usr/bin/appimagetool
-          ./squashfs-root/usr/bin/appimagetool --version
-          echo "Static appimagetool ready at /tmp/squashfs-root/usr/bin/appimagetool"
+          wget -q https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
+          echo "a6d71e2b6cd66f8e8d16c37ad164658985e0cf5fcaa950c90a482890cb9d13e0  appimagetool-x86_64.AppImage" | sha256sum --check
+          chmod +x appimagetool-x86_64.AppImage
+          ./appimagetool-x86_64.AppImage --appimage-extract > /dev/null
+          APPIMAGETOOL_BIN=$(find "$PWD/squashfs-root" -type f -name appimagetool | head -1)
+          test -n "$APPIMAGETOOL_BIN"
+          echo "Located appimagetool at: $APPIMAGETOOL_BIN"
+          "$APPIMAGETOOL_BIN" --version
+          echo "APPIMAGETOOL_BIN=$APPIMAGETOOL_BIN" >> "$GITHUB_ENV"
 
       - name: Build truly-portable AppImage with quick-sharun
         env:
@@ -108,7 +110,7 @@ jobs:
           DEPLOY_PULSE: 1
           OUTPUT_APPIMAGE: 1
           APPIMAGE_NAME: PrivonVault
-          APPIMAGETOOL: /tmp/squashfs-root/usr/bin/appimagetool
+          APPIMAGETOOL: ${{ env.APPIMAGETOOL_BIN }}
           VERSION: ${{ github.ref_name }}
           DESKTOP: ${{ github.workspace }}/src-tauri/privon.desktop
           ICON: ${{ github.workspace }}/src-tauri/icons/icon.png
