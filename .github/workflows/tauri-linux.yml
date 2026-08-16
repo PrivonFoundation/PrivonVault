@@ -124,8 +124,10 @@ jobs:
           # Increase namespace limits to prevent ENOSPC errors
           sudo sysctl -w user.max_user_namespaces=15000 || true
           STDERR_LOG=$(mktemp)
+          set +e
           timeout 600 ./quick-sharun.sh "${{ steps.locate.outputs.binary }}" 2> "$STDERR_LOG"
           EXIT_CODE=$?
+          set -e
           grep -v "tr: write error: Broken pipe" "$STDERR_LOG" >&2 || true
           rm -f "$STDERR_LOG"
           exit $EXIT_CODE
