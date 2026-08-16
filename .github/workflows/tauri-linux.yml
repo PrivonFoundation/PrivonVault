@@ -87,19 +87,6 @@ jobs:
            echo "946fe6f4c357f6e50cf5eb6fd11510f2a01f8b8e4b126dee5212ea6f832583b1  quick-sharun.sh" | sha256sum --check
           chmod +x quick-sharun.sh
 
-      - name: Install standard appimagetool (AppImage/appimagetool, squashfs format)
-        run: |
-          cd /tmp
-          wget -q https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
-          echo "a6d71e2b6cd66f8e8d16c37ad164658985e0cf5fcaa950c90a482890cb9d13e0  appimagetool-x86_64.AppImage" | sha256sum --check
-          chmod +x appimagetool-x86_64.AppImage
-          ./appimagetool-x86_64.AppImage --appimage-extract > /dev/null
-          APPIMAGETOOL_BIN=$(find "$PWD/squashfs-root" -type f -name appimagetool | head -1)
-          test -n "$APPIMAGETOOL_BIN"
-          echo "Located appimagetool at: $APPIMAGETOOL_BIN"
-          "$APPIMAGETOOL_BIN" --version
-          echo "APPIMAGETOOL_BIN=$APPIMAGETOOL_BIN" >> "$GITHUB_ENV"
-
       - name: Install desktop-file-utils (required by appimagetool)
         run: |
           sudo apt-get update
@@ -117,7 +104,6 @@ jobs:
           APPIMAGE_NAME: PrivonVault
           STRACE_BINARY: privon-vault
           STRACE_MODE: 0
-          APPIMAGETOOL: ${{ env.APPIMAGETOOL_BIN }}
           VERSION: ${{ github.ref_name }}
           DESKTOP: ${{ github.workspace }}/src-tauri/privon.desktop
           ICON: ${{ github.workspace }}/src-tauri/icons/icon.png
