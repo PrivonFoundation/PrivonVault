@@ -111,6 +111,7 @@ jobs:
           OUTPUT_APPIMAGE: 1
           APPIMAGE_NAME: PrivonVault
           STRACE_BINARY: privon-vault
+          STRACE_MODE: 0
           APPIMAGETOOL: ${{ env.APPIMAGETOOL_BIN }}
           VERSION: ${{ github.ref_name }}
           DESKTOP: ${{ github.workspace }}/src-tauri/privon.desktop
