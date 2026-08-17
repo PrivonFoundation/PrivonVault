@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Eye, EyeOff, Loader2, ShieldCheck, Timer, Key, Sparkles, Edit3, Copy, Check, ChevronRight, Target, ShieldAlert, Lock, FolderOpen, RefreshCw, Code2, Smartphone } from 'lucide-react';
+import { Eye, EyeOff, Loader2, ShieldCheck, Timer, Key, Sparkles, Edit3, Copy, Check, ChevronRight, Target, ShieldAlert, Lock, FolderOpen, RefreshCw, Code2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useI18n } from '../locales/i18nContext';
 import logoImg from '../assets/logo.png';
@@ -21,7 +21,6 @@ import {
   decrypt,
   get_argon_params,
 } from '../crypto-core/index';
-import { getDeviceKey, storeDeviceKey } from '../utils/deviceKey';
 import { setVaultKey } from '../crypto-core/db';
 import type { CryptoMetadata, VaultWrappers } from '../types';
 
@@ -52,8 +51,6 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
   const [infoTier, setInfoTier] = useState<number | null>(null);
   const [confirmTier, setConfirmTier] = useState<number | null>(null);
   const [copied, setCopied] = useState(false);
-  const [deviceKeyMode, setDeviceKeyMode] = useState(false);
-  const deviceUnlockAttemptedRef = useRef(false);
 
   const [setupProgress, setSetupProgress] = useState(0);
   const [setupProgressLabel, setSetupProgressLabel] = useState('');
@@ -89,45 +86,6 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
   }, [lockUntil]);
 
   const isLocked = timeLeft > 0;
-
-  useEffect(() => {
-    if (isSetup || isLocked) return;
-    if (localStorage.getItem('privon_auth_mode') !== 'device') return;
-    if (deviceUnlockAttemptedRef.current) return;
-    deviceUnlockAttemptedRef.current = true;
-    let cancelled = false;
-
-    (async () => {
-      setIsProcessing(true);
-      setError(null);
-      const deviceKey = await getDeviceKey();
-      if (cancelled) return;
-      if (!deviceKey) {
-        const wrappersRaw = localStorage.getItem('privon_vault_wrappers');
-        const wrappers: VaultWrappers | null = wrappersRaw ? JSON.parse(wrappersRaw) : null;
-        setError(wrappers?.master ? t('deviceKeyUnavailable') : t('deviceKeyUnavailableNoPassword'));
-        setIsProcessing(false);
-        return;
-      }
-      try {
-        const wrappersRaw = localStorage.getItem('privon_vault_wrappers');
-        const wrappers: VaultWrappers | null = wrappersRaw ? JSON.parse(wrappersRaw) : null;
-        if (!wrappers?.device) throw new Error('missing device wrapper');
-        const mvkBytes = await unwrap_raw_key(JSON.stringify(wrappers.device), deviceKey);
-        deviceKey.fill(0);
-        setVaultKey(mvkBytes);
-        mvkBytes.fill(0);
-        onUnlock();
-      } catch {
-        if (!cancelled) {
-          setError(t('deviceKeyUnlockFailed'));
-          setIsProcessing(false);
-        }
-      }
-    })();
-
-    return () => { cancelled = true; };
-  }, [isSetup, isLocked, onUnlock, t]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -204,8 +162,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
   const handleCreateFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    const hasPassword = password.length > 0;
-    if (hasPassword && password.length < 30) {
+    if (password.length < 30) {
       setError(t('passwordTooShort'));
       return;
     }
@@ -224,8 +181,6 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
     setError(null);
 
     const yieldToReact = () => new Promise(r => setTimeout(r, 16));
-    const useDeviceKey = deviceKeyMode;
-    const hasPassword = password.length >= 30;
 
     try {
       setSetupProgress(2);
@@ -236,39 +191,16 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
 
       const masterSalt = window.crypto.getRandomValues(new Uint8Array(16));
       let masterWrapper: { ciphertext: string; iv: string } | null = null;
-      let deviceWrapper: { ciphertext: string; iv: string } | null = null;
 
-      if (hasPassword) {
-        setSetupProgress(10);
-        setSetupProgressLabel('Deriving master key...');
-        await yieldToReact();
-        const masterKey = derive_key(new TextEncoder().encode(password), masterSalt, argonParams.iterations, argonParams.memoryKib, argonParams.parallelism, 32);
+      setSetupProgress(10);
+      setSetupProgressLabel('Deriving master key...');
+      await yieldToReact();
+      const masterKey = derive_key(new TextEncoder().encode(password), masterSalt, argonParams.iterations, argonParams.memoryKib, argonParams.parallelism, 32);
 
-        setSetupProgress(30);
-        setSetupProgressLabel('Wrapping master key...');
-        await yieldToReact();
-        masterWrapper = JSON.parse(await wrap_raw_key(mvkBytes, masterKey));
-      }
-
-      if (useDeviceKey) {
-        setSetupProgress(32);
-        setSetupProgressLabel('Securing device key...');
-        await yieldToReact();
-        const deviceKey = await generate_vault_key();
-        deviceWrapper = JSON.parse(await wrap_raw_key(mvkBytes, deviceKey));
-        const stored = await storeDeviceKey(deviceKey);
-        deviceKey.fill(0);
-        if (stored) {
-          localStorage.setItem('privon_auth_mode', 'device');
-        } else {
-          deviceWrapper = null;
-          if (!hasPassword) {
-            setError(t('deviceKeyUnavailable'));
-            setIsProcessing(false);
-            return;
-          }
-        }
-      }
+      setSetupProgress(30);
+      setSetupProgressLabel('Wrapping master key...');
+      await yieldToReact();
+      masterWrapper = JSON.parse(await wrap_raw_key(mvkBytes, masterKey));
 
       setSetupProgress(35);
       setSetupProgressLabel('Generating recovery codes...');
@@ -309,8 +241,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
         tier: tierId,
       };
       const wrappers: VaultWrappers = {
-        ...(masterWrapper ? { master: masterWrapper } : {}),
-        ...(deviceWrapper ? { device: deviceWrapper } : {}),
+        master: masterWrapper!,
         recovery: recoveryWrappers,
       };
 
@@ -696,25 +627,6 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
                   ><Edit3 size={18} className="text-neon-green" /><span className="text-[10px] text-zinc-300 font-medium text-center leading-tight">{t('setupTypeManual')}</span></button>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => setDeviceKeyMode(!deviceKeyMode)}
-                  className={`w-full flex items-center gap-3 p-2.5 rounded-xl border transition-all active:scale-[0.98] ${deviceKeyMode ? 'bg-neon-green/10 border-neon-green/40' : 'bg-zinc-900/50 border-zinc-800 hover:border-zinc-600'}`}
-                >
-                  <Smartphone size={18} className={deviceKeyMode ? 'text-neon-green' : 'text-zinc-400'} />
-                  <div className="flex-1 text-left">
-                    <p className={`text-xs font-semibold ${deviceKeyMode ? 'text-neon-green' : 'text-zinc-300'}`}>{t('deviceKeySetup')}</p>
-                    <p className="text-[10px] text-zinc-500 leading-tight">{t('deviceKeySetupDesc')}</p>
-                  </div>
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${deviceKeyMode ? 'bg-neon-green/20 text-neon-green' : 'bg-zinc-800 text-zinc-500'}`}>{deviceKeyMode ? t('on') : t('off')}</span>
-                </button>
-
-                {deviceKeyMode && (
-                  <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} className="p-2 rounded-lg bg-red-500/10 border border-red-500/20">
-                    <p className="text-red-400 text-[10px] text-center leading-relaxed">⚠️ {t('deviceKeyWarning')}</p>
-                  </motion.div>
-                )}
-
                 {(password || confirmPassword) && (
                   <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
                     <p className="text-amber-400 text-[10px] text-center leading-relaxed">⚠️ {t('setupCopyWarning')}</p>
@@ -727,7 +639,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
 
                 <form onSubmit={handleCreateFormSubmit} className="space-y-2.5">
                   <div className="space-y-1">
-                    <label className="text-xs text-muted font-medium ml-1">{deviceKeyMode ? t('deviceKeyPasswordOptional') : t('masterPassword')}</label>
+                    <label className="text-xs text-muted font-medium ml-1">{t('masterPassword')}</label>
                     <div className="relative">
                       <input type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)}
                         placeholder={t('enterPasswordField')}

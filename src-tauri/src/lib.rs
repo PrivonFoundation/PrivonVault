@@ -17,12 +17,8 @@ pub fn run() {
     let builder = tauri::Builder::default();
 
     builder
-        .plugin(tauri_plugin_keyring_store::init())
         .invoke_handler(tauri::generate_handler![
             greet,
-            keyring_set,
-            keyring_get,
-            keyring_delete,
             // Primitives
             derive_key,
             aes_gcm_encrypt,
@@ -67,25 +63,6 @@ pub fn run() {
 #[tauri::command]
 fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
-}
-
-fn keyring_store(app: &tauri::AppHandle) -> tauri_plugin_keyring_store::KeyringStore {
-    tauri_plugin_keyring_store::KeyringStore::new(app.config().identifier.clone())
-}
-
-#[tauri::command]
-fn keyring_set(app: tauri::AppHandle, account: String, secret: Vec<u8>) -> Result<(), String> {
-    keyring_store(&app).set_bytes(&account, &secret).map_err(map_err)
-}
-
-#[tauri::command]
-fn keyring_get(app: tauri::AppHandle, account: String) -> Result<Option<Vec<u8>>, String> {
-    keyring_store(&app).get_bytes(&account).map_err(map_err)
-}
-
-#[tauri::command]
-fn keyring_delete(app: tauri::AppHandle, account: String) -> Result<(), String> {
-    keyring_store(&app).delete(&account).map_err(map_err)
 }
 
 fn map_err<E: std::fmt::Display>(e: E) -> String {

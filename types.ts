@@ -67,7 +67,6 @@ export interface CryptoMetadata {
 }
 
 export interface VaultWrappers {
-  master?: { ciphertext: string; iv: string };
-  device?: { ciphertext: string; iv: string };
+  master: { ciphertext: string; iv: string };
   recovery: Record<string, { ciphertext: string; iv: string }>;
 }

@@ -221,7 +221,6 @@ const App: React.FC = () => {
 
       localStorage.setItem('privon_crypto_metadata', JSON.stringify(meta));
       localStorage.setItem('privon_vault_wrappers', JSON.stringify(wrappers));
-      localStorage.removeItem('privon_auth_mode');
 
       setVaultKey(mvkBytes);
       masterKeyRef.current = newMasterKey;

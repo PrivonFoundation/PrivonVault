@@ -3,7 +3,6 @@
   "description": "Default capabilities for Privon Vault",
   "windows": ["main"],
   "permissions": [
-    "core:default",
-    "keyring-store:default"
+    "core:default"
   ]
 }
