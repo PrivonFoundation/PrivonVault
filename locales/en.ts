@@ -93,7 +93,8 @@ export const translations: Translations = {
   setupGeneratePwd: 'Generate Password',
   setupCreatePhrase: 'Create Passphrase',
   setupTypeManual: 'Type Manually',
-  setupCopyWarning: 'Copy this password now. It can only be shown once and cannot be recovered!',
+  setupCopyWarning1: 'Save this 15-word phrase now — write it down or download it and keep it in a safe place.',
+  setupCopyWarning2: 'If you ever lose access to your data, you will also need your recovery codes and an encrypted backup to restore your vault.',
   unlockVault: 'Unlock Vault',
   min30Chars: 'Requires a password of minimum 30 characters.',
   argon2idAES: 'Secured with Argon2id & AES-GCM.',
@@ -663,4 +664,7 @@ export const translations: Translations = {
   modelDestructCount: 'Destruct countdown',
   inactivityOff: 'Off',
   recoveryOnly: 'Recovery only',
+  yourPassphrase: 'Your Passphrase',
+  downloadPhrase: 'Download',
+  regenerate: 'Regenerate',
 }

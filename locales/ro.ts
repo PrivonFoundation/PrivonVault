@@ -109,7 +109,8 @@ export const translations: Translations = {
   setupGeneratePwd: 'Generează parolă',
   setupCreatePhrase: 'Creează frază',
   setupTypeManual: 'Tastează manual',
-  setupCopyWarning: 'Copiază această parolă acum. Poate fi afișată o singură dată și nu poate fi recuperată!',
+  setupCopyWarning1: 'Salvează acum această frază de 15 cuvinte — noteaz-o sau descarc-o și păstreaz-o într-un loc sigur.',
+  setupCopyWarning2: 'Dacă vreodată pierzi accesul la date, vei avea nevoie și de codurile de recuperare și de un backup criptat pentru a-ți restaura seiful.',
   unlockVault: 'Deblochează Seiful',
   min30Chars: 'Necesar o parolă de minimum 30 de caractere.',
   argon2idAES: 'Securizat prin Argon2id & AES-GCM.',
@@ -666,4 +667,7 @@ export const translations: Translations = {
   modelDestructCount: 'Contorizare distrugere',
   inactivityOff: 'Oprit',
   recoveryOnly: 'Doar recuperare',
+  yourPassphrase: 'Fraza ta',
+  downloadPhrase: 'Descarcă',
+  regenerate: 'Regenerează',
 }

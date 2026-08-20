@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Eye, EyeOff, Loader2, ShieldCheck, Timer, Key, Sparkles, Edit3, Copy, Check, ChevronRight, Target, ShieldAlert, Lock, FolderOpen, RefreshCw, Code2 } from 'lucide-react';
+import { Eye, EyeOff, Loader2, ShieldCheck, Timer, Sparkles, Copy, Check, ChevronRight, Target, ShieldAlert, Lock, FolderOpen, RefreshCw, Code2, Download } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useI18n } from '../locales/i18nContext';
 import logoImg from '../assets/logo.png';
@@ -7,6 +7,7 @@ import welcomeImg from '../assets/welcome.png';
 import snowBenefitsImg from '../assets/snow-benefits.png';
 const threatModelVideo = undefined;
 import { AutoDestructCountdown } from './AutoDestructCountdown';
+import { generatePassphrase } from '../utils/passphrase';
 
 import type { AutoDestructCountdownHandle } from './AutoDestructCountdown';
 import {
@@ -162,7 +163,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
   const handleCreateFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    if (password.length < 30) {
+    if (!passphraseGenerated && password.length < 30) {
       setError(t('passwordTooShort'));
       return;
     }
@@ -362,93 +363,36 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
     { id: 5, icon: ShieldAlert, nameKey: 'advancedProtection', descKey: 'advancedProtectionDesc', blocked: true, config: THREAT_MODEL_TIER5 },
   ] as const;
 
-  const WORD_LIST = [
-    'apple','autumn','basin','batch','beach','beard','bench','birth','black','blank',
-    'blast','blend','bless','blind','block','bloom','board','boast','bonus','boost',
-    'brain','brand','brave','bread','break','breed','brief','bring','broad','brook',
-    'brown','brush','build','bunch','burst','cabin','cable','calm','camel','candy',
-    'cargo','carve','catch','cause','cedar','chain','chair','chalk','charm','chart',
-    'chase','cheap','check','cheek','cheer','chess','chest','chief','child','chill',
-    'choir','civic','civil','claim','clash','class','clean','clear','clerk','cliff',
-    'climb','cling','clock','close','cloth','cloud','coach','coast','coral','couch',
-    'count','court','cover','crack','craft','crane','crash','crawl','cream','crest',
-    'crime','crisp','cross','crowd','crown','crush','curve','cycle','daily','dance',
-    'debut','decay','delay','delta','dense','depth','derby','diary','donor','doubt',
-    'draft','drain','drama','dress','drift','drill','drink','drive','drone','eager',
-    'eagle','early','earth','eight','elder','elect','elite','empty','enjoy','enter',
-    'entry','equal','equip','error','essay','event','exact','exist','extra','fable',
-    'faith','false','fancy','fatal','fault','feast','fence','ferry','fetch','fever',
-    'fiber','field','fierce','fifth','fifty','fight','final','first','flame','flash',
-    'fleet','flesh','float','flock','flood','floor','flora','flour','fluid','flush',
-    'focus','force','forge','forth','forum','found','frame','frank','fraud','fresh',
-    'front','frost','fruit','gauge','ghost','giant','given','glad','glare','glass',
-    'glide','globe','gloom','glory','glove','glow','grace','grade','grain','grand',
-    'grant','grape','graph','grasp','grass','grave','great','green','greet','grief',
-    'grill','grind','gross','group','grove','guard','guess','guest','guide','guild',
-    'guilt','habit','happy','harsh','haven','heart','heavy','hedge','height','helmet',
-    'herald','herd','hike','honey','honor','horse','hotel','house','hover','human',
-    'humor','hurry','ideal','image','imply','index','inner','input','irony','ivory',
-    'jewel','joint','judge','juice','kebab','kernel','kettle','keypad','knock','label',
-    'labor','ladder','lance','large','laser','later','launch','layer','layout','leader',
-    'leaf','league','learn','leave','ledge','legal','lemon','level','light','limit',
-    'linen','links','liver','lobby','local','lodge','logic','loose','lover','lower',
-    'loyal','lucky','lunar','lunch','luxury','magic','major','maker','manor','maple',
-    'marble','march','margin','marker','market','marsh','mask','match','maxim','mayor',
-    'meadow','media','melon','melt','member','memory','mercy','merge','merit','metal',
-    'meter','might','minor','minus','mirror','mixed','mobile','model','money','month',
-    'moral','motor','mount','mouse','mouth','movie','museum','music','naive','narrow',
-    'naval','nerve','never','night','noble','noise','north','noted','novel','nurse',
-    'nylon','oasis','ocean','offer','often','olive','opera','orbit','order','organ',
-    'other','outer','output','oval','oven','owner','oxide','ozone','panel','panic',
-    'paper','pardon','parish','parrot','party','patch','pause','peace','pearl','phase',
-    'phone','photo','piano','piece','pilot','pinch','pixel','place','plain','plane',
-    'plant','plate','plaza','pluck','plumb','plume','point','polar','polish','polite',
-    'porch','pork','port','post','potato','pound','power','press','price','pride',
-    'prime','print','prior','prism','prize','probe','proof','pulse','punch','pupil',
-    'purple','purse','quest','queue','quick','quiet','quite','quote','radar','radio',
-    'raise','rally','ranch','range','rapid','ratio','reach','react','ready','realm',
-    'rebel','refer','reign','relax','relay','renew','reply','resin','reward','rhythm',
-    'rifle','right','rigid','ruler','rural','saber','safari','salad','salmon','salon',
-    'salute','satin','sauce','scale','scalp','scene','scent','scope','score','scrub',
-    'search','second','secret','sense','sensor','setup','seven','shade','shadow','shape',
-    'share','shark','sharp','shawl','sheep','sheet','shelf','shell','shift','shine',
-    'shirt','shock','shore','short','shout','sight','sigma','silly','since','sketch',
-    'skill','skull','slate','slave','sleep','slice','slide','slope','smart','smell',
-    'smile','smoke','snack','snake','solar','solid','solve','sorry','sound','south',
-    'space','spare','spark','speak','spear','speed','spell','spend','spice','spill',
-    'spine','spirit','split','spoil','spoon','sport','spray','spread','spring','square',
-    'stable','stair','stamp','stand','stark','start','state','steam','steel','steep',
-    'steer','stern','stick','stiff','still','stock','stone','stood','stool','store',
-    'storm','story','stove','strap','straw','strip','stuck','study','stuff','style',
-    'sugar','suite','sunny','super','surge','swamp','swan','swap','sweet','swift',
-    'swing','sword','table','tablet','taste','teach','teeth','temple','theme','thick',
-    'thief','thing','think','third','thorn','three','throw','thumb','tiger','tight',
-    'timer','tired','title','token','total','touch','towel','tower','trace','track',
-    'trade','trail','train','trait','trash','treat','trend','trial','tribe','trick',
-    'troop','truck','truly','trump','trunk','trust','truth','twice','twist','ultra',
-    'uncle','under','union','unite','unity','upper','upset','urban','usage','usual',
-    'valid','value','valve','vault','venue','verse','video','vigor','vinyl','viral',
-    'virus','visit','vista','vital','vivid','vocal','voice','voter','waist','waste',
-    'watch','water','weave','wheat','wheel','white','whole','woman','world','worry',
-    'worse','worst','worth','wound','write','wrong','yacht','yield','young','youth',
-    'zebra','zone',
-  ];
 
-  const generatePassword = (): string => {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%^&*';
-    const bytes = new Uint32Array(32);
-    window.crypto.getRandomValues(bytes);
-    let result = '';
-    for (let i = 0; i < 32; i++) {
-      result += chars[bytes[i] % chars.length];
+  const [passphraseGenerated, setPassphraseGenerated] = useState(false);
+
+  useEffect(() => {
+    if (isSetup && setupStep === 'create' && !passphraseGenerated) {
+      const phrase = generatePassphrase();
+      setPassword(phrase);
+      setConfirmPassword(phrase);
+      setPassphraseGenerated(true);
+      setError(null);
     }
-    return result;
+  }, [isSetup, setupStep, passphraseGenerated]);
+
+  const handleRegeneratePassphrase = () => {
+    const phrase = generatePassphrase();
+    setPassword(phrase);
+    setConfirmPassword(phrase);
+    setError(null);
   };
 
-  const generatePassphrase = (): string => {
-    const indices = new Uint32Array(6);
-    window.crypto.getRandomValues(indices);
-    return Array.from(indices).map(i => WORD_LIST[i % WORD_LIST.length]).join('-');
+  const handleDownloadPassphrase = () => {
+    try {
+      const blob = new Blob([password], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'privon-vault-passphrase.txt';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {}
   };
 
   const handleCopyPassword = async () => {
@@ -599,83 +543,122 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.18, ease: 'easeOut' }}
-              className="flex flex-col items-center justify-center px-6 h-full"
+              className="absolute inset-0 overflow-hidden bg-background"
             >
-              <div className="flex flex-col items-center space-y-2 md:space-y-3 mb-4">
-                <div className="relative w-36 h-36 md:w-48 md:h-48">
-                  <div className="absolute -inset-4 md:-inset-6 blur-[80px] md:blur-[120px] rounded-full animate-pulse" style={{ backgroundColor: `rgba(${accentRgb}, 0.3)` }} />
-                  <img src={logoImg} alt="Privon Vault" className="w-full h-full object-contain" style={{ filter: `drop-shadow(0 0 40px rgba(${accentRgb}, 0.6)) drop-shadow(0 0 80px rgba(${accentRgb}, 0.3))` }} />
-                </div>
-                <div className="text-xl md:text-2xl font-bold tracking-tight">
-                  <span className="text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.4)]">{t('crytoPrefix')}</span>
-                  {' '}
-                  <span className="text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.4)]">{t('toolSuffix')}</span>
-                </div>
-                <p className="text-zinc-400 text-xs text-center">{t('setupCreateTitle')}</p>
+              {/* Gradient base — silver/white top, black bottom */}
+              <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, #ffffff 0%, #e8e8e8 15%, #b0b0b0 30%, #505050 50%, #1a1a1a 70%, #0a0a0a 85%, #000000 100%)' }} />
+
+              {/* Metal reflections — soft blurred light streaks */}
+              <div className="absolute pointer-events-none" style={{ top: '-20%', left: '10%', width: '120px', height: '180%', background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.25) 20%, rgba(0,0,0,0.4) 35%, rgba(0,0,0,0.15) 60%, rgba(0,0,0,0) 100%)', transform: 'rotate(12deg)', filter: 'blur(18px)' }} />
+              <div className="absolute pointer-events-none" style={{ top: '-15%', left: '35%', width: '80px', height: '170%', background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.15) 25%, rgba(0,0,0,0.3) 40%, rgba(0,0,0,0.1) 65%, rgba(0,0,0,0) 100%)', transform: 'rotate(8deg)', filter: 'blur(22px)' }} />
+              <div className="absolute pointer-events-none" style={{ top: '-25%', left: '58%', width: '100px', height: '190%', background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.2) 18%, rgba(0,0,0,0.35) 32%, rgba(0,0,0,0.12) 55%, rgba(0,0,0,0) 100%)', transform: 'rotate(15deg)', filter: 'blur(15px)' }} />
+              <div className="absolute pointer-events-none" style={{ top: '-10%', left: '78%', width: '90px', height: '160%', background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.18) 22%, rgba(0,0,0,0.28) 38%, rgba(0,0,0,0.08) 62%, rgba(0,0,0,0) 100%)', transform: 'rotate(10deg)', filter: 'blur(20px)' }} />
+
+              {/* Metallic blobs — top zone */}
+              <div className="absolute w-96 h-96 opacity-40" style={{ top: '-15%', left: '-10%', background: 'radial-gradient(circle, #d4d4d4 0%, transparent 70%)', borderRadius: '60% 40% 70% 30% / 50% 60% 40% 50%', animation: 'blobFloat1 20s ease-in-out infinite', filter: 'blur(60px)' }} />
+              <div className="absolute w-80 h-80 opacity-35" style={{ top: '-5%', right: '-5%', background: 'radial-gradient(circle, #c0c0c0 0%, transparent 70%)', borderRadius: '40% 60% 50% 50% / 50% 40% 60% 50%', animation: 'blobFloat2 25s ease-in-out infinite', filter: 'blur(50px)' }} />
+              <div className="absolute w-64 h-64 opacity-30" style={{ top: '10%', left: '25%', background: 'radial-gradient(circle, #e0e0e0 0%, transparent 70%)', borderRadius: '50% 60% 40% 60% / 60% 40% 60% 40%', animation: 'blobFloat3 18s ease-in-out infinite', filter: 'blur(45px)' }} />
+
+              {/* Dark blobs — bottom zone */}
+              <div className="absolute w-80 h-80 opacity-30" style={{ bottom: '-10%', right: '-10%', background: 'radial-gradient(circle, #1a1a1a 0%, transparent 70%)', borderRadius: '55% 45% 60% 40% / 45% 55% 45% 55%', animation: 'blobFloat2 28s ease-in-out infinite', filter: 'blur(50px)' }} />
+              <div className="absolute w-64 h-64 opacity-20" style={{ bottom: '5%', left: '-5%', background: 'radial-gradient(circle, #2a2a2a 0%, transparent 70%)', borderRadius: '45% 55% 35% 65% / 55% 45% 55% 45%', animation: 'blobFloat3 22s ease-in-out infinite', filter: 'blur(40px)' }} />
+
+              {/* Noise texture — premium grain */}
+              <div className="absolute inset-0 pointer-events-none opacity-[0.03]" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 256 256\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.8\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23n)\' opacity=\'1\'/%3E%3C/svg%3E")', backgroundRepeat: 'repeat', backgroundSize: '128px 128px' }} />
+
+              <div className="relative z-10 flex flex-col items-center h-full px-6 pt-8 pb-8 overflow-y-auto">
+
+              <button type="button" onClick={() => { setSetupStep('intro'); setPassword(''); setConfirmPassword(''); setError(null); }}
+                className="absolute left-6 top-8 text-[11px] text-white/50 hover:text-white transition-colors"
+              >← {t('backButton')}</button>
+
+              <motion.img
+                src={logoImg}
+                alt="Privon Vault"
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.5, ease: 'easeOut' }}
+                className="w-32 h-32 md:w-40 md:h-40 object-contain"
+                style={{ filter: `drop-shadow(0 0 40px rgba(${accentRgb}, 0.55)) drop-shadow(0 0 90px rgba(${accentRgb}, 0.25))` }}
+              />
+
+              <div className="text-xl md:text-2xl font-bold tracking-tight mt-4 mb-8">
+                <span className="text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.4)]">{t('crytoPrefix')}</span>
+                {' '}
+                <span className="text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.4)]">{t('toolSuffix')}</span>
               </div>
 
-              <div className="w-full max-w-sm glass-card border border-white/10 rounded-2xl p-4 space-y-3">
-                <div className="grid grid-cols-3 gap-2">
-                  <button type="button" onClick={() => { const pwd = generatePassword(); setPassword(pwd); setConfirmPassword(pwd); setError(null); }}
-                    className="flex flex-col items-center gap-1.5 p-2.5 rounded-xl bg-zinc-900/50 border border-zinc-800 hover:border-zinc-600 transition-all active:scale-[0.96]"
-                  ><Key size={18} className="text-neon-green" /><span className="text-[10px] text-zinc-300 font-medium text-center leading-tight">{t('setupGeneratePwd')}</span></button>
-                  <button type="button" onClick={() => { const phrase = generatePassphrase(); setPassword(phrase); setConfirmPassword(phrase); setError(null); }}
-                    className="flex flex-col items-center gap-1.5 p-2.5 rounded-xl bg-zinc-900/50 border border-zinc-800 hover:border-zinc-600 transition-all active:scale-[0.96]"
-                  ><Sparkles size={18} className="text-neon-green" /><span className="text-[10px] text-zinc-300 font-medium text-center leading-tight">{t('setupCreatePhrase')}</span></button>
-                  <button type="button" onClick={() => { setPassword(''); setConfirmPassword(''); setError(null); }}
-                    className="flex flex-col items-center gap-1.5 p-2.5 rounded-xl bg-zinc-900/50 border border-zinc-800 hover:border-zinc-600 transition-all active:scale-[0.96]"
-                  ><Edit3 size={18} className="text-neon-green" /><span className="text-[10px] text-zinc-300 font-medium text-center leading-tight">{t('setupTypeManual')}</span></button>
-                </div>
-
-                {(password || confirmPassword) && (
-                  <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
-                    <p className="text-amber-400 text-[10px] text-center leading-relaxed">⚠️ {t('setupCopyWarning')}</p>
-                  </motion.div>
-                )}
-
-                <button type="button" onClick={() => { setSetupStep('intro'); setPassword(''); setConfirmPassword(''); setError(null); }}
-                  className="text-[10px] text-zinc-500 hover:text-white transition-colors block"
-                >← {t('backButton')}</button>
-
-                <form onSubmit={handleCreateFormSubmit} className="space-y-2.5">
-                  <div className="space-y-1">
-                    <label className="text-xs text-muted font-medium ml-1">{t('masterPassword')}</label>
-                    <div className="relative">
-                      <input type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)}
-                        placeholder={t('enterPasswordField')}
-                        className="w-full bg-surface border border-border text-primary rounded-xl pl-3 pr-14 py-2.5 text-sm focus:outline-none focus:border-primary transition-all placeholder:text-muted font-mono tracking-wider" autoFocus
-                      />
-                      <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
-                        {password && (
-                          <button type="button" onClick={handleCopyPassword} className="p-1.5 hover:bg-zinc-800 rounded-lg transition-colors">
-                            {copied ? <Check size={14} className="text-neon-green" /> : <Copy size={14} className="text-zinc-400" />}
-                          </button>
-                        )}
-                        <button type="button" onClick={() => setShowPassword(!showPassword)} className="p-1.5 hover:bg-zinc-800 rounded-lg transition-colors">
-                          {showPassword ? <EyeOff size={14} className="text-zinc-400" /> : <Eye size={14} className="text-zinc-400" />}
-                        </button>
+              <div className="flex-1 flex items-center justify-center w-full min-h-0">
+                <div className="relative w-full max-w-3xl px-6 md:px-10 py-8 rounded-3xl border border-white/20 bg-transparent">
+                  <div className="flex flex-col md:flex-row gap-8">
+                    <div className="flex-1 min-w-0 flex flex-col items-center gap-6">
+                      <div className="flex flex-col gap-2.5 items-center max-w-xl">
+                        <p className="text-red-400 text-sm md:text-base font-medium text-center leading-relaxed">{t('setupCopyWarning1')}</p>
+                        <p className="text-red-400 text-sm md:text-base font-medium text-center leading-relaxed">{t('setupCopyWarning2')}</p>
+                      </div>
+                      <div className="w-16 h-px bg-white/20" />
+                      <div className="flex flex-col gap-2.5 items-center">
+                        {passphraseGenerated && (() => {
+                          const words = password.split(' ').filter(Boolean);
+                          const rows: string[][] = [];
+                          for (let i = 0; i < words.length; i += 3) rows.push(words.slice(i, i + 3));
+                          return rows.map((row, r) => (
+                            <div key={r} className="flex flex-wrap items-baseline justify-center gap-x-3 gap-y-2">
+                              {row.map((word, i) => (
+                                <motion.span
+                                  key={`${word}-${r}-${i}`}
+                                  initial={{ opacity: 0, y: 14 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  transition={{ delay: 0.08 * (r * 3 + i), duration: 0.4, ease: 'easeOut' }}
+                                  className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tight text-white leading-none"
+                                  style={{ textShadow: '0 4px 40px rgba(0,0,0,0.45)' }}
+                                >
+                                  {word}
+                                </motion.span>
+                              ))}
+                            </div>
+                          ));
+                        })()}
                       </div>
                     </div>
+
+                    <div className="flex flex-col gap-2.5 md:justify-center md:shrink-0 md:w-44">
+                      <button type="button" onClick={handleCopyPassword}
+                        className="flex items-center justify-center gap-2 w-full px-5 py-3 rounded-2xl bg-white/10 border border-white/15 hover:bg-white/20 text-white text-xs font-bold tracking-wide transition-all active:scale-[0.96]"
+                      >
+                        {copied ? <Check size={16} className="text-neon-green" /> : <Copy size={16} />}
+                        {copied ? t('copied') : t('copyKey')}
+                      </button>
+                      <button type="button" onClick={handleDownloadPassphrase}
+                        className="flex items-center justify-center gap-2 w-full px-5 py-3 rounded-2xl bg-white/10 border border-white/15 hover:bg-white/20 text-white text-xs font-bold tracking-wide transition-all active:scale-[0.96]"
+                      >
+                        <Download size={16} /> {t('downloadPhrase')}
+                      </button>
+                      <button type="button" onClick={handleRegeneratePassphrase}
+                        className="flex items-center justify-center gap-2 w-full px-5 py-3 rounded-2xl bg-white/10 border border-white/15 hover:bg-white/20 text-white text-xs font-bold tracking-wide transition-all active:scale-[0.96]"
+                      >
+                        <RefreshCw size={16} /> {t('regenerate')}
+                      </button>
+                    </div>
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-xs text-muted font-medium ml-1">{t('confirmPassword')}</label>
-                    <input type={showPassword ? "text" : "password"} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)}
-                      placeholder={t('confirmYourPassword')}
-                      className="w-full bg-surface border border-border text-primary rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-primary transition-all placeholder:text-muted"
-                    />
-                  </div>
-                  {error && (
-                    <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="text-red-500 text-xs font-medium bg-red-500/10 p-2 rounded-lg border border-red-500/20 text-center">
-                      {error}
-                    </motion.div>
-                  )}
-                  <button type="submit"
-                    className="w-full py-2.5 rounded-xl text-black font-bold text-sm flex items-center justify-center gap-2 hover:opacity-90 transition-all active:scale-[0.98]"
-                    style={{ backgroundColor: accentColor }}
-                  >
-                    {t('saveAndContinue')} <ChevronRight size={18} />
-                  </button>
+                </div>
+              </div>
+
+              <div className="pt-5 flex flex-col items-center gap-3 w-full">
+                <form onSubmit={handleCreateFormSubmit} className="w-full flex flex-col items-center gap-3">
+                {error && (
+                  <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="text-red-500 text-xs font-medium bg-red-500/10 p-2 rounded-lg border border-red-500/20 text-center w-full max-w-sm">
+                    {error}
+                  </motion.div>
+                )}
+                <button type="submit"
+                  className="w-full max-w-sm py-3.5 rounded-2xl text-black font-bold text-sm flex items-center justify-center gap-2 hover:opacity-90 transition-all active:scale-[0.98]"
+                  style={{ backgroundColor: accentColor }}
+                >
+                  {t('saveAndContinue')} <ChevronRight size={18} />
+                </button>
                 </form>
+              </div>
               </div>
             </motion.div>
           ) : (

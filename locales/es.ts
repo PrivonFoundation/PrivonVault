@@ -109,7 +109,8 @@ export const translations: Translations = {
   setupGeneratePwd: 'Generar contraseña',
   setupCreatePhrase: 'Crear frase',
   setupTypeManual: 'Escribir manualmente',
-  setupCopyWarning: '¡Copia esta contraseña ahora! Solo se muestra una vez y no se puede recuperar.',
+  setupCopyWarning1: 'Guarda ahora esta frase de 15 palabras — anótala o descárgala y guárdala en un lugar seguro.',
+  setupCopyWarning2: 'Si alguna vez pierdes el acceso a tus datos, también necesitarás tus códigos de recuperación y una copia de seguridad cifrada para restaurar tu vault.',
   unlockVault: 'Desbloquear Bóveda',
   min30Chars: 'Requiere una contraseña de mínimo 30 caracteres.',
   argon2idAES: 'Asegurado con Argon2id & AES-GCM.',
@@ -666,4 +667,7 @@ export const translations: Translations = {
   modelDestructCount: 'Cuenta regresiva de destrucción',
   inactivityOff: 'Apagado',
   recoveryOnly: 'Solo recuperación',
+  yourPassphrase: 'Tu frase',
+  downloadPhrase: 'Descargar',
+  regenerate: 'Regenerar',
 }
