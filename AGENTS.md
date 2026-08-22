@@ -47,7 +47,7 @@ npx tsc --noEmit   # The only static check; required by PR template
 - **Tailwind CSS:** `^3.3.5` (devDep) + `autoprefixer: ^10.4.16` + `postcss: ^8.5.15`
 - **Animation:** `framer-motion: ^12.40.0`
 - **Icons:** `lucide-react: ^1.18.0`, `react-icons: ^4.11.0`, `@heroicons/react: ^2.0.18`
-- **Fonts (self-hosted via `@fontsource`):** 17 packages — inter, jetbrains-mono, fira-code, space-mono, poppins, nunito, roboto, open-sans, montserrat, quicksand, lora, merriweather, playfair-display, oswald, orbitron, cinzel, caveat, pacifico, lobster, dancing-script, rubik
+
 - **Image processing:** `sharp: ^0.35.1` (devDep, used by Tauri icon generator)
 - **Types:** `@types/react: ^19.2.17`, `@types/react-dom: ^19.2.3`, `@types/node: ^25.9.3`
 
@@ -88,7 +88,7 @@ npx tsc --noEmit   # The only static check; required by PR template
   - `privon_vault_enabled`, `privon_vault_pin_hash`, `privon_vault_cats`, `privon_vault_keys` (encrypted JSON)
   - `privon_ad_enabled`, `privon_ad_attempts`, `privon_ad_inactivity`, `privon_ad_countdown`
   - `privon_destruct_time`, `privon_last_activity`
-  - `app_language`, `app_region`, `app_theme_config`, `app_font_config`, `theme_accent`, `app_accent_manual`
+  - `app_language`, `app_region`, `theme_accent`, `app_accent_manual`
 - **Randomness:** `window.crypto.getRandomValues` for all IVs/salts in JS layer; `rand` Rust crate inside crypto-core.
 
 ### i18n
@@ -121,7 +121,7 @@ npx tsc --noEmit   # The only static check; required by PR template
 CrytoTool/
 ├── AGENTS.md                     # This file
 ├── App.tsx                       # Root component: 625 lines, state machine, threat model
-├── index.html                    # 136 lines; inline pre-React theme script, glass intensity vars
+├── index.html                    # inline pre-React accent + glass intensity script
 ├── index.tsx                     # 18 lines; mounts <App /> via React 19 createRoot
 ├── index.css                     # 264 lines; @tailwind directives + safe-area CSS
 ├── metadata.json                 # 5 lines; landing page metadata
@@ -130,7 +130,7 @@ CrytoTool/
 ├── postcss.config.js             # tailwindcss + autoprefixer
 ├── tailwind.config.js            # 44 lines; CSS-var-based color system
 ├── tsconfig.json                 # 33 lines; strict; target ES2020; includes crypto-core
-├── types.ts                      # 96 lines; FileSystemItem, ViewState, ThemeConfig, CryptoAlgorithm +
+├── types.ts                      # FileSystemItem, ViewState, CryptoAlgorithm +
 │                                 #   CryptoMetadata, VaultWrappers, ArgonParams, etc.
 ├── vite.config.ts                # 20 lines; manual HTTPS via key.pem+cert.pem (no vite-plugin-mkcert)
 ├── vite-env.d.ts
@@ -152,7 +152,6 @@ CrytoTool/
 │   ├── AutoDestructCountdown.tsx # 94 lines; self-destruct countdown timer
 │   ├── CopyMoveModal.tsx
 │   ├── CustomColorPicker.tsx     # HSL accent picker
-│   ├── CustomizeModal.tsx        # 623 lines; theme/font/language customization
 │   ├── CustomSelect.tsx
 │   ├── Dashboard.tsx             # 1203 lines; main shell, modals, view router
 │   ├── DecryptModal.tsx          # 315 lines; manual decryption UI
@@ -161,7 +160,7 @@ CrytoTool/
 │   ├── FileItem.tsx              # 244 lines; file/folder card
 │   ├── FullPlayer.tsx            # full-screen music player
 │   ├── LandingPage.tsx           # 233 lines; marketing page
-│   ├── LiquidGlassOverlay.tsx    # animated glass border overlay
+
 │   ├── PinModal.tsx              # 201 lines; 6-digit PIN vault
 │   ├── RecoveryCodesModal.tsx    # 69 lines; shows 10 codes + download
 │   ├── SplashScreen.tsx          # 147 lines; animated SVG lock + checkmark
@@ -172,7 +171,7 @@ CrytoTool/
 │       ├── GalleryView.tsx       # 207 lines; photos + videos + favorites + albums
 │       ├── MusicView.tsx         # 180 lines; songs/albums/artists/playlists
 │       ├── SearchView.tsx        # 87 lines; cross-vault search
-│       ├── SettingsView.tsx      # 1150 lines; security, themes, fonts, language, about
+│       ├── SettingsView.tsx      # security, appearance, language, about
 │       ├── StorageView.tsx       # 95 lines; storage breakdown by category
 │       ├── TrashView.tsx         # 87 lines; restore or delete-forever
 │       └── VaultView.tsx         # 353 lines; encryption key storage with categories
@@ -189,11 +188,8 @@ CrytoTool/
 ├── utils/                        # 1 file
 
 │
-├── styles/                       # 4 files (+ __tests__/ dir)
-│   ├── glass.css                 # 603 lines; glassmorphism design system
-│   ├── themes.ts                 # 78 lines; 100 theme generator
-│   ├── fonts.ts                  # 137 lines; font config
-│   └── fonts-imports.ts
+├── styles/                       # 1 file
+│   └── glass.css                 # glassmorphism design system
 │
 ├── src-tauri/                    # Tauri Rust desktop/mobile backend
 │   ├── Cargo.toml                # 30 lines
@@ -244,7 +240,7 @@ CrytoTool/
 - **Threat model setup:** 4 tier-uri with different Argon2id params + feature toggles
 
 ### View router — `Dashboard.tsx` (1203 lines)
-- **`ViewState`:** `'dashboard' | 'search' | 'trash' | 'settings' | 'storage' | 'themes' | 'fonts' | 'about' | 'vault'`
+- **`ViewState`:** `'dashboard' | 'search' | 'trash' | 'settings' | 'storage' | 'about' | 'vault'`
 - **Owns:** file-system CRUD (`crypto-core/db.ts`), modal state, play-queue, all settings forwarding
 
 ### Modal pattern
@@ -265,8 +261,8 @@ Dual-path: desktop via `tauri-plugin-keyring` (stores master key in OS keychain)
 
 ## Features by Section
 
-### Settings — `components/views/SettingsView.tsx` (1150 lines)
-Themes (100, 10 categories), fonts (40+, 6 categories), custom accent (HSL picker), language + region, security panel (master password 30+ chars, settings password, auto-blur/lock, progressive lockout, self-destruct, vault PIN, recovery codes), about.
+### Settings — `components/views/SettingsView.tsx`
+Dark/light/system mode toggle, custom accent (HSL picker), glass intensity, language + region, security panel (master password 30+ chars, settings password, auto-blur/lock, progressive lockout, self-destruct, vault PIN, recovery codes), about.
 
 ### Vault — `components/views/VaultView.tsx` (353 lines)
 Encrypted key storage with categories. Persisted via `crypto-core/src/vault_storage.rs` through WASM bindings.
@@ -335,7 +331,7 @@ If a fix is needed in crypto code, **describe the change in an issue and ask the
 Nothing leaves the device. No server, no network calls.
 
 ### Theme system
-100 themes (10 categories), 40+ fonts (6 categories), glassmorphism (`styles/glass.css`), accent default `#E8E8E8` (Matte Metallic White), dark/light/system modes.
+Dark/light/system mode, custom accent (HSL), glassmorphism (`styles/glass.css`), accent default `#E8E8E8` (Matte Metallic White).
 
 ### Animation
 Framer Motion `AnimatePresence`. Page: `{ opacity: 0, x: 50 }` → `{ opacity: 1, x: 0 }`. Modal: `{ opacity: 0, scale: 0.9, y: 20 }` → `{ opacity: 1, scale: 1, y: 0 }`.

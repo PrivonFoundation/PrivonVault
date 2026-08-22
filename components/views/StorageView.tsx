@@ -4,7 +4,6 @@ import { motion } from 'framer-motion';
 import { ArrowLeft, ImageIcon, Video, FileAudio, FileText } from 'lucide-react';
 import { AppTheme } from '../../types';
 import { useI18n } from '../../locales/i18nContext';
-import { LiquidGlassOverlay } from '../LiquidGlassOverlay';
 
 // Helper to format bytes (could be moved to utils)
 const formatBytes = (bytes: number, decimals = 2) => {
@@ -68,7 +67,6 @@ export const StorageView: React.FC<{
       </div>
       <div className="flex-1 overflow-y-auto px-5 py-6">
         <div className="rounded-[40px] p-8 mb-10 flex flex-col items-center relative overflow-hidden glass-card">
-              <LiquidGlassOverlay />
             <div className="relative w-56 h-56 mb-8 flex items-center justify-center">
               <svg viewBox="0 0 36 36" className="w-full h-full rotate-[-90deg] drop-shadow-[0_0_15px_rgba(var(--accent-rgb),0.2)]">
                 <path className="text-surface" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="2.5" />

@@ -16,7 +16,6 @@ import { FileItem } from './FileItem';
 import { CustomColorPicker } from './CustomColorPicker';
 import { useI18n } from '../locales/i18nContext';
 import { is_safe_image_url as isSafeImageUrl } from '../crypto-core/index';
-import { LiquidGlassOverlay } from './LiquidGlassOverlay';
 
 type PackKey = 'lucide' | 'hero' | 'emoji' | 'fa' | 'md' | 'bs' | 'bi' | 'io' | 'ri' | 'tb';
 
@@ -266,7 +265,6 @@ export const CustomizeModal: React.FC<{
                     className="relative w-full max-w-[95vw] md:max-w-lg glass-card rounded-lg md:rounded-2xl overflow-hidden flex flex-col max-h-[95vh] md:max-h-[85vh]"
                     onClick={(e) => e.stopPropagation()}
                 >
-                    <LiquidGlassOverlay />
                     {/* Header */}
                     <div className="px-3 py-2 md:px-6 md:py-4 border-b border-zinc-800 bg-zinc-900/50 flex items-center justify-between shrink-0">
                         <div className="flex items-center gap-2 md:gap-3">
@@ -507,7 +505,6 @@ export const CustomizeModal: React.FC<{
                                     {t('cancel' as any) || 'Cancel'}
                                 </button>
                                 <button onClick={handleSave} className="px-5 md:px-10 py-2.5 md:py-3 rounded-lg md:rounded-xl bg-white text-black text-[10px] md:text-xs font-bold uppercase tracking-wider relative overflow-hidden">
-                                    <LiquidGlassOverlay intensity="subtle" />
                                     <span className="relative z-10">{t('save' as any) || 'Save'} →</span>
                                 </button>
                             </>

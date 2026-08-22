@@ -10,7 +10,6 @@ import {
 import { useI18n } from '../../locales/i18nContext';
 import { vault_encrypt_keys, vault_decrypt_keys } from '../../crypto-core/index';
 import { getVaultKey } from '../../crypto-core/db';
-import { LiquidGlassOverlay } from '../LiquidGlassOverlay';
 
 interface VaultKeyEntry {
   id: string;
@@ -244,7 +243,6 @@ export const VaultView: React.FC<VaultViewProps> = ({ onBack }) => {
                                 transition={{ delay: idx * 0.05 }}
                                 className="relative group p-4 sm:p-5 rounded-xl sm:rounded-[24px] glass-card hover:border-neon-green/50 transition-all text-left flex flex-col justify-between h-32 sm:h-36 overflow-hidden"
                                 >
-                                <LiquidGlassOverlay />
                                 <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity transform scale-150 origin-top-right">
                                     {React.cloneElement(CATEGORY_ICONS[cat.icon] as React.ReactElement<any>, { size: 60 })}
                                 </div>
@@ -279,7 +277,6 @@ export const VaultView: React.FC<VaultViewProps> = ({ onBack }) => {
                           }}
                           className="w-full p-3 rounded-xl bg-red-500/5 border border-red-500/20 text-red-400 text-xs font-bold hover:bg-red-500/10 transition-colors flex items-center justify-center gap-2 relative overflow-hidden"
                         >
-                          <LiquidGlassOverlay intensity="subtle" />
                           <span className="relative z-10 flex items-center justify-center gap-2">
                             <Trash2 size={14} /> {t('vaultDeleteAll')}
                           </span>

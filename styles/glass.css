@@ -26,6 +26,97 @@
   --glass-accent-glow: rgba(var(--accent-rgb), 0.15);
 }
 
+/* --- Premium Extensions --- */
+
+.glass-card-premium {
+  position: relative;
+  background: var(--glass-card-bg, linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.03) 100%));
+  backdrop-filter: var(--glass-blur-medium) saturate(180%);
+  -webkit-backdrop-filter: var(--glass-blur-medium) saturate(180%);
+  border: 1px solid var(--glass-border-light);
+  border-top: 1px solid var(--glass-card-border-top, rgba(255, 255, 255, 0.18));
+  border-left: 1px solid var(--glass-card-border-left, rgba(255, 255, 255, 0.12));
+  border-bottom: 1px solid var(--glass-card-border-bottom, rgba(255, 255, 255, 0.06));
+  border-right: 1px solid var(--glass-card-border-right, rgba(255, 255, 255, 0.06));
+  border-radius: var(--glass-radius-lg);
+  box-shadow: var(--glass-shadow-medium), inset 0 1px 0 rgba(255, 255, 255, 0.12), inset 0 0 60px rgba(255, 255, 255, 0.02), inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+  z-index: 1;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.glass-card-premium::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0) 50%, rgba(255, 255, 255, 0.05) 100%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.glass-card-premium:hover::after {
+  opacity: 1;
+}
+
+.glass-card-premium:hover {
+  border-color: var(--glass-border-strong);
+  box-shadow: var(--glass-shadow-heavy), inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 0 30px var(--glass-accent-glow);
+}
+
+.glass-border-glow-hover {
+  position: relative;
+  transition: box-shadow 0.3s ease;
+}
+
+.glass-border-glow-hover:hover {
+  box-shadow: 0 0 20px var(--glass-accent-glow), 0 0 40px rgba(var(--accent-rgb), 0.08);
+}
+
+.glass-inset-highlight {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15), inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+}
+
+.glass-shimmer-light {
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.06) 50%, transparent 100%);
+  background-size: 200% 100%;
+  animation: glassShimmerLight 3s ease-in-out infinite;
+}
+
+@keyframes glassShimmerLight {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+@keyframes glassSnowFloat {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  33% { transform: translateY(-6px) rotate(1deg); }
+  66% { transform: translateY(-3px) rotate(-0.5deg); }
+}
+
+.glass-snow-float {
+  animation: glassSnowFloat 5s ease-in-out infinite;
+}
+
+/* Main scroll container fix: only the inner content scrolls, not the whole page */
+.gallery-scroll,
+.files-scroll,
+.docs-scroll {
+  flex: 1;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+/* Content-visibility for performance */
+.gallery-row {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 280px;
+}
+
 [data-theme="light"],
 :root:has(#theme-toggle:checked) {
   --glass-accent-glow: rgba(var(--accent-rgb), 0.25);

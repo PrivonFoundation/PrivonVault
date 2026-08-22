@@ -1,22 +1,23 @@
 
-import React, { useState, useRef, useMemo, useEffect } from 'react';
+import React, { useState, useRef, useMemo, useEffect, useDeferredValue } from 'react';
 import { 
   Plus, FolderPlus, Database, Search, Trash2, Settings, Home, MoreVertical, 
   Folder, Image as ImageIcon, Music, FileText, ArrowLeft, Video, X,
   Pause, Play, SkipBack, SkipForward, ListMusic, ChevronDown, 
-  Shuffle, Heart, Repeat, Share2, Menu, Moon, Lock, Copy, Move
+  Shuffle, Heart, Repeat, Share2, Menu, Moon, Copy, Move, Eye, EyeOff
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LiquidGlassOverlay } from './LiquidGlassOverlay';
+import { Virtuoso } from 'react-virtuoso';
 import { db, DBItem, getVaultKey } from '../crypto-core/db';
 import { is_safe_image_url as isSafeImageUrl, decrypt, base64_encode, metadata_encrypt, metadata_decrypt } from '../crypto-core/index';
-import { FileSystemItem, ViewState, AppTheme, ThemeConfig, ThemeCategory } from '../types';
+import { FileSystemItem, ViewState, AppTheme } from '../types';
 import { useI18n } from '../locales/i18nContext';
 import { FullPlayer } from './FullPlayer';
+import snowDocumentImg from '../assets/snow-document.png';
+import { seedTestData, clearTestData } from '../utils/seedData';
 
 // Import Shared Components
 import { FileItem } from './FileItem';
-import { CustomizeModal } from './CustomizeModal';
 import { FileActionMenu } from './FileActionMenu';
 import { TopActions } from './TopActions';
 import { PinModal } from './PinModal';
@@ -27,7 +28,7 @@ import { RecoveryCodesModal } from './RecoveryCodesModal';
 
 // Import Views
 import { StorageView } from './views/StorageView';
-import { SettingsView, ThemesGalleryView, AboutView, FontsGalleryView } from './views/SettingsView';
+import { SettingsView, AboutView } from './views/SettingsView';
 import { GalleryView } from './views/GalleryView';
 import { MusicView } from './views/MusicView';
 import { SearchView } from './views/SearchView';
@@ -36,11 +37,6 @@ import { VaultView } from './views/VaultView';
 import { BackupView } from './views/BackupView';
 
 interface DashboardProps {
-  settingsLock: {
-    password: string | null;
-    setPassword: (pwd: string | null) => void;
-    required?: boolean;
-  };
   recoverySettings: {
     codes: string[] | null;
     count: number;
@@ -61,16 +57,6 @@ interface DashboardProps {
     setLockTime: (val: number) => void;
     attempts: number;
     setAttempts: (val: number) => void;
-  };
-  autoDestructSettings: {
-    enabled: boolean;
-    setEnabled: (val: boolean) => void;
-    attempts: number;
-    setAttempts: (val: number) => void;
-    inactivitySeconds: number;
-    setInactivitySeconds: (val: number) => void;
-    countdownSeconds: number;
-    setCountdownSeconds: (val: number) => void;
   };
 }
 
@@ -100,6 +86,7 @@ const formatTime = (seconds: number) => {
       <motion.button
         onClick={onClick}
         className="relative flex items-center justify-center p-2"
+        whileHover={{ scale: 1.08 }}
         whileTap={{ scale: 0.85 }}
         transition={{ type: 'spring', stiffness: 400, damping: 17 }}
       >
@@ -110,28 +97,32 @@ const formatTime = (seconds: number) => {
             transition={{ type: 'spring', stiffness: 380, damping: 30 }}
           />
         )}
-        <div className={`relative z-10 transition-all duration-200 ${
-          active
-            ? 'text-white drop-shadow-[0_0_10px_rgba(var(--accent-rgb),0.9)]'
-            : 'text-white/35 group-hover:text-white/60'
-        }`}>
+        <motion.div
+          className={`relative z-10 transition-colors duration-200 ${
+            active
+              ? 'text-white drop-shadow-[0_0_10px_rgba(var(--accent-rgb),0.9)]'
+              : 'text-white/35 group-hover:text-white/60'
+          }`}
+          animate={active ? {
+            scale: [1, 1.08, 1],
+            transition: { duration: 2, repeat: Infinity, ease: 'easeInOut' },
+          } : {}}
+        >
           {React.cloneElement(icon as React.ReactElement<any>, {
             size: 20,
             strokeWidth: active ? 2.5 : 1.8,
           })}
-        </div>
+        </motion.div>
       </motion.button>
     );
   };
 
 export const Dashboard: React.FC<DashboardProps> = ({ 
-  settingsLock, 
   recoverySettings,
   vaultSettings,
   autoBlurSettings, 
   autoLockSettings, 
-  progressiveLockSettings,
-  autoDestructSettings 
+  progressiveLockSettings
 }) => {
   const [showCodesModal, setShowCodesModal] = useState(false);
   const { t } = useI18n();
@@ -154,19 +145,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
   };
   const clearManualAccent = () => {
     localStorage.removeItem('app_accent_manual');
-    const config = localStorage.getItem('app_theme_config');
-    if (config) {
-      try {
-        const c = JSON.parse(config);
-        if (c['--accent-color']) {
-          setAccentColor(c['--accent-color']);
-          return;
-        }
-      } catch {}
-    }
+    localStorage.setItem('theme_accent', '#E8E8E8');
+    const root = document.documentElement;
+    root.style.setProperty('--accent-color', '#E8E8E8');
+    root.style.setProperty('--accent-rgb', '232, 232, 232');
     setAccentColor('#E8E8E8');
   };
-  const [activeThemeCategory, setActiveThemeCategory] = useState<ThemeCategory>('Neon');
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
   const [activeItem, setActiveItem] = useState<FileSystemItem | null>(null); 
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
@@ -174,8 +158,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
   const [menuOpenItem, setMenuOpenItem] = useState<FileSystemItem | null>(null);
-  const [isCustomizeModalOpen, setIsCustomizeModalOpen] = useState(false);
-  const [itemToCustomize, setItemToCustomize] = useState<FileSystemItem | null>(null);
   
   // Encryption Modal State
   const [isEncryptionModalOpen, setIsEncryptionModalOpen] = useState(false);
@@ -189,17 +171,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [copyMoveItem, setCopyMoveItem] = useState<FileSystemItem | null>(null);
   const decryptResolveRef = useRef<((url: string | null) => void) | null>(null);
 
-  // Settings Lock UI State
-  const [showSettingsUnlock, setShowSettingsUnlock] = useState(false);
-  const [settingsUnlockInput, setSettingsUnlockInput] = useState('');
-  const [settingsUnlockError, setSettingsUnlockError] = useState(false);
-
   // Vault/Pin UI State
   const [showPinModal, setShowPinModal] = useState(false);
   const [pinModalMode, setPinModalMode] = useState<'setup' | 'unlock' | 'disable'>('setup');
   const [pendingVaultAction, setPendingVaultAction] = useState<'enable' | 'access' | 'disable' | null>(null);
 
   const [decryptedUrls, setDecryptedUrls] = useState<Record<string, string>>({});
+  const [searchQuery, setSearchQuery] = useState('');
 
   const [currentPlayingItem, setCurrentPlayingItem] = useState<FileSystemItem | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -210,6 +188,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [deviceStorage, setDeviceStorage] = useState<{ quota: number; usage: number } | null>(null);
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [devSeedHidden, setDevSeedHidden] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
@@ -223,31 +202,23 @@ export const Dashboard: React.FC<DashboardProps> = ({
         });
     }
     
-    // Apply saved theme on mount - only if custom theme config exists
-    const savedConfig = localStorage.getItem('app_theme_config');
-    if (savedConfig) {
-      try {
-        const config = JSON.parse(savedConfig);
-        const root = document.documentElement;
-        Object.entries(config).forEach(([key, value]) => {
-          if (typeof value === 'string') {
-            root.style.setProperty(key, value);
-          }
-        });
-        const manualAccent = localStorage.getItem('app_accent_manual');
-        if (manualAccent) {
-          setAccentColor(manualAccent);
-        } else if (config['--accent-color']) {
-          setAccentColor(config['--accent-color']);
-        }
-      } catch (e) {
-        console.error("Failed to load theme config", e);
-      }
+    // Remove legacy theme config if present
+    if (localStorage.getItem('app_theme_config')) {
+      localStorage.removeItem('app_theme_config');
     }
     
     return () => {
         Object.values(decryptedUrls).forEach(url => URL.revokeObjectURL(url as string));
     };
+  }, []);
+
+  // Expose seed function in dev mode for performance testing
+  useEffect(() => {
+    if (import.meta.env.DEV) {
+      (window as any).seedTestData = seedTestData;
+      (window as any).clearTestData = clearTestData;
+      console.log('💾 Run seedTestData(1000) in console to generate test files');
+    }
   }, []);
 
   useEffect(() => {
@@ -256,14 +227,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
     }
   }, [recoverySettings.codes]);
 
-  // --- NAVIGATION HANDLER WITH LOCK ---
+  // --- NAVIGATION HANDLER ---
   const handleViewNavigation = (view: ViewState) => {
-    if (view === 'settings' && settingsLock.password) {
-      setSettingsUnlockInput('');
-      setSettingsUnlockError(false);
-      setShowSettingsUnlock(true);
-      return;
-    }
     setCurrentView(view);
   };
 
@@ -298,17 +263,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
     setPendingVaultAction(null);
     
     window.dispatchEvent(new CustomEvent('pin-setup-done', { detail: pin }));
-  };
-
-  const handleSettingsUnlock = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (settingsUnlockInput === (settingsLock.password || '')) {
-      setShowSettingsUnlock(false);
-      setCurrentView('settings');
-    } else {
-      setSettingsUnlockError(true);
-      setSettingsUnlockInput('');
-    }
   };
 
   const decryptOnDemand = async (item: FileSystemItem): Promise<string | null> => {
@@ -372,16 +326,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
     const b = parseInt(accentColor.slice(5, 7), 16);
     root.style.setProperty('--accent-rgb', `${r}, ${g}, ${b}`);
     localStorage.setItem('theme_accent', accentColor);
-    const savedConfig = localStorage.getItem('app_theme_config');
-    if (savedConfig) {
-      try {
-        const config = JSON.parse(savedConfig);
-        config['--accent-color'] = accentColor;
-        localStorage.setItem('app_theme_config', JSON.stringify(config));
-      } catch (e) {
-        // ignore parse errors
-      }
-    }
   }, [accentColor]);
 
   useEffect(() => {
@@ -395,26 +339,22 @@ export const Dashboard: React.FC<DashboardProps> = ({
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
     const handler = () => {
       if (appTheme === 'system') {
-        // Only apply system theme if no custom theme is saved
-        const hasCustomTheme = localStorage.getItem('app_theme_config') !== null;
-        if (!hasCustomTheme) {
-          const root = document.documentElement;
-          const mode = resolveTheme('system');
-          if (mode === 'light') {
-            root.style.setProperty('--bg-main', '#ffffff');
-            root.style.setProperty('--bg-card', '#f4f4f5');
-            root.style.setProperty('--bg-surface', '#e4e4e7');
-            root.style.setProperty('--border-color', '#d4d4d8');
-            root.style.setProperty('--text-main', '#09090b');
-            root.style.setProperty('--text-muted', '#52525b');
-          } else {
-            root.style.setProperty('--bg-main', '#000000');
-            root.style.setProperty('--bg-card', '#09090b');
-            root.style.setProperty('--bg-surface', '#18181b');
-            root.style.setProperty('--border-color', '#27272a');
-            root.style.setProperty('--text-main', '#ffffff');
-            root.style.setProperty('--text-muted', '#a1a1aa');
-          }
+        const root = document.documentElement;
+        const mode = resolveTheme('system');
+        if (mode === 'light') {
+          root.style.setProperty('--bg-main', '#ffffff');
+          root.style.setProperty('--bg-card', '#f4f4f5');
+          root.style.setProperty('--bg-surface', '#e4e4e7');
+          root.style.setProperty('--border-color', '#d4d4d8');
+          root.style.setProperty('--text-main', '#09090b');
+          root.style.setProperty('--text-muted', '#52525b');
+        } else {
+          root.style.setProperty('--bg-main', '#0a0a0a');
+          root.style.setProperty('--bg-card', '#1a1a1a');
+          root.style.setProperty('--bg-surface', '#2a2a2a');
+          root.style.setProperty('--border-color', '#3a3a3a');
+          root.style.setProperty('--text-main', '#ffffff');
+          root.style.setProperty('--text-muted', '#a1a1aa');
         }
       }
     };
@@ -460,6 +400,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
     ));
   }, [vaultSettings.enabled]);
 
+  const yieldToBrowser = (): Promise<void> =>
+    new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 0)));
+
   const loadFiles = async () => {
     try {
       const dbItems = await db.getAllItems();
@@ -468,64 +411,57 @@ export const Dashboard: React.FC<DashboardProps> = ({
         { id: 'sys-2', parentId: null, type: 'system', name: t('systemFolderBackup'), status: t('systemSecure'), date: t('systemDate'), category: 'other' },
       ];
 
-      const loadedItems: FileSystemItem[] = await Promise.all(dbItems.map(async (i) => {
-         const item: any = { ...i, url: i.externalUrl, rawBlob: i.fileData };
-          if (i.encryptedMeta) {
+      const key = getVaultKey();
+      const loadedItems: FileSystemItem[] = [];
+      const BATCH = 100;
+      for (let i = 0; i < dbItems.length; i += BATCH) {
+        const batch = dbItems.slice(i, i + BATCH);
+        const decrypted = batch.map(item => {
+          const entry: any = { ...item, url: item.externalUrl, rawBlob: item.fileData };
+          if (item.encryptedMeta && key) {
             try {
-              const key = getVaultKey();
-              if (!key) throw new Error('no vault key');
-              const meta = JSON.parse(metadata_decrypt(JSON.stringify(i.encryptedMeta), key));
-             item.decryptedName = meta.name;
-             item.decryptedTags = meta.tags;
-             item.decryptedArtist = meta.artist;
-             item.decryptedAlbum = meta.album;
-             item.decryptedCoverUrl = meta.coverUrl;
-             item.decryptedCustomIcon = meta.customIcon;
-             item.decryptedExternalUrl = meta.externalUrl;
-           } catch (e) {
-             console.warn('Failed to decrypt metadata for item', i.id, e);
-           }
-         }
-         return item as FileSystemItem;
-      }));
-      
+              const meta = JSON.parse(metadata_decrypt(JSON.stringify(item.encryptedMeta), key));
+              entry.decryptedName = meta.name;
+              entry.decryptedTags = meta.tags;
+              entry.decryptedArtist = meta.artist;
+              entry.decryptedAlbum = meta.album;
+              entry.decryptedCoverUrl = meta.coverUrl;
+              entry.decryptedCustomIcon = meta.customIcon;
+              entry.decryptedExternalUrl = meta.externalUrl;
+            } catch (e) {
+              console.warn('Failed to decrypt metadata for item', item.id, e);
+            }
+          }
+          return entry as FileSystemItem;
+        });
+        loadedItems.push(...decrypted);
+        if (i + BATCH < dbItems.length) await yieldToBrowser();
+      }
+
       setAllItems([...systemItems, ...loadedItems]);
     } catch (e) {
       console.error("Failed to load items from DB", e);
     }
   };
 
-  const applyFullTheme = (theme: ThemeConfig) => {
-    const root = document.documentElement;
-    root.style.setProperty('--bg-main', theme.bgMain);
-    root.style.setProperty('--bg-card', theme.bgCard);
-    root.style.setProperty('--bg-surface', theme.bgSurface);
-    root.style.setProperty('--border-color', theme.border);
-    root.style.setProperty('--text-main', theme.textMain);
-    root.style.setProperty('--text-muted', theme.textMuted);
-    localStorage.setItem('app_theme_config', JSON.stringify({
-        '--bg-main': theme.bgMain, '--bg-card': theme.bgCard, '--bg-surface': theme.bgSurface,
-        '--border-color': theme.border, '--text-main': theme.textMain, '--text-muted': theme.textMuted,
-        '--accent-color': theme.accent
-    }));
-    // Remove app_theme_mode so it doesn't interfere on reload
-    localStorage.removeItem('app_theme_mode');
-    // Only set accent to theme's color if no manual override
-    const manualAccent = localStorage.getItem('app_accent_manual');
-    if (!manualAccent) {
-      setAccentColor(theme.accent);
-      localStorage.setItem('theme_accent', theme.accent);
-    }
-  };
+  const deferredQuery = useDeferredValue(searchQuery);
 
   const items = useMemo(() => allItems.filter(i => !i.isTrashed), [allItems]);
   const trashItems = useMemo(() => allItems.filter(i => i.isTrashed), [allItems]);
   
   const currentFolder = useMemo(() => items.find(i => i.id === currentFolderId), [items, currentFolderId]);
-  const visibleItems = useMemo(() => items.filter(item => {
+  const visibleItems = useMemo(() => {
+    const folderItems = items.filter(item => {
       if (item.type === 'system') return currentFolderId === null;
       return item.parentId === currentFolderId;
-  }), [items, currentFolderId]);
+    });
+    if (!deferredQuery) return folderItems;
+    const q = deferredQuery.toLowerCase();
+    return folderItems.filter(item => {
+      const name = (item as any).decryptedName || item.name || '';
+      return name.toLowerCase().includes(q);
+    });
+  }, [items, currentFolderId, deferredQuery]);
 
   const storageStats = useMemo(() => {
     let limit = 64 * 1024 * 1024 * 1024; let used = 0;
@@ -540,8 +476,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   const handleItemAction = (action: string, item: FileSystemItem) => {
     if (item.type === 'system') return;
-    if (action === 'customize') { setItemToCustomize(item); setIsCustomizeModalOpen(true); }
-    else if (action === 'rename') { setRenamingId(item.id); setRenameValue((item as any).decryptedName || item.name); }
+    if (action === 'rename') { setRenamingId(item.id); setRenameValue((item as any).decryptedName || item.name); }
     else if (action === 'delete') { moveToTrash(item.id); }
     else if (action === 'favorite') { toggleFavorite(item); }
     else if (action === 'encrypt') { setItemToEncrypt(item); setIsEncryptionModalOpen(true); }
@@ -785,8 +720,29 @@ export const Dashboard: React.FC<DashboardProps> = ({
       loadFiles();
   };
 
+  const mode = resolveTheme(appTheme);
   return (
-    <div className="min-h-screen flex flex-col font-sans relative overflow-hidden bg-background text-primary">
+    <div className="min-h-screen flex flex-col font-sans relative overflow-hidden text-primary">
+      {/* Premium metallic gradient background */}
+      {mode === 'light' ? (
+        <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, #ffffff 0%, #e8e8e8 15%, #b0b0b0 30%, #505050 50%, #1a1a1a 70%, #0a0a0a 85%, #000000 100%)' }} />
+      ) : (
+        <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, #2a2a2a 0%, #1f1f1f 15%, #151515 30%, #0d0d0d 50%, #080808 70%, #030303 85%, #000000 100%)' }} />
+      )}
+      <div className="absolute pointer-events-none" style={{ top: '-20%', left: '10%', width: '120px', height: '180%', background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.25) 20%, rgba(0,0,0,0.4) 35%, rgba(0,0,0,0.15) 60%, rgba(0,0,0,0) 100%)', transform: 'rotate(12deg)', filter: 'blur(18px)' }} />
+      <div className="absolute pointer-events-none" style={{ top: '-15%', left: '35%', width: '80px', height: '170%', background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.15) 25%, rgba(0,0,0,0.3) 40%, rgba(0,0,0,0.1) 65%, rgba(0,0,0,0) 100%)', transform: 'rotate(8deg)', filter: 'blur(22px)' }} />
+      <div className="absolute pointer-events-none" style={{ top: '-25%', left: '58%', width: '100px', height: '190%', background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.2) 18%, rgba(0,0,0,0.35) 32%, rgba(0,0,0,0.12) 55%, rgba(0,0,0,0) 100%)', transform: 'rotate(15deg)', filter: 'blur(15px)' }} />
+      <div className="absolute pointer-events-none" style={{ top: '-10%', left: '78%', width: '90px', height: '160%', background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.18) 22%, rgba(0,0,0,0.28) 38%, rgba(0,0,0,0.08) 62%, rgba(0,0,0,0) 100%)', transform: 'rotate(10deg)', filter: 'blur(20px)' }} />
+      {/* Premium noise texture — subtle grain */}
+      <div className="absolute pointer-events-none opacity-[0.05]" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 256 256\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.8\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23n)\' opacity=\'1\'/%3E%3C/svg%3E")', backgroundRepeat: 'repeat', backgroundSize: '128px 128px' }} />
+      {/* Gradient orbs — enhanced depth */}
+      <div className="absolute w-96 h-96 opacity-25" style={{ top: '-12%', left: '-8%', background: 'radial-gradient(circle, #d4d4d4 0%, transparent 70%)', borderRadius: '60% 40% 70% 30% / 50% 60% 40% 50%', animation: 'blobFloat1 20s ease-in-out infinite', filter: 'blur(60px)' }} />
+      <div className="absolute w-80 h-80 opacity-20" style={{ top: '-3%', right: '-3%', background: 'radial-gradient(circle, #c0c0c0 0%, transparent 70%)', borderRadius: '40% 60% 50% 50% / 50% 40% 60% 50%', animation: 'blobFloat2 25s ease-in-out infinite', filter: 'blur(50px)' }} />
+      <div className="absolute w-80 h-80 opacity-20" style={{ bottom: '-8%', right: '-8%', background: 'radial-gradient(circle, #1a1a1a 0%, transparent 70%)', borderRadius: '55% 45% 60% 40% / 45% 55% 45% 55%', animation: 'blobFloat2 28s ease-in-out infinite', filter: 'blur(50px)' }} />
+      <div className="absolute w-64 h-64 opacity-15" style={{ bottom: '8%', left: '-3%', background: 'radial-gradient(circle, #2a2a2a 0%, transparent 70%)', borderRadius: '45% 55% 35% 65% / 55% 45% 55% 45%', animation: 'blobFloat3 22s ease-in-out infinite', filter: 'blur(40px)' }} />
+      {/* Accent orb — dynamic color hint */}
+      <div className="absolute w-72 h-72 opacity-[0.08]" style={{ top: '30%', right: '-5%', background: 'radial-gradient(circle, var(--accent-color) 0%, transparent 70%)', borderRadius: '50%', animation: 'blobFloat1 18s ease-in-out infinite', filter: 'blur(50px)' }} />
+
       <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileChange} />
       <audio 
         ref={audioRef} 
@@ -893,27 +849,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
         onComplete={loadFiles}
       />
 
-      {/* Settings Lock Modal removed for brevity in this snippet as it was unchanged, assuming it persists */}
-      <AnimatePresence>
-        {showSettingsUnlock && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[150] flex items-center justify-center bg-black/90 backdrop-blur-md p-4"
-          >
-            {/* ... Modal content ... */}
-            <motion.div className="w-full max-w-sm bg-zinc-950 border border-border rounded-3xl p-8 shadow-2xl">
-                 <form onSubmit={handleSettingsUnlock} className="space-y-4">
-                    <input type="password" autoFocus value={settingsUnlockInput} onChange={(e) => setSettingsUnlockInput(e.target.value)} className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-white outline-none" placeholder={t('passwordPlaceholder')} />
-                    <button type="submit" className="w-full py-3 bg-neon-green text-black font-bold rounded-xl">{t('unlock')}</button>
-                    <button type="button" onClick={() => setShowSettingsUnlock(false)} className="w-full py-3 border border-zinc-700 text-zinc-400 font-bold rounded-xl">{t('cancel')}</button>
-                 </form>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
 
       <FileActionMenu 
         isOpen={!!menuOpenItem}
@@ -921,20 +856,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
         onClose={() => setMenuOpenItem(null)}
         onAction={handleItemAction}
       />
-
-      {itemToCustomize && (
-          <CustomizeModal 
-            isOpen={isCustomizeModalOpen}
-            item={itemToCustomize}
-            onClose={() => { setIsCustomizeModalOpen(false); setItemToCustomize(null); }}
-            onSave={async (updated) => {
-                const dbItem: DBItem = { ...updated, fileData: updated.rawBlob };
-                delete (dbItem as any).url; delete (dbItem as any).rawBlob;
-                await db.updateItem(dbItem);
-                loadFiles();
-            }}
-          />
-      )}
 
       <AnimatePresence>
         {isFullPlayerOpen && currentPlayingItem && (
@@ -994,64 +915,107 @@ export const Dashboard: React.FC<DashboardProps> = ({
                        </div>
                      </motion.div>
                    )}
-                   {activeTab === 'files' && (
-                      <div className="flex flex-col pb-4">
-                        <div className="flex items-center gap-2.5 mb-5">
-                          {currentFolderId === null ? (
-                            <><Home size={22} className="text-primary" /><span className="font-bold text-lg text-primary">{t('files')}</span></>
-                          ) : (
-                            <div className="flex items-center gap-2">
-                              <button onClick={() => { if(currentFolderId) { const p = items.find(i => i.id === currentFolderId)?.parentId || null; setCurrentFolderId(p); }}} className="flex items-center gap-1 hover:opacity-70 transition-opacity text-primary"><ArrowLeft size={20} /><span className="font-bold text-lg">{t('files')}</span></button>
-                              <span className="text-muted">/</span>
-                              <span className="font-bold text-lg text-primary">{items.find(i => i.id === currentFolderId)?.name}</span>
-                            </div>
-                          )}
-                        </div>
-                        {visibleItems.map((item) => (
-                            <FileItem 
-                                key={item.id} item={item} onAction={(act) => handleItemAction(act, item)} 
-                                onOpenMenu={() => { if(item.type !== 'system') setMenuOpenItem(item); }} 
-                                onClick={() => isSelectionMode ? handleItemSelect(item.id) : handleNavigate(item)} 
-                                theme={appTheme}
-                                isRenaming={renamingId === item.id} renameValue={renameValue}
-                                onRenameChange={setRenameValue} onRenameConfirm={handleRenameConfirm}
-                                onRenameCancel={() => setRenamingId(null)}
-                                isSelected={selectedItems.has(item.id)}
+
+                   <AnimatePresence mode="wait">
+                    {activeTab === 'files' && (
+                      <motion.div key="files" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.2 }}>
+                        <div className="flex flex-col pb-4" style={{ height: 'calc(100vh - 320px)' }}>
+                          <div className="flex items-center gap-2.5 mb-5 shrink-0">
+                           {currentFolderId === null ? (
+                             <><Home size={22} className="text-primary" /><span className="font-bold text-lg text-primary">{t('files')}</span></>
+                           ) : (
+                             <div className="flex items-center gap-2">
+                               <button onClick={() => { if(currentFolderId) { const p = items.find(i => i.id === currentFolderId)?.parentId || null; setCurrentFolderId(p); }}} className="flex items-center gap-1 hover:opacity-70 transition-opacity text-primary"><ArrowLeft size={20} /><span className="font-bold text-lg">{t('files')}</span></button>
+                               <span className="text-muted">/</span>
+                               <span className="font-bold text-lg text-primary">{items.find(i => i.id === currentFolderId)?.name}</span>
+                             </div>
+                           )}
+                         </div>
+                          <div className="relative mb-3 shrink-0">
+                            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
+                            <input
+                              type="text"
+                              value={searchQuery}
+                              onChange={e => setSearchQuery(e.target.value)}
+                              placeholder="Search files..."
+                              className="w-full bg-black/30 backdrop-blur-sm border border-zinc-800 rounded-xl pl-9 pr-3 py-2 text-sm text-white placeholder-zinc-600 outline-none transition-all duration-200 focus:border-neon-green/50 focus:shadow-[0_0_15px_rgba(var(--accent-rgb),0.1)] focus:bg-black/40"
                             />
-                        ))}
-                      </div>
-                  )}
+                            {searchQuery && (
+                              <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white transition-colors">
+                                <X size={14} />
+                              </button>
+                            )}
+                          </div>
+                         <Virtuoso
+                           style={{ flex: 1 }}
+                           totalCount={visibleItems.length}
+                           itemContent={(index) => {
+                             const item = visibleItems[index];
+                             return (
+                               <FileItem 
+                                   key={item.id} item={item} onAction={(act) => handleItemAction(act, item)} 
+                                   onOpenMenu={() => { if(item.type !== 'system') setMenuOpenItem(item); }} 
+                                   onClick={() => isSelectionMode ? handleItemSelect(item.id) : handleNavigate(item)} 
+                                   theme={appTheme}
+                                   isRenaming={renamingId === item.id} renameValue={renameValue}
+                                   onRenameChange={setRenameValue} onRenameConfirm={handleRenameConfirm}
+                                   onRenameCancel={() => setRenamingId(null)}
+                                   isSelected={selectedItems.has(item.id)}
+                               />
+                             );
+                           }}
+                           overscan={5}
+                         />
+                        </div>
+                      </motion.div>
+                    )}
 
-                  {activeTab === 'gallery' && (
-                      <GalleryView items={items} onNavigate={handleNavigate} theme={appTheme} onDecrypt={decryptOnDemand} decryptedUrls={decryptedUrls} />
-                  )}
+                   {activeTab === 'gallery' && (
+                     <motion.div key="gallery" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.2 }}>
+                       <GalleryView items={items} onNavigate={handleNavigate} theme={appTheme} onDecrypt={decryptOnDemand} decryptedUrls={decryptedUrls} />
+                     </motion.div>
+                   )}
 
-                  {activeTab === 'music' && (
-                      <MusicView items={items} onPlay={(item) => { setCurrentPlayingItem(item); setIsPlaying(true); }} currentSong={currentPlayingItem} isPlaying={isPlaying} theme={appTheme} />
-                  )}
+                   {activeTab === 'music' && (
+                     <motion.div key="music" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.2 }}>
+                       <MusicView items={items} onPlay={(item) => { setCurrentPlayingItem(item); setIsPlaying(true); }} currentSong={currentPlayingItem} isPlaying={isPlaying} theme={appTheme} />
+                     </motion.div>
+                   )}
 
-                  {activeTab === 'docs' && (
-                      (() => {
-                        const docItems = items.filter(i => i.category === 'doc');
-                        return docItems.length === 0 ? (
-                          <div className="flex-1 flex flex-col items-center justify-center text-muted px-8 pt-10">
-                            <div className="w-20 h-20 rounded-full bg-surface border border-border flex items-center justify-center mb-5">
-                              <FileText size={36} className="opacity-30" />
+                    {activeTab === 'docs' && (
+                      <motion.div key="docs" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.2 }}>
+                         {(() => {
+                           const docItems = items.filter(i => i.category === 'doc');
+                           return docItems.length === 0 ? (
+                             <div className="flex flex-col items-center justify-center px-8 pt-10">
+                               <div className="glass-card rounded-[24px] p-4 max-w-xs w-full flex flex-col items-center">
+                                  <div className="w-40 h-40 rounded-2xl overflow-hidden -mt-10 mb-4 shadow-xl glass-snow-float">
+                                    <img src={snowDocumentImg} alt="Snow" className="w-full h-full object-cover" />
+                                 </div>
+                                 <div className="text-center px-2 pb-2">
+                                   <h4 className="text-sm font-bold text-white text-center mb-2">Snow is preparing the document viewer</h4>
+                                   <p className="text-xs text-zinc-300 text-center leading-relaxed">I'm working on PDF viewer, text editor, document signing and more. Thanks for exploring this beta with me!</p>
+                                 </div>
+                               </div>
+                             </div>
+                          ) : (
+                            <div className="flex flex-col gap-2" style={{ height: 'calc(100vh - 300px)' }}>
+                                <p className="text-[10px] font-black text-muted uppercase tracking-widest mb-2 px-1 shrink-0">{t('encryptedDocuments')}</p>
+                                <Virtuoso
+                                  style={{ flex: 1 }}
+                                  totalCount={docItems.length}
+                                  itemContent={(index) => (
+                                    <FileItem key={docItems[index].id} item={docItems[index]} onAction={(act) => handleItemAction(act, docItems[index])} onOpenMenu={() => { if(docItems[index].type !== 'system') setMenuOpenItem(docItems[index]); }} onClick={() => handleNavigate(docItems[index])} theme={appTheme} />
+                                  )}
+                                  overscan={5}
+                                />
                             </div>
-                            <h4 className="text-sm font-bold text-primary text-center mb-2">{t('documentsComingSoon')}</h4>
-                            <p className="text-[11px] text-zinc-500 text-center leading-relaxed max-w-xs">{t('documentsComingSoonDesc')}</p>
-                          </div>
-                        ) : (
-                          <div className="flex flex-col gap-2">
-                              <p className="text-[10px] font-black text-muted uppercase tracking-widest mb-2 px-1">{t('encryptedDocuments')}</p>
-                              {docItems.map(item => (
-                                  <FileItem key={item.id} item={item} onAction={(act) => handleItemAction(act, item)} onOpenMenu={() => { if(item.type !== 'system') setMenuOpenItem(item); }} onClick={() => handleNavigate(item)} theme={appTheme} />
-                              ))}
-                          </div>
-                        );
-                      })()
-                  )}
-               </main>
+                          );
+                        })()}
+                      </motion.div>
+                    )}
+                   </AnimatePresence>
+                </main>
 
                 <AnimatePresence>
                   {currentPlayingItem && !isFullPlayerOpen && (
@@ -1127,6 +1091,45 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   )}
                 </AnimatePresence>
 
+                {/* Dev seed button */}
+                {import.meta.env.DEV && (
+                  <div className="fixed bottom-24 right-6 z-50 flex flex-col items-end gap-2">
+                    <button
+                      onClick={() => setDevSeedHidden((v) => !v)}
+                      aria-label={devSeedHidden ? 'Show test buttons' : 'Hide test buttons'}
+                      className="w-9 h-9 flex items-center justify-center rounded-full bg-black/60 text-white/90 text-sm shadow-lg backdrop-blur"
+                    >
+                      {devSeedHidden ? <EyeOff /> : <Eye />}
+                    </button>
+                    {!devSeedHidden && (
+                      <>
+                        <button
+                          onClick={async () => {
+                            const btn = document.activeElement as HTMLButtonElement;
+                            btn.textContent = '...';
+                            btn.disabled = true;
+                            await seedTestData(1000);
+                            btn.textContent = '1000 files added!';
+                            setTimeout(() => { location.reload(); }, 1500);
+                          }}
+                          className="px-4 py-2 rounded-xl bg-neon-green text-black text-xs font-bold shadow-lg shadow-neon-green/30"
+                        >
+                          +1000 files
+                        </button>
+                        <button
+                          onClick={async () => {
+                            await clearTestData();
+                            location.reload();
+                          }}
+                          className="px-4 py-2 rounded-xl bg-red-500/80 text-white text-xs font-bold shadow-lg"
+                        >
+                          Clear
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
+
                 <nav className="fixed bottom-0 left-0 right-0 z-40 pointer-events-none"
                   style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom, 16px))' }}
                 >
@@ -1139,7 +1142,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
                         boxShadow: '0 12px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.06), inset 0 1px 0 rgba(255,255,255,0.12)',
                       }}
                     >
-                      <LiquidGlassOverlay intensity="medium" />
                       <div className="flex justify-around items-center relative z-10">
                         <NavButton active={activeTab === 'files'} onClick={() => setActiveTab('files')} icon={<Folder />} label={t('files')} />
                         <NavButton active={activeTab === 'gallery'} onClick={() => setActiveTab('gallery')} icon={<ImageIcon />} label={t('gallery')} />
@@ -1165,22 +1167,15 @@ export const Dashboard: React.FC<DashboardProps> = ({
               autoBlurSettings={autoBlurSettings} 
               autoLockSettings={autoLockSettings} 
               progressiveLockSettings={progressiveLockSettings}
-              autoDestructSettings={autoDestructSettings}
-              settingsLock={settingsLock} 
               recoverySettings={recoverySettings}
               vaultSettings={{
                 ...vaultSettings,
                 openVault: handleOpenVaultSettings,
                 disableVault: handleDisableVault
               }}
-              applyFullTheme={applyFullTheme} 
-              openThemes={() => setCurrentView('themes')} 
-              openFonts={() => setCurrentView('fonts')} 
               onOpenAbout={() => setCurrentView('about')} 
             />
           )}
-          {currentView === 'themes' && <ThemesGalleryView key="themes-view" onBack={() => setCurrentView('settings')} activeCategory={activeThemeCategory} setActiveCategory={setActiveThemeCategory} accentColor={accentColor} applyFullTheme={applyFullTheme} />}
-          {currentView === 'fonts' && <FontsGalleryView key="fonts-view" onBack={() => setCurrentView('settings')} />}
           {currentView === 'search' && <SearchView items={items} onNavigate={(item) => { handleNavigate(item); setCurrentView('dashboard'); }} onBack={() => setCurrentView('dashboard')} theme={appTheme} />}
           {currentView === 'trash' && <TrashView trashItems={trashItems} onRestore={restoreFromTrash} onDeleteForever={deletePermanently} onBack={() => setCurrentView('dashboard')} theme={appTheme} />}
           {currentView === 'about' && <AboutView onBack={() => setCurrentView('settings')} accentColor={accentColor} />}

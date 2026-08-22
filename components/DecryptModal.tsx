@@ -6,7 +6,6 @@ import { useI18n } from '../locales/i18nContext';
 import { PinModal } from './PinModal';
 import { decrypt_with_passphrase, base64_decode, pin_verify, vault_decrypt_keys, get_argon_params } from '../crypto-core/index';
 import { getVaultKey } from '../crypto-core/db';
-import { LiquidGlassOverlay } from './LiquidGlassOverlay';
 
 interface DecryptModalProps {
   isOpen: boolean;
@@ -172,7 +171,6 @@ export const DecryptModal: React.FC<DecryptModalProps> = ({ isOpen, onClose, onS
           onClick={(e) => e.stopPropagation()}
           onKeyDown={handleKeyDown}
                   >
-            <LiquidGlassOverlay />
           <div className="px-3 py-2 md:px-6 md:py-4 border-b border-zinc-800 bg-zinc-900/50 flex items-center justify-between shrink-0">
             <div className="flex items-center gap-2 md:gap-3">
               <div className="w-6 h-6 md:w-10 md:h-10 rounded md:rounded-xl bg-neon-green/10 flex items-center justify-center border border-neon-green/20 text-neon-green">
@@ -222,7 +220,6 @@ export const DecryptModal: React.FC<DecryptModalProps> = ({ isOpen, onClose, onS
                         onClick={() => setShowPinModal(true)}
                         className={`w-full flex items-center justify-between p-2 md:p-3 rounded-lg md:rounded-xl border transition-all relative overflow-hidden ${autoFillFromVault && vaultKeyFound ? 'bg-neon-green/5 border-neon-green/30' : 'bg-black/50 border-zinc-800 hover:border-zinc-700'}`}
                       >
-                        <LiquidGlassOverlay intensity="subtle" />
                         <div className="flex items-center gap-2 md:gap-3 relative z-10">
                           <div className={`w-5 h-5 md:w-8 md:h-8 rounded-lg md:rounded-xl flex items-center justify-center ${autoFillFromVault && vaultKeyFound ? 'bg-neon-green/20 text-neon-green' : 'bg-zinc-800 text-zinc-500'}`}>
                             {autoFillFromVault && vaultKeyFound ? <Check size={10} className="md:size-4" /> : <Shield size={10} className="md:size-4" />}
@@ -305,7 +302,6 @@ export const DecryptModal: React.FC<DecryptModalProps> = ({ isOpen, onClose, onS
                 disabled={!passphrase.trim()}
                 className="ml-auto px-4 md:px-8 py-2 md:py-3 rounded-lg md:rounded-xl bg-white text-black text-[9px] md:text-xs font-bold uppercase tracking-wider flex items-center gap-1 disabled:opacity-30 relative overflow-hidden"
               >
-                <LiquidGlassOverlay intensity="subtle" />
                 <span className="relative z-10">{t('decryptButton')}</span>
               </button>
             </div>

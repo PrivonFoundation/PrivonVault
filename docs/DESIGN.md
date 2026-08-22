@@ -30,7 +30,7 @@ All surfaces use the glassmorphism design system defined in `styles/glass.css`:
 - **Background**: `bg-zinc-900/80` with `backdrop-blur-xl`
 - **Cards**: `glass-card` class (semi-transparent, border-zinc-800)
 - **Surfaces**: `glass-surface` for nested elements
-- **Accent**: Matte Metallic White `#E8E8E8` (default), customizable via themes
+- **Accent**: Matte Metallic White `#E8E8E8` (default), customizable via HSL picker
 
 ### Color System
 | Role | Color | Usage |
@@ -45,7 +45,7 @@ All surfaces use the glassmorphism design system defined in `styles/glass.css`:
 | Warning | `#eab308` (Yellow-500) | Cautions, notices |
 
 ### Typography
-- **Font Family**: Loaded from `styles/fonts.ts`, applied via Tailwind `font-sans`
+- **Font Family**: System font stack via `font-sans` (`system-ui, -apple-system, sans-serif`)
 - **Code/Keys**: `font-mono` (for encryption keys, hashes)
 - **Sizes**: `text-xs` (10px) for metadata, `text-sm` (12px) for body, `text-base` (14px) for headings, `text-lg` (18px) for titles
 - **Weights**: `font-bold` for actions, `font-black` for section headers
@@ -191,22 +191,14 @@ transition: { delay: index * 0.05 } // staggered
 ---
 
 ## 8. Theming System
-### Creating a New Theme
-1. Open `styles/themes.ts`
-2. Add entry to `themes` array following `ThemeConfig` interface:
-   ```typescript
-   { id: 'my-theme', name: 'My Theme', accent: '#xxxxxx', bgMain: '#xxxxxx', 
-     bgCard: '#xxxxxx', bgSurface: '#xxxxxx', border: '#xxxxxx', 
-     textMain: '#xxxxxx', textMuted: '#xxxxxx' }
-   ```
-3. Add theme category (`ThemeCategory` type): `'Neon' | 'Dark' | 'Light' | 'Nature' | 'Ocean' | 'Space' | 'Retro' | 'Royal' | 'Sunset' | 'Tech'`
-4. Test contrast ratios before submitting
+### Modes
+Dark/light/system mode toggle. `data-theme` attribute on `<html>` drives Tailwind classes.
 
 ### Accent Color Picker
 - Use `components/CustomColorPicker.tsx`
 - Accepts HSL values, converts to HEX for storage
-- Stored in `localStorage` as `privon_accent_h`, `privon_accent_s`, `privon_accent_l`
-- Applied via CSS variables in `index.css`
+- Stored in `localStorage` as `theme_accent`, `app_accent_manual`
+- Applied via CSS variable `--accent-color` on `:root`
 
 ---
 
@@ -252,6 +244,5 @@ Use `animate-pulse` with `bg-zinc-800` for loading states:
 ## Resources
 - **Technical Architecture**: [ARCHITECTURE.md](https://github.com/privonn/PrivonVault/blob/main/docs/ARCHITECTURE.md)
 - **i18n Keys**: [locales/en.ts](https://github.com/privonn/PrivonVault/blob/main/locales/en.ts)
-- **Theme Config**: [styles/themes.ts](https://github.com/privonn/PrivonVault/blob/main/styles/themes.ts)
 - **Glass CSS**: [styles/glass.css](https://github.com/privonn/PrivonVault/blob/main/styles/glass.css)
 - **Crypto Architecture**: [crypto-core/src/](https://github.com/privonn/PrivonVault/tree/main/crypto-core/src)
