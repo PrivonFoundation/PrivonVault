@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Eye, EyeOff, Loader2, ShieldCheck, Timer, Sparkles, Copy, Check, ChevronRight, Target, ShieldAlert, Lock, FolderOpen, RefreshCw, Code2, Download } from 'lucide-react';
+import { Eye, EyeOff, Loader2, ShieldCheck, Timer, Copy, Check, ChevronRight, Target, ShieldAlert, FolderOpen, RefreshCw, Code2, Download, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useI18n } from '../locales/i18nContext';
 import logoImg from '../assets/logo.png';
@@ -578,73 +578,69 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.5, ease: 'easeOut' }}
-                className="w-32 h-32 md:w-40 md:h-40 object-contain"
+                className="w-20 h-20 md:w-40 md:h-40 object-contain"
                 style={{ filter: `drop-shadow(0 0 40px rgba(${accentRgb}, 0.55)) drop-shadow(0 0 90px rgba(${accentRgb}, 0.25))` }}
               />
 
-              <div className="text-xl md:text-2xl font-bold tracking-tight mt-4 mb-8">
+              <div className="text-lg md:text-2xl font-bold tracking-tight mt-3 mb-4 md:mt-4 md:mb-8">
                 <span className="text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.4)]">{t('crytoPrefix')}</span>
                 {' '}
                 <span className="text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.4)]">{t('toolSuffix')}</span>
               </div>
 
               <div className="flex-1 flex items-center justify-center w-full min-h-0">
-                <div className="relative w-full max-w-3xl px-6 md:px-10 py-8 rounded-3xl border border-white/20 bg-transparent">
-                  <div className="flex flex-col md:flex-row gap-8">
-                    <div className="flex-1 min-w-0 flex flex-col items-center gap-6">
-                      <div className="flex flex-col gap-2.5 items-center max-w-xl">
-                        <p className="text-red-400 text-sm md:text-base font-medium text-center leading-relaxed">{t('setupCopyWarning1')}</p>
-                        <p className="text-red-400 text-sm md:text-base font-medium text-center leading-relaxed">{t('setupCopyWarning2')}</p>
+                <div className="relative w-full max-w-3xl px-4 md:px-10 py-5 md:py-8 rounded-3xl border border-white/20 bg-transparent">
+                  <div className="flex flex-col md:flex-row gap-5 md:gap-8">
+                    <div className="flex-1 min-w-0 flex flex-col items-center gap-4 md:gap-6">
+                      <div className="flex items-start gap-2.5 md:gap-3 w-full max-w-xl px-3 md:px-4 py-2.5 md:py-3.5 rounded-xl md:rounded-2xl bg-yellow-400/[0.07] border border-yellow-400/25">
+                        <AlertTriangle size={16} className="text-yellow-500 shrink-0 mt-0.5 md:w-5 md:h-5" />
+                        <div className="flex flex-col gap-1 md:gap-2 min-w-0">
+                          <p className="text-white/90 text-xs md:text-base font-medium text-left leading-relaxed">{t('setupCopyWarning1')}</p>
+                          <p className="text-white/90 text-xs md:text-base font-medium text-left leading-relaxed">{t('setupCopyWarning2')}</p>
+                        </div>
                       </div>
                       <div className="w-16 h-px bg-white/20" />
-                      <div className="flex flex-col gap-2.5 items-center">
-                        {passphraseGenerated && (() => {
-                          const words = password.split(' ').filter(Boolean);
-                          const rows: string[][] = [];
-                          for (let i = 0; i < words.length; i += 3) rows.push(words.slice(i, i + 3));
-                          return rows.map((row, r) => (
-                            <div key={r} className="flex flex-wrap items-baseline justify-center gap-x-3 gap-y-2">
-                              {row.map((word, i) => (
-                                <motion.span
-                                  key={`${word}-${r}-${i}`}
-                                  initial={{ opacity: 0, y: 14 }}
-                                  animate={{ opacity: 1, y: 0 }}
-                                  transition={{ delay: 0.08 * (r * 3 + i), duration: 0.4, ease: 'easeOut' }}
-                                  className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tight text-white leading-none"
-                                  style={{ textShadow: '0 4px 40px rgba(0,0,0,0.45)' }}
-                                >
-                                  {word}
-                                </motion.span>
-                              ))}
-                            </div>
-                          ));
-                        })()}
+                      <div className="w-full max-w-md">
+                        <div className="grid grid-cols-3 gap-1.5 md:gap-2">
+                          {passphraseGenerated && password.split(' ').filter(Boolean).map((word, i) => (
+                            <motion.div
+                              key={`${word}-${i}`}
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: 0.03 * i, duration: 0.35, ease: 'easeOut' }}
+                              className="flex items-center gap-1.5 md:gap-2 px-2 md:px-3 py-2 md:py-2.5 rounded-xl bg-white/[0.06] border border-white/10 min-w-0"
+                            >
+                              <span className="text-[10px] md:text-xs text-white/40 font-bold w-4 shrink-0 text-right tabular-nums">{i + 1}</span>
+                              <span className="text-xs sm:text-sm md:text-base font-bold text-white truncate">{word}</span>
+                            </motion.div>
+                          ))}
+                        </div>
                       </div>
                     </div>
 
-                    <div className="flex flex-col gap-2.5 md:justify-center md:shrink-0 md:w-44">
+                    <div className="grid grid-cols-3 md:flex md:flex-col gap-2 md:justify-center md:shrink-0 md:w-44">
                       <button type="button" onClick={handleCopyPassword}
-                        className="flex items-center justify-center gap-2 w-full px-5 py-3 rounded-2xl bg-white/10 border border-white/15 hover:bg-white/20 text-white text-xs font-bold tracking-wide transition-all active:scale-[0.96]"
+                        className="flex items-center justify-center gap-1.5 md:gap-2 w-full px-2 md:px-5 py-2.5 md:py-3 rounded-xl md:rounded-2xl bg-white/10 border border-white/15 hover:bg-white/20 text-white text-[11px] md:text-xs font-bold tracking-wide transition-all active:scale-[0.96]"
                       >
-                        {copied ? <Check size={16} className="text-neon-green" /> : <Copy size={16} />}
+                        {copied ? <Check size={14} className="text-neon-green md:w-4 md:h-4" /> : <Copy size={14} className="md:w-4 md:h-4" />}
                         {copied ? t('copied') : t('copyKey')}
                       </button>
                       <button type="button" onClick={handleDownloadPassphrase}
-                        className="flex items-center justify-center gap-2 w-full px-5 py-3 rounded-2xl bg-white/10 border border-white/15 hover:bg-white/20 text-white text-xs font-bold tracking-wide transition-all active:scale-[0.96]"
+                        className="flex items-center justify-center gap-1.5 md:gap-2 w-full px-2 md:px-5 py-2.5 md:py-3 rounded-xl md:rounded-2xl bg-white/10 border border-white/15 hover:bg-white/20 text-white text-[11px] md:text-xs font-bold tracking-wide transition-all active:scale-[0.96]"
                       >
-                        <Download size={16} /> {t('downloadPhrase')}
+                        <Download size={14} className="md:w-4 md:h-4" /> {t('downloadPhrase')}
                       </button>
                       <button type="button" onClick={handleRegeneratePassphrase}
-                        className="flex items-center justify-center gap-2 w-full px-5 py-3 rounded-2xl bg-white/10 border border-white/15 hover:bg-white/20 text-white text-xs font-bold tracking-wide transition-all active:scale-[0.96]"
+                        className="flex items-center justify-center gap-1.5 md:gap-2 w-full px-2 md:px-5 py-2.5 md:py-3 rounded-xl md:rounded-2xl bg-white/10 border border-white/15 hover:bg-white/20 text-white text-[11px] md:text-xs font-bold tracking-wide transition-all active:scale-[0.96]"
                       >
-                        <RefreshCw size={16} /> {t('regenerate')}
+                        <RefreshCw size={14} className="md:w-4 md:h-4" /> {t('regenerate')}
                       </button>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div className="pt-5 flex flex-col items-center gap-3 w-full">
+              <div className="pt-3 md:pt-5 flex flex-col items-center gap-3 w-full">
                 <form onSubmit={handleCreateFormSubmit} className="w-full flex flex-col items-center gap-3">
                 {error && (
                   <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="text-red-500 text-xs font-medium bg-red-500/10 p-2 rounded-lg border border-red-500/20 text-center w-full max-w-sm">
@@ -652,7 +648,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
                   </motion.div>
                 )}
                 <button type="submit"
-                  className="w-full max-w-sm py-3.5 rounded-2xl text-black font-bold text-sm flex items-center justify-center gap-2 hover:opacity-90 transition-all active:scale-[0.98]"
+                  className="w-full max-w-sm py-3 md:py-3.5 rounded-2xl text-black font-bold text-sm flex items-center justify-center gap-2 hover:opacity-90 transition-all active:scale-[0.98]"
                   style={{ backgroundColor: accentColor }}
                 >
                   {t('saveAndContinue')} <ChevronRight size={18} />
