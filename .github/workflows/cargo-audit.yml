@@ -23,7 +23,7 @@ jobs:
         run: cargo install cargo-audit
 
       - name: Audit src-tauri
-        run: cargo audit --manifest-path src-tauri/Cargo.toml
+        run: cargo audit --file src-tauri/Cargo.lock
 
       - name: Audit crypto-core
-        run: cargo audit --manifest-path crypto-core/Cargo.toml
+        run: cargo audit --file crypto-core/Cargo.lock
