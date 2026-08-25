@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Eye, EyeOff, Loader2, ShieldCheck, Timer, Sparkles, Copy, Check, ChevronRight, Target, ShieldAlert, Lock, FolderOpen, RefreshCw, Code2, Download, AlertTriangle } from 'lucide-react';
+import { Eye, EyeOff, Loader2, ShieldCheck, Timer, Copy, Check, ChevronRight, Target, ShieldAlert, FolderOpen, RefreshCw, Code2, Download, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useI18n } from '../locales/i18nContext';
 import logoImg from '../assets/logo.png';
