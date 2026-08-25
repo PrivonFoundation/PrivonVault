@@ -83,20 +83,14 @@ jobs:
 
       - name: Install quick-sharun
         run: |
-          wget -q https://raw.githubusercontent.com/pkgforge-dev/Anylinux-AppImages/0a6a74c362a218b3a8b6bde137bbf8a63d3a8fec/useful-tools/quick-sharun.sh
-           echo "d5558cd419c8d46bdc958064cb97f963d1ea793866414c025906ec15033512ed  quick-sharun.sh" | sha256sum --check
+          wget -q https://raw.githubusercontent.com/pkgforge-dev/Anylinux-AppImages/17acc38983ef60d678208ac418e3cf8bf594ea17/useful-tools/quick-sharun.sh
+           echo "946fe6f4c357f6e50cf5eb6fd11510f2a01f8b8e4b126dee5212ea6f832583b1  quick-sharun.sh" | sha256sum --check
           chmod +x quick-sharun.sh
 
-      - name: Install standard appimagetool (probonopd, squashfs format)
+      - name: Install desktop-file-utils (required by appimagetool)
         run: |
-          cd /tmp
-          wget -q https://github.com/probonopd/go-appimage/releases/download/continuous/appimagetool-940-x86_64.AppImage
-          echo "0019dfc4b32d63c1392aa264aed2253c1e0c2fb09216f8e2cc269bbfb8bb49b5  appimagetool-940-x86_64.AppImage" | sha256sum --check
-          chmod +x appimagetool-940-x86_64.AppImage
-          ./appimagetool-940-x86_64.AppImage --appimage-extract > /dev/null
-          ls -la squashfs-root/usr/bin/appimagetool
-          ./squashfs-root/usr/bin/appimagetool --version
-          echo "Static appimagetool ready at /tmp/squashfs-root/usr/bin/appimagetool"
+          sudo apt-get update
+          sudo apt-get install -y desktop-file-utils
 
       - name: Build truly-portable AppImage with quick-sharun
         env:
@@ -108,7 +102,8 @@ jobs:
           DEPLOY_PULSE: 1
           OUTPUT_APPIMAGE: 1
           APPIMAGE_NAME: PrivonVault
-          APPIMAGETOOL: /tmp/squashfs-root/usr/bin/appimagetool
+          STRACE_BINARY: privon-vault
+          STRACE_MODE: 0
           VERSION: ${{ github.ref_name }}
           DESKTOP: ${{ github.workspace }}/src-tauri/privon.desktop
           ICON: ${{ github.workspace }}/src-tauri/icons/icon.png
@@ -120,9 +115,13 @@ jobs:
           # Increase namespace limits to prevent ENOSPC errors
           sudo sysctl -w user.max_user_namespaces=15000 || true
           STDERR_LOG=$(mktemp)
-          ./quick-sharun.sh "${{ steps.locate.outputs.binary }}" 2> "$STDERR_LOG"
+          set +e
+          timeout 600 ./quick-sharun.sh "${{ steps.locate.outputs.binary }}" 2> "$STDERR_LOG"
+          EXIT_CODE=$?
+          set -e
           grep -v "tr: write error: Broken pipe" "$STDERR_LOG" >&2 || true
           rm -f "$STDERR_LOG"
+          exit $EXIT_CODE
           echo "---"
           echo "Generated AppImage:"
           ls -la *.AppImage
@@ -157,14 +156,25 @@ jobs:
           gpg --verify SHA256SUMS.asc SHA256SUMS
 
       - name: Upload AppImage + checksums + signature to release
+        if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65
         with:
-          tagName: ${{ github.ref_name }}
-          releaseName: 'PrivonVault ${{ github.ref_name }}'
-          releaseBody: 'PrivonVault ${{ github.ref_name }}'
-          releaseDraft: true
+          tag_name: ${{ github.ref_name }}
+          name: 'PrivonVault ${{ github.ref_name }}'
+          body: 'PrivonVault ${{ github.ref_name }}'
+          draft: true
           prerelease: false
           files: |
+            *.AppImage
+            SHA256SUMS
+            SHA256SUMS.asc
+
+      - name: Upload AppImage artifact (branch builds)
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: PrivonVault-linux-appimage
+          path: |
             *.AppImage
             SHA256SUMS
             SHA256SUMS.asc

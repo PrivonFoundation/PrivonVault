@@ -1,11 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import { Eye, EyeOff, Loader2, ShieldCheck, Timer, Key, Sparkles, Edit3, Copy, Check, ChevronRight, Target, ShieldAlert } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Eye, EyeOff, Loader2, ShieldCheck, Timer, Sparkles, Copy, Check, ChevronRight, Target, ShieldAlert, Lock, FolderOpen, RefreshCw, Code2, Download } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useI18n } from '../locales/i18nContext';
-import crytoLogo from '../assets/PrivonVault.png';
-import welcomeVideo from '../assets/welcome.webm';
-import threatModelVideo from '../assets/threat-model.webm';
+import logoImg from '../assets/logo.png';
+import welcomeImg from '../assets/welcome.png';
+import snowBenefitsImg from '../assets/snow-benefits.png';
+const threatModelVideo = undefined;
 import { AutoDestructCountdown } from './AutoDestructCountdown';
+import { generatePassphrase } from '../utils/passphrase';
 
 import type { AutoDestructCountdownHandle } from './AutoDestructCountdown';
 import {
@@ -32,14 +34,12 @@ interface AuthScreenProps {
     count: number;
   };
   onResetWithRecovery: (code: string, newPassword: string) => Promise<{ success: boolean; error?: string }>;
-  destructRef: React.RefObject<AutoDestructCountdownHandle | null>;
-  onDestructComplete: () => void;
   onNewCodes?: (codes: string[]) => void;
   onStoreMasterKey?: (key: Uint8Array) => void;
-  onApplyThreatModel?: (config: { autoBlurSeconds: number; autoLockSeconds: number; failedAttemptsThreshold: number; progressiveLockSeconds: number; autoDestructEnabled: boolean; autoDestructAttempts: number; autoDestructInactivity: number; destructCountdownSeconds: number; minPasswordLength?: number; settingsPasswordRequired?: boolean; vaultPinAllowed?: boolean }) => void;
+  onApplyThreatModel?: (config: { autoBlurSeconds: number; autoLockSeconds: number; failedAttemptsThreshold: number; progressiveLockSeconds: number; vaultPinAllowed?: boolean }) => void;
 }
 
-export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockUntil, onFailedAttempt, recoverySettings, onResetWithRecovery, destructRef, onDestructComplete, onNewCodes, onStoreMasterKey, onApplyThreatModel }) => {
+export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockUntil, onFailedAttempt, recoverySettings, onResetWithRecovery, onNewCodes, onStoreMasterKey, onApplyThreatModel }) => {
   const { t } = useI18n();
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -47,8 +47,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
   const [error, setError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [timeLeft, setTimeLeft] = useState(0);
-  const [isDestructing, setIsDestructing] = useState(false);
-  const [setupStep, setSetupStep] = useState<'welcome' | 'create' | 'threat'>('welcome');
+  const [setupStep, setSetupStep] = useState<'welcome' | 'intro' | 'create'>('welcome');
   const [selectedTier, setSelectedTier] = useState<number | null>(null);
   const [infoTier, setInfoTier] = useState<number | null>(null);
   const [confirmTier, setConfirmTier] = useState<number | null>(null);
@@ -69,13 +68,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
     return `${parseInt(c.slice(0, 2), 16)}, ${parseInt(c.slice(2, 4), 16)}, ${parseInt(c.slice(4, 6), 16)}`;
   })();
 
-  const themeConfig = (() => {
-    try {
-      const saved = localStorage.getItem('app_theme_config');
-      return saved ? JSON.parse(saved) : null;
-    } catch { return null; }
-  })();
-  const bgMain = themeConfig?.['--bg-main'] || '#000000';
+
 
   useEffect(() => {
     if (!lockUntil) {
@@ -97,7 +90,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isLocked && !isDestructing) return;
+    if (isLocked && !false) return;
     setError(null);
     setIsProcessing(true);
     await new Promise(r => setTimeout(r, 16));
@@ -130,7 +123,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
           } catch (err) {
             setError(t('wrongPassword'));
             setPassword('');
-            if (!isDestructing) onFailedAttempt();
+            if (!false) onFailedAttempt();
           }
         } else {
           const saltB64 = localStorage.getItem('privon_salt');
@@ -156,7 +149,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
           } catch (err) {
             setError(t('wrongPassword'));
             setPassword('');
-            if (!isDestructing) onFailedAttempt();
+            if (!false) onFailedAttempt();
           }
         }
     } catch (err) {
@@ -170,7 +163,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
   const handleCreateFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    if (password.length < 30) {
+    if (!passphraseGenerated && password.length < 30) {
       setError(t('passwordTooShort'));
       return;
     }
@@ -178,8 +171,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
       setError(t('passwordsDoNotMatch'));
       return;
     }
-    const tierId = confirmTier;
-    if (tierId === null) return;
+    const tierId = confirmTier ?? 1;
     const tier = TIERS.find(t => t.id === tierId);
     if (!tier) return;
     completeSetup(tier.config.argon, tierId);
@@ -198,16 +190,18 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
       const mvkBytes = await generate_vault_key();
       const codes = generate_recovery_codes();
 
+      const masterSalt = window.crypto.getRandomValues(new Uint8Array(16));
+      let masterWrapper: { ciphertext: string; iv: string } | null = null;
+
       setSetupProgress(10);
       setSetupProgressLabel('Deriving master key...');
       await yieldToReact();
-      const masterSalt = window.crypto.getRandomValues(new Uint8Array(16));
       const masterKey = derive_key(new TextEncoder().encode(password), masterSalt, argonParams.iterations, argonParams.memoryKib, argonParams.parallelism, 32);
 
       setSetupProgress(30);
       setSetupProgressLabel('Wrapping master key...');
       await yieldToReact();
-      const masterWrapper = JSON.parse(await wrap_raw_key(mvkBytes, masterKey));
+      masterWrapper = JSON.parse(await wrap_raw_key(mvkBytes, masterKey));
 
       setSetupProgress(35);
       setSetupProgressLabel('Generating recovery codes...');
@@ -248,7 +242,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
         tier: tierId,
       };
       const wrappers: VaultWrappers = {
-        master: masterWrapper,
+        master: masterWrapper!,
         recovery: recoveryWrappers,
       };
 
@@ -257,7 +251,6 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
 
       setVaultKey(mvkBytes);
       mvkBytes.fill(0);
-      onStoreMasterKey?.(masterKey);
       onNewCodes?.(codes);
       setSetupProgress(100);
       setSetupProgressLabel('Done!');
@@ -370,93 +363,36 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
     { id: 5, icon: ShieldAlert, nameKey: 'advancedProtection', descKey: 'advancedProtectionDesc', blocked: true, config: THREAT_MODEL_TIER5 },
   ] as const;
 
-  const WORD_LIST = [
-    'apple','autumn','basin','batch','beach','beard','bench','birth','black','blank',
-    'blast','blend','bless','blind','block','bloom','board','boast','bonus','boost',
-    'brain','brand','brave','bread','break','breed','brief','bring','broad','brook',
-    'brown','brush','build','bunch','burst','cabin','cable','calm','camel','candy',
-    'cargo','carve','catch','cause','cedar','chain','chair','chalk','charm','chart',
-    'chase','cheap','check','cheek','cheer','chess','chest','chief','child','chill',
-    'choir','civic','civil','claim','clash','class','clean','clear','clerk','cliff',
-    'climb','cling','clock','close','cloth','cloud','coach','coast','coral','couch',
-    'count','court','cover','crack','craft','crane','crash','crawl','cream','crest',
-    'crime','crisp','cross','crowd','crown','crush','curve','cycle','daily','dance',
-    'debut','decay','delay','delta','dense','depth','derby','diary','donor','doubt',
-    'draft','drain','drama','dress','drift','drill','drink','drive','drone','eager',
-    'eagle','early','earth','eight','elder','elect','elite','empty','enjoy','enter',
-    'entry','equal','equip','error','essay','event','exact','exist','extra','fable',
-    'faith','false','fancy','fatal','fault','feast','fence','ferry','fetch','fever',
-    'fiber','field','fierce','fifth','fifty','fight','final','first','flame','flash',
-    'fleet','flesh','float','flock','flood','floor','flora','flour','fluid','flush',
-    'focus','force','forge','forth','forum','found','frame','frank','fraud','fresh',
-    'front','frost','fruit','gauge','ghost','giant','given','glad','glare','glass',
-    'glide','globe','gloom','glory','glove','glow','grace','grade','grain','grand',
-    'grant','grape','graph','grasp','grass','grave','great','green','greet','grief',
-    'grill','grind','gross','group','grove','guard','guess','guest','guide','guild',
-    'guilt','habit','happy','harsh','haven','heart','heavy','hedge','height','helmet',
-    'herald','herd','hike','honey','honor','horse','hotel','house','hover','human',
-    'humor','hurry','ideal','image','imply','index','inner','input','irony','ivory',
-    'jewel','joint','judge','juice','kebab','kernel','kettle','keypad','knock','label',
-    'labor','ladder','lance','large','laser','later','launch','layer','layout','leader',
-    'leaf','league','learn','leave','ledge','legal','lemon','level','light','limit',
-    'linen','links','liver','lobby','local','lodge','logic','loose','lover','lower',
-    'loyal','lucky','lunar','lunch','luxury','magic','major','maker','manor','maple',
-    'marble','march','margin','marker','market','marsh','mask','match','maxim','mayor',
-    'meadow','media','melon','melt','member','memory','mercy','merge','merit','metal',
-    'meter','might','minor','minus','mirror','mixed','mobile','model','money','month',
-    'moral','motor','mount','mouse','mouth','movie','museum','music','naive','narrow',
-    'naval','nerve','never','night','noble','noise','north','noted','novel','nurse',
-    'nylon','oasis','ocean','offer','often','olive','opera','orbit','order','organ',
-    'other','outer','output','oval','oven','owner','oxide','ozone','panel','panic',
-    'paper','pardon','parish','parrot','party','patch','pause','peace','pearl','phase',
-    'phone','photo','piano','piece','pilot','pinch','pixel','place','plain','plane',
-    'plant','plate','plaza','pluck','plumb','plume','point','polar','polish','polite',
-    'porch','pork','port','post','potato','pound','power','press','price','pride',
-    'prime','print','prior','prism','prize','probe','proof','pulse','punch','pupil',
-    'purple','purse','quest','queue','quick','quiet','quite','quote','radar','radio',
-    'raise','rally','ranch','range','rapid','ratio','reach','react','ready','realm',
-    'rebel','refer','reign','relax','relay','renew','reply','resin','reward','rhythm',
-    'rifle','right','rigid','ruler','rural','saber','safari','salad','salmon','salon',
-    'salute','satin','sauce','scale','scalp','scene','scent','scope','score','scrub',
-    'search','second','secret','sense','sensor','setup','seven','shade','shadow','shape',
-    'share','shark','sharp','shawl','sheep','sheet','shelf','shell','shift','shine',
-    'shirt','shock','shore','short','shout','sight','sigma','silly','since','sketch',
-    'skill','skull','slate','slave','sleep','slice','slide','slope','smart','smell',
-    'smile','smoke','snack','snake','solar','solid','solve','sorry','sound','south',
-    'space','spare','spark','speak','spear','speed','spell','spend','spice','spill',
-    'spine','spirit','split','spoil','spoon','sport','spray','spread','spring','square',
-    'stable','stair','stamp','stand','stark','start','state','steam','steel','steep',
-    'steer','stern','stick','stiff','still','stock','stone','stood','stool','store',
-    'storm','story','stove','strap','straw','strip','stuck','study','stuff','style',
-    'sugar','suite','sunny','super','surge','swamp','swan','swap','sweet','swift',
-    'swing','sword','table','tablet','taste','teach','teeth','temple','theme','thick',
-    'thief','thing','think','third','thorn','three','throw','thumb','tiger','tight',
-    'timer','tired','title','token','total','touch','towel','tower','trace','track',
-    'trade','trail','train','trait','trash','treat','trend','trial','tribe','trick',
-    'troop','truck','truly','trump','trunk','trust','truth','twice','twist','ultra',
-    'uncle','under','union','unite','unity','upper','upset','urban','usage','usual',
-    'valid','value','valve','vault','venue','verse','video','vigor','vinyl','viral',
-    'virus','visit','vista','vital','vivid','vocal','voice','voter','waist','waste',
-    'watch','water','weave','wheat','wheel','white','whole','woman','world','worry',
-    'worse','worst','worth','wound','write','wrong','yacht','yield','young','youth',
-    'zebra','zone',
-  ];
 
-  const generatePassword = (): string => {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%^&*';
-    const bytes = new Uint32Array(32);
-    window.crypto.getRandomValues(bytes);
-    let result = '';
-    for (let i = 0; i < 32; i++) {
-      result += chars[bytes[i] % chars.length];
+  const [passphraseGenerated, setPassphraseGenerated] = useState(false);
+
+  useEffect(() => {
+    if (isSetup && setupStep === 'create' && !passphraseGenerated) {
+      const phrase = generatePassphrase();
+      setPassword(phrase);
+      setConfirmPassword(phrase);
+      setPassphraseGenerated(true);
+      setError(null);
     }
-    return result;
+  }, [isSetup, setupStep, passphraseGenerated]);
+
+  const handleRegeneratePassphrase = () => {
+    const phrase = generatePassphrase();
+    setPassword(phrase);
+    setConfirmPassword(phrase);
+    setError(null);
   };
 
-  const generatePassphrase = (): string => {
-    const indices = new Uint32Array(6);
-    window.crypto.getRandomValues(indices);
-    return Array.from(indices).map(i => WORD_LIST[i % WORD_LIST.length]).join('-');
+  const handleDownloadPassphrase = () => {
+    try {
+      const blob = new Blob([password], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'privon-vault-passphrase.txt';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {}
   };
 
   const handleCopyPassword = async () => {
@@ -472,7 +408,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
       <div className={`absolute -inset-4 md:-inset-6 blur-[80px] md:blur-[120px] rounded-full animate-pulse transition-all duration-700 ${isLocked ? 'bg-red-500/20' : ''}`} style={{ backgroundColor: isLocked ? undefined : `rgba(${accentRgb}, 0.3)` }} />
       <div className={`absolute inset-0 md:inset-2 blur-2xl md:blur-3xl rounded-full ${isLocked ? 'bg-red-500/10' : ''}`} style={{ backgroundColor: isLocked ? undefined : `rgba(${accentRgb}, 0.2)` }} />
       <img
-        src={crytoLogo}
+        src={logoImg}
         alt="Privon Vault"
         className={`w-full h-full object-contain transition-all duration-500 ${isLocked ? 'opacity-50 grayscale' : ''}`}
         style={{ filter: isLocked ? 'none' : `drop-shadow(0 0 40px rgba(${accentRgb}, 0.6)) drop-shadow(0 0 80px rgba(${accentRgb}, 0.3)) drop-shadow(0 0 120px rgba(${accentRgb}, 0.15))` }}
@@ -515,7 +451,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
               <div className="absolute inset-0 pointer-events-none opacity-[0.03]" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 256 256\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.8\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23n)\' opacity=\'1\'/%3E%3C/svg%3E")', backgroundRepeat: 'repeat', backgroundSize: '128px 128px' }} />
 
               {/* Content */}
-              <div className="relative z-10 flex flex-col items-center h-full px-6 pt-20 pb-8">
+              <div className="relative z-10 flex flex-col items-center h-full px-6 pt-12 pb-8">
 
                 {/* Paw icon */}
                 <motion.div
@@ -546,13 +482,13 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
 
                 {/* Subtitle */}
                 <motion.p
-                  className="text-sm md:text-base text-center max-w-[280px] leading-relaxed"
-                  style={{ color: '#ffffff', opacity: 0.7 }}
+                  className="text-sm md:text-base text-center max-w-sm leading-relaxed glass-card rounded-2xl px-5 py-3"
+                  style={{ color: '#ffffff' }}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6, delay: 0.35 }}
                 >
-                  {t('welcomeSubtitleText')}
+                  Hi! I'm Snow. Welcome to Privon Vault! I'll help keep your files private. Everything you store stays encrypted on your device, and only you hold the key.
                 </motion.p>
 
                 {/* Mascot - video, centered */}
@@ -562,14 +498,14 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ duration: 0.7, delay: 0.3 }}
                 >
-                  <div className="relative w-full max-w-[528px]">
-                    <video src={welcomeVideo} autoPlay loop muted playsInline className="w-full h-auto object-contain" />
+                  <div className="relative w-full max-w-[800px]">
+                    <img src={welcomeImg} alt="Welcome" className="w-full h-auto object-contain rounded-2xl" />
                   </div>
                 </motion.div>
 
                 {/* Button */}
                 <motion.button
-                  onClick={() => setSetupStep('threat')}
+                  onClick={() => setSetupStep('intro')}
                   className="w-full max-w-xs flex items-center justify-center gap-3 py-4 rounded-[28px] font-bold text-sm transition-all duration-300 active:scale-[0.97]"
                   style={{ backgroundColor: 'var(--accent-color)', color: 'var(--bg-main)', boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }}
                   initial={{ opacity: 0, y: 12 }}
@@ -607,91 +543,6 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.18, ease: 'easeOut' }}
-              className="flex flex-col items-center justify-center px-6 h-full"
-            >
-              <div className="flex flex-col items-center space-y-2 md:space-y-3 mb-4">
-                <div className="relative w-36 h-36 md:w-48 md:h-48">
-                  <div className="absolute -inset-4 md:-inset-6 blur-[80px] md:blur-[120px] rounded-full animate-pulse" style={{ backgroundColor: `rgba(${accentRgb}, 0.3)` }} />
-                  <img src={crytoLogo} alt="Privon Vault" className="w-full h-full object-contain" style={{ filter: `drop-shadow(0 0 40px rgba(${accentRgb}, 0.6)) drop-shadow(0 0 80px rgba(${accentRgb}, 0.3))` }} />
-                </div>
-                <div className="text-xl md:text-2xl font-bold tracking-tight">
-                  <span className="text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.4)]">{t('crytoPrefix')}</span>
-                  <span className="drop-shadow-[0_0_12px_rgba(212,212,216,0.5)]" style={{ color: accentColor }}>{t('toolSuffix')}</span>
-                </div>
-                <p className="text-zinc-400 text-xs text-center">{t('setupCreateTitle')}</p>
-              </div>
-
-              <div className="w-full max-w-sm glass-card border border-white/10 rounded-2xl p-4 space-y-3">
-                <div className="grid grid-cols-3 gap-2">
-                  <button type="button" onClick={() => { const pwd = generatePassword(); setPassword(pwd); setConfirmPassword(pwd); setError(null); }}
-                    className="flex flex-col items-center gap-1.5 p-2.5 rounded-xl bg-zinc-900/50 border border-zinc-800 hover:border-zinc-600 transition-all active:scale-[0.96]"
-                  ><Key size={18} className="text-neon-green" /><span className="text-[10px] text-zinc-300 font-medium text-center leading-tight">{t('setupGeneratePwd')}</span></button>
-                  <button type="button" onClick={() => { const phrase = generatePassphrase(); setPassword(phrase); setConfirmPassword(phrase); setError(null); }}
-                    className="flex flex-col items-center gap-1.5 p-2.5 rounded-xl bg-zinc-900/50 border border-zinc-800 hover:border-zinc-600 transition-all active:scale-[0.96]"
-                  ><Sparkles size={18} className="text-neon-green" /><span className="text-[10px] text-zinc-300 font-medium text-center leading-tight">{t('setupCreatePhrase')}</span></button>
-                  <button type="button" onClick={() => { setPassword(''); setConfirmPassword(''); setError(null); }}
-                    className="flex flex-col items-center gap-1.5 p-2.5 rounded-xl bg-zinc-900/50 border border-zinc-800 hover:border-zinc-600 transition-all active:scale-[0.96]"
-                  ><Edit3 size={18} className="text-neon-green" /><span className="text-[10px] text-zinc-300 font-medium text-center leading-tight">{t('setupTypeManual')}</span></button>
-                </div>
-
-                {(password || confirmPassword) && (
-                  <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
-                    <p className="text-amber-400 text-[10px] text-center leading-relaxed">⚠️ {t('setupCopyWarning')}</p>
-                  </motion.div>
-                )}
-
-                <button type="button" onClick={() => { setSetupStep('threat'); setPassword(''); setConfirmPassword(''); setError(null); }}
-                  className="text-[10px] text-zinc-500 hover:text-white transition-colors block"
-                >← {t('backButton')}</button>
-
-                <form onSubmit={handleCreateFormSubmit} className="space-y-2.5">
-                  <div className="space-y-1">
-                    <label className="text-xs text-muted font-medium ml-1">{t('masterPassword')}</label>
-                    <div className="relative">
-                      <input type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)}
-                        placeholder={t('enterPasswordField')}
-                        className="w-full bg-surface border border-border text-primary rounded-xl pl-3 pr-14 py-2.5 text-sm focus:outline-none focus:border-primary transition-all placeholder:text-muted font-mono tracking-wider" autoFocus
-                      />
-                      <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
-                        {password && (
-                          <button type="button" onClick={handleCopyPassword} className="p-1.5 hover:bg-zinc-800 rounded-lg transition-colors">
-                            {copied ? <Check size={14} className="text-neon-green" /> : <Copy size={14} className="text-zinc-400" />}
-                          </button>
-                        )}
-                        <button type="button" onClick={() => setShowPassword(!showPassword)} className="p-1.5 hover:bg-zinc-800 rounded-lg transition-colors">
-                          {showPassword ? <EyeOff size={14} className="text-zinc-400" /> : <Eye size={14} className="text-zinc-400" />}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs text-muted font-medium ml-1">{t('confirmPassword')}</label>
-                    <input type={showPassword ? "text" : "password"} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)}
-                      placeholder={t('confirmYourPassword')}
-                      className="w-full bg-surface border border-border text-primary rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-primary transition-all placeholder:text-muted"
-                    />
-                  </div>
-                  {error && (
-                    <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="text-red-500 text-xs font-medium bg-red-500/10 p-2 rounded-lg border border-red-500/20 text-center">
-                      {error}
-                    </motion.div>
-                  )}
-                  <button type="submit"
-                    className="w-full py-2.5 rounded-xl text-black font-bold text-sm flex items-center justify-center gap-2 hover:opacity-90 transition-all active:scale-[0.98]"
-                    style={{ backgroundColor: accentColor }}
-                  >
-                    {t('saveAndContinue')} <ChevronRight size={18} />
-                  </button>
-                </form>
-              </div>
-            </motion.div>
-          ) : (
-            <motion.div
-              key="threat"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.5, ease: 'easeOut' }}
               className="absolute inset-0 overflow-hidden bg-background"
             >
               {/* Gradient base — silver/white top, black bottom */}
@@ -715,129 +566,169 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
               {/* Noise texture — premium grain */}
               <div className="absolute inset-0 pointer-events-none opacity-[0.03]" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 256 256\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.8\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23n)\' opacity=\'1\'/%3E%3C/svg%3E")', backgroundRepeat: 'repeat', backgroundSize: '128px 128px' }} />
 
-              {/* Content */}
-              <div className="relative z-10 flex flex-col items-center h-full px-6 pt-16 pb-8 overflow-y-auto">
+              <div className="relative z-10 flex flex-col items-center h-full px-6 pt-8 pb-8 overflow-y-auto">
 
-                {/* Threat model video */}
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.7, delay: 0.2 }}
-                  className="w-full max-w-[200px] mb-3"
-                >
-                  <video src={threatModelVideo} autoPlay loop muted playsInline className="w-full h-auto object-contain" />
-                </motion.div>
+              <button type="button" onClick={() => { setSetupStep('intro'); setPassword(''); setConfirmPassword(''); setError(null); }}
+                className="absolute left-6 top-8 text-[11px] text-white/50 hover:text-white transition-colors"
+              >← {t('backButton')}</button>
 
-                {/* Title */}
-                <motion.h1
-                  className="text-2xl md:text-3xl font-black tracking-tight text-center mb-1"
-                  style={{ color: 'var(--text-main)' }}
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: 0.3 }}
-                >
-                  {t('threatModelTitle')}
-                </motion.h1>
+              <motion.img
+                src={logoImg}
+                alt="Privon Vault"
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.5, ease: 'easeOut' }}
+                className="w-32 h-32 md:w-40 md:h-40 object-contain"
+                style={{ filter: `drop-shadow(0 0 40px rgba(${accentRgb}, 0.55)) drop-shadow(0 0 90px rgba(${accentRgb}, 0.25))` }}
+              />
 
-                {/* Subtitle */}
-                <motion.p
-                  className="text-xs text-center max-w-[280px] leading-relaxed mb-5"
-                  style={{ color: 'var(--text-main)', opacity: 0.5 }}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: 0.4 }}
-                >
-                  {t('threatModelDesc')}
-                </motion.p>
+              <div className="text-xl md:text-2xl font-bold tracking-tight mt-4 mb-8">
+                <span className="text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.4)]">{t('crytoPrefix')}</span>
+                {' '}
+                <span className="text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.4)]">{t('toolSuffix')}</span>
+              </div>
 
-                {/* Tier cards */}
-                <motion.div
-                  className="w-full max-w-sm space-y-4 mb-4"
-                  initial={{ opacity: 0, y: 16 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: 0.5 }}
-                >
-                  {/* Everyday Privacy - recommended */}
-                  <div
-                    onClick={() => { setSelectedTier(1); setInfoTier(null); }}
-                    className="glass-card w-full rounded-[24px] p-5 transition-all cursor-pointer active:scale-[0.98]"
-                    style={{
-                      borderColor: selectedTier === 1 ? 'var(--accent-color)' : undefined,
-                      boxShadow: selectedTier === 1 ? '0 8px 32px rgba(var(--accent-rgb), 0.12), 0 2px 8px rgba(0,0,0,0.06)' : undefined,
-                    }}
-                  >
-                    <div className="flex items-center gap-3.5">
-                      <div className="p-3 rounded-[16px] shrink-0" style={{
-                        backgroundColor: selectedTier === 1 ? 'rgba(var(--accent-rgb), 0.15)' : 'rgba(255,255,255,0.08)',
-                        color: selectedTier === 1 ? 'var(--accent-color)' : '#ffffff',
-                      }}>
-                        <Target size={22} />
+              <div className="flex-1 flex items-center justify-center w-full min-h-0">
+                <div className="relative w-full max-w-3xl px-6 md:px-10 py-8 rounded-3xl border border-white/20 bg-transparent">
+                  <div className="flex flex-col md:flex-row gap-8">
+                    <div className="flex-1 min-w-0 flex flex-col items-center gap-6">
+                      <div className="flex flex-col gap-2.5 items-center max-w-xl">
+                        <p className="text-red-400 text-sm md:text-base font-medium text-center leading-relaxed">{t('setupCopyWarning1')}</p>
+                        <p className="text-red-400 text-sm md:text-base font-medium text-center leading-relaxed">{t('setupCopyWarning2')}</p>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-[15px] font-bold" style={{
-                            color: selectedTier === 1 ? 'var(--accent-color)' : '#ffffff',
-                          }}>{t('tier1Name')}</span>
-                          <span className="text-[10px] px-2.5 py-0.5 rounded-full font-semibold tracking-wide" style={{
-                            backgroundColor: 'rgba(var(--accent-rgb), 0.15)',
-                            color: 'var(--accent-color)',
-                          }}>{t('tierRecommended')}</span>
-                        </div>
-                        <p className="text-[12px] mt-1.5 leading-relaxed" style={{ color: 'rgba(255,255,255,0.65)' }}>{t('tier1Desc')}</p>
+                      <div className="w-16 h-px bg-white/20" />
+                      <div className="flex flex-col gap-2.5 items-center">
+                        {passphraseGenerated && (() => {
+                          const words = password.split(' ').filter(Boolean);
+                          const rows: string[][] = [];
+                          for (let i = 0; i < words.length; i += 3) rows.push(words.slice(i, i + 3));
+                          return rows.map((row, r) => (
+                            <div key={r} className="flex flex-wrap items-baseline justify-center gap-x-3 gap-y-2">
+                              {row.map((word, i) => (
+                                <motion.span
+                                  key={`${word}-${r}-${i}`}
+                                  initial={{ opacity: 0, y: 14 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  transition={{ delay: 0.08 * (r * 3 + i), duration: 0.4, ease: 'easeOut' }}
+                                  className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tight text-white leading-none"
+                                  style={{ textShadow: '0 4px 40px rgba(0,0,0,0.45)' }}
+                                >
+                                  {word}
+                                </motion.span>
+                              ))}
+                            </div>
+                          ));
+                        })()}
                       </div>
+                    </div>
+
+                    <div className="flex flex-col gap-2.5 md:justify-center md:shrink-0 md:w-44">
+                      <button type="button" onClick={handleCopyPassword}
+                        className="flex items-center justify-center gap-2 w-full px-5 py-3 rounded-2xl bg-white/10 border border-white/15 hover:bg-white/20 text-white text-xs font-bold tracking-wide transition-all active:scale-[0.96]"
+                      >
+                        {copied ? <Check size={16} className="text-neon-green" /> : <Copy size={16} />}
+                        {copied ? t('copied') : t('copyKey')}
+                      </button>
+                      <button type="button" onClick={handleDownloadPassphrase}
+                        className="flex items-center justify-center gap-2 w-full px-5 py-3 rounded-2xl bg-white/10 border border-white/15 hover:bg-white/20 text-white text-xs font-bold tracking-wide transition-all active:scale-[0.96]"
+                      >
+                        <Download size={16} /> {t('downloadPhrase')}
+                      </button>
+                      <button type="button" onClick={handleRegeneratePassphrase}
+                        className="flex items-center justify-center gap-2 w-full px-5 py-3 rounded-2xl bg-white/10 border border-white/15 hover:bg-white/20 text-white text-xs font-bold tracking-wide transition-all active:scale-[0.96]"
+                      >
+                        <RefreshCw size={16} /> {t('regenerate')}
+                      </button>
                     </div>
                   </div>
+                </div>
+              </div>
 
-                  {/* Hardened - blocked */}
-                  <a
-                    href="https://github.com/privonn/PrivonVault/blob/main/docs%2FSECURITY.md"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="glass-card w-full rounded-[24px] p-5 transition-all cursor-pointer active:scale-[0.98] opacity-60 block"
-                  >
-                    <div className="flex items-center gap-3.5">
-                      <div className="p-3 rounded-[16px] shrink-0" style={{
-                        backgroundColor: 'rgba(255,255,255,0.08)',
-                        color: 'rgba(255,255,255,0.5)',
-                      }}>
-                        <ShieldAlert size={22} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-[15px] font-bold" style={{ color: '#ffffff' }}>{t('advancedProtection')}</span>
-                          <span className="text-[9px] px-2 py-0.5 rounded-full font-medium" style={{
-                            backgroundColor: 'rgba(255,255,255,0.08)',
-                            color: 'rgba(255,255,255,0.5)',
-                          }}>{t('tierNotAvailable')}</span>
+              <div className="pt-5 flex flex-col items-center gap-3 w-full">
+                <form onSubmit={handleCreateFormSubmit} className="w-full flex flex-col items-center gap-3">
+                {error && (
+                  <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="text-red-500 text-xs font-medium bg-red-500/10 p-2 rounded-lg border border-red-500/20 text-center w-full max-w-sm">
+                    {error}
+                  </motion.div>
+                )}
+                <button type="submit"
+                  className="w-full max-w-sm py-3.5 rounded-2xl text-black font-bold text-sm flex items-center justify-center gap-2 hover:opacity-90 transition-all active:scale-[0.98]"
+                  style={{ backgroundColor: accentColor }}
+                >
+                  {t('saveAndContinue')} <ChevronRight size={18} />
+                </button>
+                </form>
+              </div>
+              </div>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="intro"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.5, ease: 'easeOut' }}
+              className="absolute inset-0 overflow-hidden bg-background"
+            >
+              <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, #ffffff 0%, #e8e8e8 15%, #b0b0b0 30%, #505050 50%, #1a1a1a 70%, #0a0a0a 85%, #000000 100%)' }} />
+              <div className="absolute pointer-events-none" style={{ top: '-20%', left: '10%', width: '120px', height: '180%', background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.25) 20%, rgba(0,0,0,0.4) 35%, rgba(0,0,0,0.15) 60%, rgba(0,0,0,0) 100%)', transform: 'rotate(12deg)', filter: 'blur(18px)' }} />
+              <div className="absolute pointer-events-none" style={{ top: '-15%', left: '35%', width: '80px', height: '170%', background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.15) 25%, rgba(0,0,0,0.3) 40%, rgba(0,0,0,0.1) 65%, rgba(0,0,0,0) 100%)', transform: 'rotate(8deg)', filter: 'blur(22px)' }} />
+              <div className="absolute pointer-events-none" style={{ top: '-25%', left: '58%', width: '100px', height: '190%', background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.2) 18%, rgba(0,0,0,0.35) 32%, rgba(0,0,0,0.12) 55%, rgba(0,0,0,0) 100%)', transform: 'rotate(15deg)', filter: 'blur(15px)' }} />
+              <div className="absolute pointer-events-none" style={{ top: '-10%', left: '78%', width: '90px', height: '160%', background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.18) 22%, rgba(0,0,0,0.28) 38%, rgba(0,0,0,0.08) 62%, rgba(0,0,0,0) 100%)', transform: 'rotate(10deg)', filter: 'blur(20px)' }} />
+              <div className="absolute w-96 h-96 opacity-40" style={{ top: '-15%', left: '-10%', background: 'radial-gradient(circle, #d4d4d4 0%, transparent 70%)', borderRadius: '60% 40% 70% 30% / 50% 60% 40% 50%', animation: 'blobFloat1 20s ease-in-out infinite', filter: 'blur(60px)' }} />
+              <div className="absolute w-80 h-80 opacity-35" style={{ top: '-5%', right: '-5%', background: 'radial-gradient(circle, #c0c0c0 0%, transparent 70%)', borderRadius: '40% 60% 50% 50% / 50% 40% 60% 50%', animation: 'blobFloat2 25s ease-in-out infinite', filter: 'blur(50px)' }} />
+              <div className="absolute w-64 h-64 opacity-30" style={{ top: '10%', left: '25%', background: 'radial-gradient(circle, #e0e0e0 0%, transparent 70%)', borderRadius: '50% 60% 40% 60% / 60% 40% 60% 40%', animation: 'blobFloat3 18s ease-in-out infinite', filter: 'blur(45px)' }} />
+              <div className="absolute w-80 h-80 opacity-30" style={{ bottom: '-10%', right: '-10%', background: 'radial-gradient(circle, #1a1a1a 0%, transparent 70%)', borderRadius: '55% 45% 60% 40% / 45% 55% 45% 55%', animation: 'blobFloat2 28s ease-in-out infinite', filter: 'blur(50px)' }} />
+              <div className="absolute w-64 h-64 opacity-20" style={{ bottom: '5%', left: '-5%', background: 'radial-gradient(circle, #2a2a2a 0%, transparent 70%)', borderRadius: '45% 55% 35% 65% / 55% 45% 55% 45%', animation: 'blobFloat3 22s ease-in-out infinite', filter: 'blur(40px)' }} />
+              <div className="absolute inset-0 pointer-events-none opacity-[0.03]" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 256 256\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.8\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23n)\' opacity=\'1\'/%3E%3C/svg%3E")', backgroundRepeat: 'repeat', backgroundSize: '128px 128px' }} />
+
+              <div className="relative z-10 flex flex-col items-center h-full px-6 pt-16 pb-8 overflow-y-auto">
+                <motion.div
+                  className="w-full max-w-sm space-y-3 mb-6"
+                  variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.15 } } }}
+                  initial="hidden"
+                  animate="visible"
+                >
+                  {([
+                    { icon: null, image: snowBenefitsImg, title: 'Total Privacy', desc: 'Everything you store stays encrypted on your device. Nobody — not even us — can see your files.' },
+                    { icon: Code2, image: null, title: 'Open Source', desc: 'Privon Vault is a free, open-source project. The source code is public, auditable, and licensed under AGPL-3.0.' },
+                    { icon: FolderOpen, image: null, title: 'All-in-One Vault', desc: 'Secure vault, file manager, photo gallery, music player, and document viewer — all in one place.' },
+                    { icon: RefreshCw, image: null, title: 'Backup & Restore', desc: 'Encrypted backups — your data stays safe even if you lose access.' },
+                  ] as const).map((item, i) => (
+                    <motion.div
+                      key={i}
+                      variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0 } }}
+                      className="glass-card rounded-[16px] p-3.5 flex flex-col gap-3"
+                    >
+                      {item.image && (
+                        <img src={item.image} alt={item.title} className="w-full h-auto rounded-xl scale-105" />
+                      )}
+                      <div className="flex items-start gap-3">
+                        {item.icon && (
+                          <span className="shrink-0 mt-0.5" style={{ color: 'var(--accent-color)' }}><item.icon size={20} /></span>
+                        )}
+                        <div>
+                          <p className="text-sm font-semibold text-white">{item.title}</p>
+                          <p className="text-[11px] leading-relaxed" style={{ color: 'rgba(255,255,255,0.55)' }}>{item.desc}</p>
                         </div>
-                        <p className="text-[12px] mt-1.5 leading-relaxed" style={{ color: 'rgba(255,255,255,0.5)' }}>{t('advancedProtectionDesc')}</p>
                       </div>
-                    </div>
-                  </a>
+                    </motion.div>
+                  ))}
                 </motion.div>
 
-                {/* Back button */}
                 <motion.button
-                  type="button"
-                  onClick={() => { setSetupStep('welcome'); setSelectedTier(null); }}
-                  className="text-[11px] mb-3 transition-colors"
-                  style={{ color: 'var(--text-muted)' }}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.5, delay: 0.6 }}
-                >
-                  ← {t('backButton')}
-                </motion.button>
-
-                {/* Continue button */}
-                <motion.button
-                  onClick={() => { if (!selectedTier) return; setConfirmTier(selectedTier); }}
-                  disabled={!selectedTier}
-                  className="w-full max-w-xs flex items-center justify-center gap-3 py-4 rounded-[28px] font-bold text-sm transition-all duration-300 active:scale-[0.97] disabled:grayscale disabled:opacity-50"
+                  onClick={() => {
+                    setSelectedTier(1);
+                    setConfirmTier(1);
+                    const tier = TIERS.find(t => t.id === 1);
+                    if (tier) onApplyThreatModel?.(tier.config);
+                    setSetupStep('create');
+                  }}
+                  className="w-full max-w-xs flex items-center justify-center gap-3 py-4 rounded-[28px] font-bold text-sm transition-all duration-300 active:scale-[0.97]"
                   style={{ backgroundColor: 'var(--accent-color)', color: 'var(--bg-main)', boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }}
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: 0.65 }}
+                  transition={{ duration: 0.6, delay: 0.7 }}
                   whileHover={{ scale: 1.02, boxShadow: '0 12px 40px rgba(0,0,0,0.18)' }}
                   whileTap={{ scale: 0.97 }}
                 >
@@ -849,7 +740,6 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
                   </span>
                 </motion.button>
 
-                {/* Pagination dots */}
                 <motion.div
                   className="flex items-center gap-2 mt-5"
                   initial={{ opacity: 0 }}
@@ -859,267 +749,11 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
                   <div className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--border-color)' }} />
                   <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: 'var(--accent-color)' }} />
                   <div className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--border-color)' }} />
-                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--border-color)' }} />
                 </motion.div>
               </div>
-
-              {infoTier !== null && (() => {
-                const tier = TIERS.find(t => t.id === infoTier);
-                if (!tier) return null;
-                const cfg = tier.config;
-                const fmtInactivity = (s: number) => {
-                  if (s === 0) return t('inactivityOff');
-                  if (s < 60) return `${s}s`;
-                  if (s < 3600) return `${Math.floor(s / 60)}m`;
-                  if (s < 86400) return `${Math.floor(s / 3600)}h`;
-                  return `${Math.floor(s / 86400)}d`;
-                };
-                return (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
-                    onClick={() => setInfoTier(null)}
-                  >
-                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.95, y: 10 }}
-                      animate={{ opacity: 1, scale: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                      onClick={(e) => e.stopPropagation()}
-                      className="relative w-full max-w-xs glass-card border border-white/10 rounded-2xl p-5"
-                    >
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className="p-2 rounded-xl bg-neon-green/20 text-neon-green">
-                          <tier.icon size={18} />
-                        </div>
-                        <div>
-                          <p className="text-xs font-semibold text-white">{t(tier.nameKey as any)}</p>
-                          <p className="text-[9px] text-zinc-500">{t('tierInfoTitle')}</p>
-                        </div>
-                      </div>
-                      <div className="space-y-1.5">
-                        <div className="flex justify-between text-[10px]">
-                          <span className="text-zinc-400">{t('modelBlur')}</span>
-                          <span className="text-white font-medium">{cfg.autoBlurSeconds}s</span>
-                        </div>
-                        <div className="flex justify-between text-[10px]">
-                          <span className="text-zinc-400">{t('modelLock')}</span>
-                          <span className="text-white font-medium">{cfg.autoLockSeconds}s</span>
-                        </div>
-                        <div className="flex justify-between text-[10px]">
-                          <span className="text-zinc-400">{t('modelAttempts')}</span>
-                          <span className="text-white font-medium">{cfg.failedAttemptsThreshold}</span>
-                        </div>
-                        <div className="flex justify-between text-[10px]">
-                          <span className="text-zinc-400">{t('modelLockDur')}</span>
-                          <span className="text-white font-medium">{cfg.progressiveLockSeconds === 0 ? t('recoveryOnly') : `${cfg.progressiveLockSeconds}s`}</span>
-                        </div>
-                        <div className="border-t border-white/5 my-1.5" />
-                        <div className="flex justify-between text-[10px]">
-                          <span className="text-zinc-400">{t('modelDestruct')}</span>
-                          <span className={`font-medium ${cfg.autoDestructEnabled ? 'text-red-400' : 'text-zinc-500'}`}>{cfg.autoDestructEnabled ? t('on') : t('off')}</span>
-                        </div>
-                        {cfg.autoDestructEnabled && (
-                          <>
-                            <div className="flex justify-between text-[10px]">
-                              <span className="text-zinc-400">{t('modelDestructAtt')}</span>
-                              <span className="text-white font-medium">{cfg.autoDestructAttempts}</span>
-                            </div>
-                            <div className="flex justify-between text-[10px]">
-                              <span className="text-zinc-400">{t('modelDestructIn')}</span>
-                              <span className="text-white font-medium">{fmtInactivity(cfg.autoDestructInactivity)}</span>
-                            </div>
-                            <div className="flex justify-between text-[10px]">
-                              <span className="text-zinc-400">{t('modelDestructCount')}</span>
-                              <span className="text-white font-medium">{cfg.destructCountdownSeconds}s</span>
-                            </div>
-                          </>
-                        )}
-                        <div className="border-t border-white/5 my-1.5" />
-                        <div className="space-y-0.5">
-                          <div className="grid grid-cols-4 gap-x-2 text-[8px] text-zinc-600 font-mono mb-0.5">
-                            <span />
-                            <span className="text-right">t</span>
-                            <span className="text-right">m</span>
-                            <span className="text-right">p</span>
-                          </div>
-                          {([
-                            { label: 'master', params: cfg.argon },
-                            { label: 'recovery', params: cfg.argonRecovery },
-                            { label: 'PIN', params: cfg.argonPin },
-                          ] as const).map(({ label, params }) => {
-                            const mem = (params.memoryKib / 1024).toFixed(0);
-                            return (
-                              <div key={label} className="grid grid-cols-4 gap-x-2 text-[9px] font-mono">
-                                <span className="text-zinc-500">{label}</span>
-                                <span className="text-zinc-300 text-right">{params.iterations}</span>
-                                <span className="text-zinc-300 text-right">{mem}M</span>
-                                <span className="text-zinc-300 text-right">{params.parallelism}</span>
-                              </div>
-                            );
-                          })}
-                        </div>
-                        <div className="border-t border-white/5 my-1.5" />
-                        <div className="space-y-0.5">
-                          {([
-                            { label: 'min pwd', value: `${cfg.minPasswordLength} chars` },
-                            { label: 'settings pwd', value: cfg.settingsPasswordRequired ? 'required' : 'optional' },
-                            { label: 'vault PIN', value: cfg.vaultPinAllowed ? 'allowed' : 'disabled' },
-                            { label: 'backup name', value: cfg.backupFilenameRandom ? 'random' : 'descriptive' },
-                            { label: 'recovery file', value: cfg.recoveryFilenameRandom ? 'random' : 'descriptive' },
-                          ] as const).map(({ label, value }) => (
-                            <div key={label} className="flex justify-between text-[9px]">
-                              <span className="text-zinc-500">{label}</span>
-                              <span className="text-zinc-300">{value}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-1.5 mt-4 pt-3 border-t border-white/5">
-                        {cfg.autoDestructEnabled ? (
-                          <span className="text-[9px] text-red-400/70">{t('warning')}: {t('auditLimitationTitle')}</span>
-                        ) : (
-                          <span className="text-[9px] text-zinc-600">{t('auditLimitationTitle')}</span>
-                        )}
-                      </div>
-                    </motion.div>
-                  </motion.div>
-                );
-              })()}
-
-              {confirmTier !== null && (() => {
-                const tier = TIERS.find(t => t.id === confirmTier);
-                if (!tier) return null;
-                const cfg = tier.config;
-                const Icon = tier.icon;
-                const fmtInactivity = (s: number) => {
-                  if (s === 0) return t('inactivityOff');
-                  if (s < 60) return `${s}s`;
-                  if (s < 3600) return `${Math.floor(s / 60)}m`;
-                  if (s < 86400) return `${Math.floor(s / 3600)}h`;
-                  return `${Math.floor(s / 86400)}d`;
-                };
-                return (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
-                    onClick={() => setConfirmTier(null)}
-                  >
-                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.95, y: 10 }}
-                      animate={{ opacity: 1, scale: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                      onClick={(e) => e.stopPropagation()}
-                      className="relative w-full max-w-xs glass-card border border-white/10 rounded-2xl p-5"
-                    >
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className="p-2 rounded-xl bg-neon-green/20 text-neon-green">
-                          <Icon size={18} />
-                        </div>
-                        <div>
-                          <p className="text-xs font-semibold text-white">{t(tier.nameKey as any)}</p>
-                          <p className="text-[9px] text-zinc-500">{t('tierInfoTitle')}</p>
-                        </div>
-                      </div>
-                      <div className="space-y-1.5">
-                        <div className="flex justify-between text-[10px]">
-                          <span className="text-zinc-400">{t('modelBlur')}</span>
-                          <span className="text-white font-medium">{cfg.autoBlurSeconds}s</span>
-                        </div>
-                        <div className="flex justify-between text-[10px]">
-                          <span className="text-zinc-400">{t('modelLock')}</span>
-                          <span className="text-white font-medium">{cfg.autoLockSeconds}s</span>
-                        </div>
-                        <div className="flex justify-between text-[10px]">
-                          <span className="text-zinc-400">{t('modelAttempts')}</span>
-                          <span className="text-white font-medium">{cfg.failedAttemptsThreshold}</span>
-                        </div>
-                        <div className="flex justify-between text-[10px]">
-                          <span className="text-zinc-400">{t('modelLockDur')}</span>
-                          <span className="text-white font-medium">{cfg.progressiveLockSeconds === 0 ? t('recoveryOnly') : `${cfg.progressiveLockSeconds}s`}</span>
-                        </div>
-                        <div className="border-t border-white/5 my-1.5" />
-                        <div className="flex justify-between text-[10px]">
-                          <span className="text-zinc-400">{t('modelDestruct')}</span>
-                          <span className={`font-medium ${cfg.autoDestructEnabled ? 'text-red-400' : 'text-zinc-500'}`}>{cfg.autoDestructEnabled ? t('on') : t('off')}</span>
-                        </div>
-                        {cfg.autoDestructEnabled && (
-                          <>
-                            <div className="flex justify-between text-[10px]">
-                              <span className="text-zinc-400">{t('modelDestructAtt')}</span>
-                              <span className="text-white font-medium">{cfg.autoDestructAttempts}</span>
-                            </div>
-                            <div className="flex justify-between text-[10px]">
-                              <span className="text-zinc-400">{t('modelDestructIn')}</span>
-                              <span className="text-white font-medium">{fmtInactivity(cfg.autoDestructInactivity)}</span>
-                            </div>
-                            <div className="flex justify-between text-[10px]">
-                              <span className="text-zinc-400">{t('modelDestructCount')}</span>
-                              <span className="text-white font-medium">{cfg.destructCountdownSeconds}s</span>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                      <div className="border-t border-white/5 my-1.5" />
-                      <div className="space-y-0.5">
-                        <div className="grid grid-cols-4 gap-x-2 text-[8px] text-zinc-600 font-mono mb-0.5">
-                          <span />
-                          <span className="text-right">t</span>
-                          <span className="text-right">m</span>
-                          <span className="text-right">p</span>
-                        </div>
-                        {([
-                          { label: 'master', params: cfg.argon },
-                          { label: 'recovery', params: cfg.argonRecovery },
-                          { label: 'PIN', params: cfg.argonPin },
-                        ] as const).map(({ label, params }) => {
-                          const mem = (params.memoryKib / 1024).toFixed(0);
-                          return (
-                            <div key={label} className="grid grid-cols-4 gap-x-2 text-[9px] font-mono">
-                              <span className="text-zinc-500">{label}</span>
-                              <span className="text-zinc-300 text-right">{params.iterations}</span>
-                              <span className="text-zinc-300 text-right">{mem}M</span>
-                              <span className="text-zinc-300 text-right">{params.parallelism}</span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                      <div className="border-t border-white/5 my-1.5" />
-                      <div className="space-y-0.5">
-                        {([
-                          { label: 'min pwd', value: `${cfg.minPasswordLength} chars` },
-                          { label: 'settings pwd', value: cfg.settingsPasswordRequired ? 'required' : 'optional' },
-                          { label: 'vault PIN', value: cfg.vaultPinAllowed ? 'allowed' : 'disabled' },
-                          { label: 'backup name', value: cfg.backupFilenameRandom ? 'random' : 'descriptive' },
-                          { label: 'recovery file', value: cfg.recoveryFilenameRandom ? 'random' : 'descriptive' },
-                        ] as const).map(({ label, value }) => (
-                          <div key={label} className="flex justify-between text-[9px]">
-                            <span className="text-zinc-500">{label}</span>
-                            <span className="text-zinc-300">{value}</span>
-                          </div>
-                        ))}
-                      </div>
-                      <button
-                        onClick={() => {
-                          if (tier) onApplyThreatModel?.(cfg);
-                          setSetupStep('create');
-                        }}
-                        className="mt-3 text-[10px] text-zinc-400 hover:text-white transition-colors flex items-center justify-center gap-1 w-full"
-                      >
-                        {t('continueButton')} <ChevronRight size={12} />
-                      </button>
-                    </motion.div>
-                  </motion.div>
-                );
-              })()}
             </motion.div>
           )}
-        </AnimatePresence>
+          </AnimatePresence>
       </div>
     );
   }
@@ -1130,7 +764,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
         <Logo />
         <div className="text-2xl md:text-3xl font-bold tracking-tight">
           <span className={`font-bold tracking-tight ${isLocked ? 'text-red-500' : 'text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.4)]'}`}>{t('crytoPrefix')}</span>
-          <span className={isLocked ? '' : 'drop-shadow-[0_0_12px_rgba(212,212,216,0.5)]'} style={{ color: isLocked ? '#ef4444' : accentColor }}>{t('toolSuffix')}</span>
+          {' '}
+          <span className={isLocked ? 'text-red-500' : 'text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.4)]'}>{t('toolSuffix')}</span>
         </div>
         <p className={`text-sm tracking-wide ${isLocked ? 'text-muted' : 'text-zinc-400 drop-shadow-[0_0_8px_rgba(161,161,170,0.3)]'}`}>{t('allInOnePrivacyTagline')}</p>
       </div>
@@ -1319,9 +954,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
                 </p>
               </div>
 
-              <AutoDestructCountdown ref={destructRef} onComplete={onDestructComplete} onStateChange={setIsDestructing} />
-
-              {isLocked && !isDestructing && (
+              {isLocked && !false && (
                 <motion.div
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
@@ -1332,17 +965,17 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
                 </motion.div>
               )}
 
-              <form onSubmit={handleSubmit} className={`space-y-4 ${isLocked && !isDestructing ? 'opacity-30 pointer-events-none grayscale' : ''}`}>
+              <form onSubmit={handleSubmit} className={`space-y-4 ${isLocked && !false ? 'opacity-30 pointer-events-none grayscale' : ''}`}>
                 <div className="space-y-1.5">
                   <label className="text-sm text-muted font-medium ml-1">{t('masterPassword')}</label>
                   <div className="relative group">
                     <input
-                      disabled={isProcessing || (isLocked && !isDestructing)}
+                      disabled={isProcessing || (isLocked && !false)}
                       type={showPassword ? "text" : "password"}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder={t('enterPasswordField')}
-                      className={`w-full bg-surface border ${isDestructing ? 'border-red-500/50 focus:border-red-500' : 'border-border focus:border-primary'} text-primary rounded-xl pl-4 pr-20 py-3 focus:outline-none transition-all placeholder:text-muted disabled:opacity-50`}
+                      className={`w-full bg-surface border ${false ? 'border-red-500/50 focus:border-red-500' : 'border-border focus:border-primary'} text-primary rounded-xl pl-4 pr-20 py-3 focus:outline-none transition-all placeholder:text-muted disabled:opacity-50`}
                       autoFocus
                     />
                     <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-3 text-muted">
@@ -1361,7 +994,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
                   <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="space-y-1.5">
                     <label className="text-sm text-muted font-medium ml-1">{t('confirmPassword')}</label>
                     <input
-                      disabled={isProcessing || (isLocked && !isDestructing)}
+                      disabled={isProcessing || (isLocked && !false)}
                       type={showPassword ? "text" : "password"}
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
@@ -1379,9 +1012,9 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
 
                 <button
                   type="submit"
-                  disabled={isProcessing || (isLocked && !isDestructing)}
-                  className={`w-full text-black font-bold text-base py-3 rounded-xl hover:opacity-90 transition-all flex items-center justify-center gap-2 active:scale-[0.99] disabled:grayscale disabled:opacity-50 ${isDestructing ? 'bg-red-500 hover:bg-red-400' : isLocked ? 'bg-zinc-800' : ''}`}
-                  style={{ backgroundColor: isDestructing ? undefined : (isLocked ? undefined : accentColor), boxShadow: isDestructing ? '0 0 20px rgba(239,68,68,0.4)' : (isLocked ? undefined : `0 0 15px rgba(${accentRgb}, 0.3)`) }}
+                  disabled={isProcessing || (isLocked && !false)}
+                  className={`w-full text-black font-bold text-base py-3 rounded-xl hover:opacity-90 transition-all flex items-center justify-center gap-2 active:scale-[0.99] disabled:grayscale disabled:opacity-50 ${false ? 'bg-red-500 hover:bg-red-400' : isLocked ? 'bg-zinc-800' : ''}`}
+                  style={{ backgroundColor: false ? undefined : (isLocked ? undefined : accentColor), boxShadow: false ? '0 0 20px rgba(239,68,68,0.4)' : (isLocked ? undefined : `0 0 15px rgba(${accentRgb}, 0.3)`) }}
                 >
                   {isProcessing ? (
                     <>
@@ -1397,7 +1030,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
                 </button>
               </form>
 
-              {!isSetup && !isLocked && !isDestructing && recoverySettings && recoverySettings.count > 0 && (
+              {!isSetup && !isLocked && !false && recoverySettings && recoverySettings.count > 0 && (
                 <div className="mt-4 pt-4 border-t border-white/10">
                   <button
                     type="button"

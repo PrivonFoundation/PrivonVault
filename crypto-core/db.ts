@@ -197,6 +197,70 @@ class VaultDB {
     });
   }
 
+  async getItemsPage(offset: number, limit: number): Promise<DBItem[]> {
+    await this.ensureInit();
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction([STORE_NAME], 'readonly');
+      const store = transaction.objectStore(STORE_NAME);
+      const items: DBItem[] = [];
+      let skipped = 0;
+      const request = store.openCursor();
+      request.onsuccess = (event) => {
+        const cursor = (event.target as IDBRequest).result;
+        if (cursor && items.length < limit) {
+          if (skipped < offset) {
+            skipped++;
+            cursor.continue();
+          } else {
+            items.push(cursor.value);
+            cursor.continue();
+          }
+        } else {
+          resolve(items);
+        }
+      };
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async getItemsByCategory(category: DBItem['category'], offset: number, limit: number): Promise<DBItem[]> {
+    await this.ensureInit();
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction([STORE_NAME], 'readonly');
+      const store = transaction.objectStore(STORE_NAME);
+      const items: DBItem[] = [];
+      let skipped = 0;
+      const request = store.openCursor();
+      request.onsuccess = (event) => {
+        const cursor = (event.target as IDBRequest).result;
+        if (cursor && items.length < limit) {
+          if (cursor.value.category === category) {
+            if (skipped < offset) {
+              skipped++;
+            } else {
+              items.push(cursor.value);
+            }
+          }
+          cursor.continue();
+        } else {
+          resolve(items);
+        }
+      };
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async getItemCount(): Promise<number> {
+    await this.ensureInit();
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction([STORE_NAME], 'readonly');
+      const store = transaction.objectStore(STORE_NAME);
+      const request = store.count();
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
   async deleteItem(id: string): Promise<void> {
     await this.ensureInit();
     return new Promise((resolve, reject) => {

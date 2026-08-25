@@ -5,6 +5,17 @@ on:
     tags:
       - 'v*'
   workflow_dispatch:
+    inputs:
+      target:
+        description: 'Target ABI to build (all = universal APK)'
+        type: choice
+        options:
+          - all
+          - aarch64
+          - armv7
+          - x86_64
+          - x86
+        default: all
 
 permissions:
   contents: read
@@ -67,8 +78,15 @@ jobs:
       - name: Generate app icons
         run: npm run tauri -- icon src-tauri/icon-sources/icon-manifest.json -o src-tauri/icons
 
-      - name: Build Universal APK
-        run: npm run tauri android build -- --apk
+      - name: Build APK
+        env:
+          BUILD_TARGET: ${{ inputs.target || 'all' }}
+        run: |
+          if [ "$BUILD_TARGET" = "all" ]; then
+            npm run tauri android build -- --apk
+          else
+            npm run tauri android build -- --apk --target "$BUILD_TARGET"
+          fi
 
       - name: Find APK files
         run: |

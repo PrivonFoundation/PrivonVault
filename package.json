@@ -33,6 +33,7 @@
     "@fontsource/rubik": "^5.2.8",
     "@fontsource/space-mono": "^5.2.9",
     "@heroicons/react": "^2.0.18",
+    "@tanstack/react-virtual": "^3.14.5",
     "@tauri-apps/api": "^2.0.0",
     "framer-motion": "^12.40.0",
     "hash-wasm": "^4.12.0",
@@ -40,11 +41,12 @@
     "lucide-react": "^1.18.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
-    "react-icons": "^4.11.0"
+    "react-icons": "^4.11.0",
+    "react-virtuoso": "^4.18.10"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.11.2",
-"@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@types/node": "^26.1.1",
     "@types/prop-types": "^15.7.15",

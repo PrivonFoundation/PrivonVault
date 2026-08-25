@@ -8,7 +8,6 @@ import { backup_encrypt, backup_decrypt, generate_passphrase } from '../../crypt
 import { db } from '../../crypto-core/db';
 import { useI18n } from '../../locales/i18nContext';
 import { AppTheme } from '../../types';
-import { LiquidGlassOverlay } from '../LiquidGlassOverlay';
 
 interface BackupViewProps {
   onBack: () => void;
@@ -110,7 +109,7 @@ export const BackupView: React.FC<BackupViewProps> = ({ onBack, theme }) => {
             'privon_blur_time', 'privon_lock_time',
             'privon_prog_lock_time', 'privon_prog_attempts',
             'privon_destruct_time',
-            'theme_accent', 'app_theme_config', 'app_font_config', 'app_language', 'app_region',
+            'theme_accent', 'app_language', 'app_region',
           ]);
           Object.entries(data.localStorage).forEach(([k, v]) => {
               if (v && allowedKeys.has(k)) {
@@ -175,7 +174,6 @@ export const BackupView: React.FC<BackupViewProps> = ({ onBack, theme }) => {
                       onClick={startBackup}
                       className="group relative p-6 rounded-[32px] glass-card hover:border-neon-green/50 transition-all cursor-pointer overflow-hidden"
                     >
-                        <LiquidGlassOverlay />
                         <div className="absolute top-0 right-0 p-8 opacity-[0.03] pointer-events-none group-hover:opacity-05 transition-opacity">
                             <Download size={80} className="text-primary" />
                         </div>
@@ -200,7 +198,6 @@ export const BackupView: React.FC<BackupViewProps> = ({ onBack, theme }) => {
                       onClick={() => setStep('restore_input')}
                       className="group relative p-6 rounded-[32px] glass-card hover:border-neon-green/50 transition-all cursor-pointer overflow-hidden"
                     >
-                        <LiquidGlassOverlay />
                         <div className="absolute top-0 right-0 p-8 opacity-[0.03] pointer-events-none group-hover:opacity-05 transition-opacity">
                             <Upload size={80} className="text-primary" />
                         </div>
@@ -286,7 +283,6 @@ export const BackupView: React.FC<BackupViewProps> = ({ onBack, theme }) => {
                         disabled={isProcessing}
                         className="w-full py-5 rounded-2xl bg-neon-green text-black font-bold uppercase tracking-widest hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-3 text-lg shadow-lg shadow-neon-green/20 relative overflow-hidden"
                     >
-                        <LiquidGlassOverlay intensity="subtle" />
                         <span className="relative z-10 flex items-center justify-center gap-3">
                           {isProcessing ? <Loader2 className="animate-spin" /> : <Download size={22} />}
                           {isProcessing ? t('processing') : t('downloadBackup')}
@@ -297,7 +293,6 @@ export const BackupView: React.FC<BackupViewProps> = ({ onBack, theme }) => {
                         onClick={() => setStep('menu')}
                         className="w-full py-4 rounded-2xl bg-surface border border-border text-muted font-bold uppercase tracking-widest hover:text-primary hover:border-primary transition-all relative overflow-hidden"
                     >
-                        <LiquidGlassOverlay intensity="subtle" />
                         <span className="relative z-10">{t('back')}</span>
                     </button>
                 </motion.div>
@@ -322,7 +317,6 @@ export const BackupView: React.FC<BackupViewProps> = ({ onBack, theme }) => {
                         <span>{new Date().toLocaleDateString()}</span>
                     </div>
                     <button onClick={() => setStep('menu')} className="px-10 py-4 rounded-2xl bg-surface border border-border text-primary font-bold uppercase tracking-widest hover:border-neon-green hover:text-neon-green transition-all relative overflow-hidden">
-                        <LiquidGlassOverlay intensity="subtle" />
                         <span className="relative z-10">{t('backToMenu')}</span>
                     </button>
                 </motion.div>
@@ -401,7 +395,6 @@ export const BackupView: React.FC<BackupViewProps> = ({ onBack, theme }) => {
                         disabled={isProcessing}
                         className="w-full py-5 rounded-2xl bg-white text-black font-bold uppercase tracking-widest hover:bg-zinc-200 transition-all flex items-center justify-center gap-3 text-lg shadow-lg relative overflow-hidden"
                     >
-                        <LiquidGlassOverlay intensity="subtle" />
                         <span className="relative z-10 flex items-center justify-center gap-3">
                           {isProcessing ? <Loader2 className="animate-spin" /> : <RefreshCw size={22} />}
                           {isProcessing ? t('restoring') : t('restoreAll')}
@@ -412,7 +405,6 @@ export const BackupView: React.FC<BackupViewProps> = ({ onBack, theme }) => {
                         onClick={() => { setStep('menu'); setRestoreFile(null); setRestoreKey(''); }}
                         className="w-full py-4 rounded-2xl bg-surface border border-border text-muted font-bold uppercase tracking-widest hover:text-primary hover:border-primary transition-all relative overflow-hidden"
                     >
-                        <LiquidGlassOverlay intensity="subtle" />
                         <span className="relative z-10">{t('back')}</span>
                     </button>
                 </motion.div>
@@ -433,7 +425,6 @@ export const BackupView: React.FC<BackupViewProps> = ({ onBack, theme }) => {
                         <p className="text-base text-muted">{t('appReload')}</p>
                     </div>
                     <button onClick={() => window.location.reload()} className="px-10 py-4 rounded-2xl bg-neon-green text-black font-bold uppercase tracking-widest text-lg shadow-lg shadow-neon-green/20 hover:opacity-90 transition-all relative overflow-hidden">
-                        <LiquidGlassOverlay intensity="subtle" />
                         <span className="relative z-10">{t('reload')}</span>
                     </button>
                 </motion.div>

@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import crytoLogo from '../assets/PrivonVault.png';
+import logoImg from '../assets/logo.png';
 
 interface SplashScreenProps {
   onComplete: () => void;
@@ -10,7 +10,7 @@ interface SplashScreenProps {
 export const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete }) => {
   const [showText, setShowText] = useState(false);
   
-  const accentColor = localStorage.getItem('theme_accent') || '#E8E8E8';
+  const accentColor = '#E8E8E8';
   const rgb = (() => {
     const c = accentColor.replace('#', '');
     return `${parseInt(c.slice(0, 2), 16)}, ${parseInt(c.slice(2, 4), 16)}, ${parseInt(c.slice(4, 6), 16)}`;
@@ -45,7 +45,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete }) => {
             <div className="absolute inset-0 blur-[100px] rounded-full" style={{ backgroundColor: `rgba(${rgb}, 0.2)` }} />
             <div className="absolute inset-8 blur-3xl rounded-full" style={{ backgroundColor: `rgba(${rgb}, 0.15)` }} />
             <motion.img
-              src={crytoLogo}
+              src={logoImg}
               alt="Privon Vault"
               className="w-full h-full object-contain relative z-10"
               style={{ filter: `drop-shadow(0 0 40px rgba(${rgb}, 0.6)) drop-shadow(0 0 80px rgba(${rgb}, 0.3))` }}

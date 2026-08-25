@@ -5,6 +5,7 @@ import { Music, Disc, User, ListMusic, Play, Pause, Shuffle, Heart, MoreHorizont
 import { FileSystemItem, AppTheme } from '../../types';
 import { is_safe_image_url as isSafeImageUrl } from '../../crypto-core/index';
 import { useI18n } from '../../locales/i18nContext';
+import snowMusicImg from '../../assets/snow-music.png';
 
 type MusicSubTab = 'songs' | 'albums' | 'artists' | 'playlists';
 
@@ -37,7 +38,7 @@ export const MusicView: React.FC<MusicViewProps> = ({ items, onPlay, currentSong
   const quickPicks = useMemo(() => filteredItems.slice(0, 5), [filteredItems]);
 
   return (
-    <div className="flex flex-col h-full bg-background relative overflow-hidden">
+    <div className="flex flex-col relative" style={{ height: 'calc(100vh - 320px)' }}>
       
       {/* Decorative Background Glow */}
       <div className="absolute top-[-10%] right-[-20%] w-[300px] h-[300px] bg-neon-green/5 blur-[100px] rounded-full pointer-events-none" />
@@ -61,12 +62,16 @@ export const MusicView: React.FC<MusicViewProps> = ({ items, onPlay, currentSong
       </div>
 
       {filteredItems.length === 0 ? (
-        <div className="flex-1 flex flex-col items-center justify-center text-muted px-8 pt-10">
-          <div className="w-20 h-20 rounded-full bg-surface border border-border flex items-center justify-center mb-5">
-            <Music size={36} className="opacity-30" />
+        <div className="flex-1 flex flex-col items-center justify-center px-8">
+          <div className="glass-card rounded-[24px] p-4 max-w-xs w-full flex flex-col items-center">
+            <div className="w-40 h-40 rounded-2xl overflow-hidden -mt-10 mb-4 shadow-xl glass-snow-float">
+              <img src={snowMusicImg} alt="Snow" className="w-full h-full object-cover" />
+            </div>
+            <div className="text-center px-2 pb-2">
+              <h4 className="text-sm font-bold text-white text-center mb-2">Snow is preparing the music player</h4>
+              <p className="text-xs text-zinc-300 text-center leading-relaxed">I'm working on playlist management, equalizer, lyrics sync and more. Thanks for exploring this beta with me!</p>
+            </div>
           </div>
-          <h4 className="text-sm font-bold text-primary text-center mb-2">{t('musicComingSoon')}</h4>
-          <p className="text-[11px] text-zinc-500 text-center leading-relaxed max-w-xs">{t('musicComingSoonDesc')}</p>
         </div>
       ) : (
         <div className="flex-1 overflow-y-auto pb-32 pt-4 no-scrollbar">

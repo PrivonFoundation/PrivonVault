@@ -14,7 +14,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FileSystemItem, AppTheme } from '../types';
 import { is_safe_image_url as isSafeImageUrl } from '../crypto-core/index';
 import { useI18n } from '../locales/i18nContext';
-import { LiquidGlassOverlay } from './LiquidGlassOverlay';
 
 // Map namespaces
 const ICON_PACKS: Record<string, any> = {
@@ -136,9 +135,12 @@ export const FileItem: React.FC<{
 
   if (minimal) {
     return (
-      <div 
+      <motion.div 
         onClick={onClick}
-        className="group flex items-center p-3 rounded-xl glass-card transition-all cursor-pointer active:scale-[0.98] hover:border-neon-green hover:shadow-md"
+        className="group flex items-center p-3 rounded-xl glass-card-premium cursor-pointer file-item"
+        whileHover={{ y: -2, boxShadow: '0 8px 24px rgba(var(--accent-rgb), 0.12)' }}
+        whileTap={{ scale: 0.98 }}
+        transition={{ type: 'spring', stiffness: 400, damping: 20 }}
       >
         <div className={`w-10 h-10 rounded-lg flex items-center justify-center mr-4 bg-surface shrink-0 overflow-hidden`}>
           {RenderedIcon || <DefaultIcon size={20} className={iconColorClass} />}
@@ -152,16 +154,18 @@ export const FileItem: React.FC<{
               </div>
           )}
         </div>
-      </div>
+      </motion.div>
     );
   }
 
   return (
-    <div 
+    <motion.div 
       onClick={!isRenaming ? onClick : undefined}
-      className={`relative w-full p-4 rounded-2xl transition-all duration-200 cursor-pointer mb-4 glass-card overflow-hidden hover:-translate-y-1 ${isRenaming ? 'border-neon-green ring-1 ring-neon-green' : isSelected ? 'border-neon-green ring-2 ring-neon-green' : 'active:scale-[0.98]'}`}
+      className={`relative w-full p-4 rounded-2xl transition-colors duration-200 cursor-pointer mb-4 glass-card-premium overflow-hidden file-item ${isRenaming ? 'border-neon-green ring-1 ring-neon-green' : isSelected ? 'border-neon-green ring-2 ring-neon-green' : ''}`}
+      whileHover={!isRenaming ? { y: -3, boxShadow: '0 12px 30px rgba(var(--accent-rgb), 0.15)' } : undefined}
+      whileTap={!isRenaming && !isSelected ? { scale: 0.98 } : undefined}
+      transition={{ type: 'spring', stiffness: 350, damping: 18 }}
     >
-        <LiquidGlassOverlay />
       {isSelected && (
         <div className="absolute top-2 right-2 w-5 h-5 bg-neon-green rounded-full flex items-center justify-center">
           <LucideIcons.Check size={12} className="text-black" />
@@ -241,6 +245,6 @@ export const FileItem: React.FC<{
           </div>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 };

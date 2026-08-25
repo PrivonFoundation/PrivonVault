@@ -4,7 +4,6 @@ import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useI18n } from '../locales/i18nContext';
-import { LiquidGlassOverlay } from './LiquidGlassOverlay';
 
 // HSL to Hex Helper for Color Picker
 const hslToHex = (h: number, s: number, l: number) => {
@@ -84,7 +83,6 @@ export const CustomColorPicker: React.FC<{
               className="relative w-full max-w-sm glass-card rounded-[32px] overflow-hidden shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
-                <LiquidGlassOverlay />
                <div className="p-5 border-b border-border bg-black/30 flex justify-between items-center">
                   <h3 className="text-lg font-bold text-primary">{t('colorSelector') || 'Selector Culoare'}</h3>
                </div>

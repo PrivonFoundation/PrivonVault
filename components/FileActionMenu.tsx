@@ -9,7 +9,6 @@ import {
 import { FileSystemItem } from '../types';
 import { is_safe_image_url as isSafeImageUrl } from '../crypto-core/index';
 import { useI18n } from '../locales/i18nContext';
-import { LiquidGlassOverlay } from './LiquidGlassOverlay';
 
 interface FileActionMenuProps {
   isOpen: boolean;
@@ -45,7 +44,6 @@ export const FileActionMenu: React.FC<FileActionMenuProps> = ({ isOpen, onClose,
           ${isDanger ? 'bg-red-500/10 border-red-500/30 hover:border-red-500' : 'bg-surface/30 border-border hover:bg-surface/60 hover:border-neon-green/50'}
         `}
       >
-        <LiquidGlassOverlay intensity="subtle" />
         <span className="relative z-10 flex flex-col items-center justify-center gap-1">
           <div className={`
             p-1.5 rounded-lg bg-surface/30 
@@ -75,7 +73,6 @@ export const FileActionMenu: React.FC<FileActionMenuProps> = ({ isOpen, onClose,
           ${isDanger ? 'hover:bg-red-500/10' : 'hover:bg-surface/50 hover:border-neon-green/20'}
         `}
       >
-        <LiquidGlassOverlay intensity="subtle" />
         <span className="relative z-10 flex items-center gap-3">
           <div className={`p-1.5 rounded-lg bg-surface/30 ${isDanger ? 'text-red-500' : 'text-muted'}`}>
             {React.cloneElement(icon as React.ReactElement<any>, { size: 16 })}
@@ -146,7 +143,6 @@ export const FileActionMenu: React.FC<FileActionMenuProps> = ({ isOpen, onClose,
                     onClick={() => handleAction('delete')}
                     className="w-full py-3 rounded-xl border border-red-500/30 bg-red-500/10 text-red-500 font-bold uppercase tracking-wider text-xs flex items-center justify-center gap-2 hover:bg-red-500/20 hover:border-red-500/50 transition-all relative overflow-hidden"
                 >
-                  <LiquidGlassOverlay intensity="subtle" />
                   <span className="relative z-10 flex items-center justify-center gap-2">
                     <Trash2 size={14} />
                     {t('deleteFile')}
