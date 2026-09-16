@@ -20,12 +20,12 @@
 |  Welcome |  Dashboard |
 | :---: | :---: |
 | <img src="assets/snow-mock-up-welcome.png" width="400" /> | <img src="assets/snow-mock-up-dashboard.png" width="400" /> |
-| *Threat-model driven setup* | *File Management* |
+| |  |
 
 |  Benefits |
 | :---: |
 | <img src="assets/snow-mock-up-benefits.png" width="400" /> |
-| *Privacy first, always* |
+|  |
 
 </div>
 
