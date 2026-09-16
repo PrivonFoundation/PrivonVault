@@ -17,15 +17,15 @@
 <div align="center">
 
 
-|  Concept & Brand |  Interface Overview |
+|  Welcome |  Dashboard |
 | :---: | :---: |
-| <img src="assets/animation.png" width="400" /> | <img src="assets/dashboard.png" width="400" /> |
-| *brand & animation* | *File Management* |
+| <img src="assets/snow-mock-up-welcome.png" width="400" /> | <img src="assets/snow-mock-up-dashboard.png" width="400" /> |
+| *Threat-model driven setup* | *File Management* |
 
-|  Advanced Security |  Deep Customization |
-| :---: | :---: |
-| <img src="assets/encryption.png" width="400" /> | <img src="assets/settings.png" width="400" /> |
-| *Multiple encryption algorithms* | *Themes & Personalization* |
+|  Benefits |
+| :---: |
+| <img src="assets/snow-mock-up-benefits.png" width="400" /> |
+| *Privacy first, always* |
 
 </div>
 
