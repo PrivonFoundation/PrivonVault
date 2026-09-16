@@ -1,6 +1,6 @@
 
 <div align="center">
-  <img src="assets/PrivonVault.png" alt="Privon Vault Logo" width="2000px" />
+  <img src="assets/Snow-logo-PrivonVault.png" alt="Privon Vault Logo" width="2000px" />
   <h1>Privon Vault</h1>
   <p><strong>All-in-One Privacy.</strong></p>
   <br>
