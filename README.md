@@ -38,15 +38,6 @@ File names, tags, and metadata are encrypted — not just file contents. It work
 Privon Vault is compliant with the [Protocol-3305](https://github.com/ObscuritySecurity/protocol-3305) and respects all its principles.
 
 
-Privon Vault adapts to your needs and your individual threat model configures settings, features, technical parameters, and even the interface because security should not be reserved exclusively for experts with a very intuitive and visually pleasing design based on liquid glass.
-
-The glass interface is extremely intuitive — welcome screen, choose threat model, and the application configures everything for you. Models include Everyday Privacy — with subcategories for higher threat models: Journalists, Activists, Whistleblowers.
-
-Attention: high threat models are disabled by default until audit. We do not put lives at risk and do not create false impressions.
-impressions.
-
-See the full [Threat Model & Security Features](https://github.com/privonn/PrivonVault/blob/main/docs/SECURITY.md) for details.
-
 ### No Software Is Perfect
 
 No software is perfect — including Privon Vault. That's exactly why we need a community. Bugs, vulnerabilities, and edge cases will always exist. The difference between good software and great software is **transparency** and **how actively you work with the people who use it**.
