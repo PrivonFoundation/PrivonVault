@@ -2,12 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Eye, EyeOff, Loader2, ShieldCheck, Timer, Copy, Check, ChevronRight, Target, ShieldAlert, FolderOpen, RefreshCw, Code2, Download, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useI18n } from '../locales/i18nContext';
-import logoImg from '../assets/logo.png';
-import welcomeImg from '../assets/welcome.png';
+import logoImg from '../assets/Snow-logo-PrivonVault.png';
+import welcomeImg from '../assets/snow-welcome.png';
 import snowBenefitsImg from '../assets/snow-benefits.png';
 const threatModelVideo = undefined;
 import { AutoDestructCountdown } from './AutoDestructCountdown';
-import { generatePassphrase } from '../utils/passphrase';
+import { generatePassphrase, normalizePassphrase } from '../utils/passphrase';
 
 import type { AutoDestructCountdownHandle } from './AutoDestructCountdown';
 import {
@@ -112,7 +112,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
           const masterSalt = base64_decode(meta.master_salt);
           const ap = meta.argon || { iterations: 2, memoryKib: 19456, parallelism: 1 };
 
-        const masterKey = derive_key(new TextEncoder().encode(password), masterSalt, ap.iterations, ap.memoryKib, ap.parallelism, 32);
+        const masterKey = derive_key(new TextEncoder().encode(normalizePassphrase(password)), masterSalt, ap.iterations, ap.memoryKib, ap.parallelism, 32);
 
           try {
             const mvkBytes = await unwrap_raw_key(JSON.stringify(wrappers.master), masterKey);
@@ -139,7 +139,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
           const salt = base64_decode(saltB64);
           const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
-          const masterKey = derive_master_key(password, salt, isMobile);
+          const masterKey = derive_master_key(normalizePassphrase(password), salt, isMobile);
 
           try {
             const rawVaultKey = decrypt(vaultB64, ivB64, masterKey);
@@ -163,21 +163,22 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
   const handleCreateFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    if (!passphraseGenerated && password.length < 30) {
+    const pw = normalizePassphrase(password);
+    if (!passphraseGenerated && pw.length < 30) {
       setError(t('passwordTooShort'));
       return;
     }
-    if (password !== confirmPassword) {
+    if (pw !== normalizePassphrase(confirmPassword)) {
       setError(t('passwordsDoNotMatch'));
       return;
     }
     const tierId = confirmTier ?? 1;
     const tier = TIERS.find(t => t.id === tierId);
     if (!tier) return;
-    completeSetup(tier.config.argon, tierId);
+    completeSetup(tier.config.argon, tierId, pw);
   };
 
-  const completeSetup = async (argonParams: { iterations: number; memoryKib: number; parallelism: number }, tierId: number) => {
+  const completeSetup = async (argonParams: { iterations: number; memoryKib: number; parallelism: number }, tierId: number, passphrase: string) => {
     setIsProcessing(true);
     setError(null);
 
@@ -196,7 +197,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
       setSetupProgress(10);
       setSetupProgressLabel('Deriving master key...');
       await yieldToReact();
-      const masterKey = derive_key(new TextEncoder().encode(password), masterSalt, argonParams.iterations, argonParams.memoryKib, argonParams.parallelism, 32);
+      const masterKey = derive_key(new TextEncoder().encode(passphrase), masterSalt, argonParams.iterations, argonParams.memoryKib, argonParams.parallelism, 32);
 
       setSetupProgress(30);
       setSetupProgressLabel('Wrapping master key...');

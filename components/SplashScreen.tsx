@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import logoImg from '../assets/logo.png';
+import logoImg from '../assets/Snow-logo-PrivonVault.png';
 
 interface SplashScreenProps {
   onComplete: () => void;

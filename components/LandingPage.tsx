@@ -3,7 +3,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { ShieldCheck, Lock, FileText, Image, Music, Database, Key, FolderLock } from 'lucide-react';
 import { useI18n } from '../locales/i18nContext';
-import logoImg from '../assets/logo.png';
+import logoImg from '../assets/Snow-logo-PrivonVault.png';
 
 const NeonButton: React.FC<{ children: React.ReactNode; primary?: boolean }> = ({ children, primary }) => (
   <button

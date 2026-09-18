@@ -16,6 +16,7 @@ import {
   parse_code_index,
   get_argon_params,
 } from './crypto-core/index';
+import { normalizePassphrase } from './utils/passphrase';
 import type { CryptoMetadata, VaultWrappers } from './types';
 
 const App: React.FC = () => {
@@ -212,7 +213,7 @@ const App: React.FC = () => {
 
       const newMasterSalt = window.crypto.getRandomValues(new Uint8Array(16));
       const ap = meta.argon || { iterations: 2, memoryKib: 19456, parallelism: 1 };
-      const newMasterKey = derive_key(new TextEncoder().encode(newPassword), newMasterSalt, ap.iterations, ap.memoryKib, ap.parallelism, 32);
+      const newMasterKey = derive_key(new TextEncoder().encode(normalizePassphrase(newPassword)), newMasterSalt, ap.iterations, ap.memoryKib, ap.parallelism, 32);
       const newMasterWrapper = await wrap_raw_key(mvkBytes, newMasterKey);
 
       delete wrappers.recovery[idx];
