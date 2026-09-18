@@ -8,7 +8,7 @@ import {
   Type, CaseUpper, ShieldAlert, Power, ShieldCheck, Lock, Check, Key, Sparkles, ChevronRight,
   Target
 } from 'lucide-react';
-import logoImg from '../../assets/logo.png';
+import logoImg from '../../assets/Snow-logo-PrivonVault.png';
 import { AppTheme } from '../../types';
 import { CustomColorPicker } from '../CustomColorPicker';
 import { LANGUAGES } from '../../locales';

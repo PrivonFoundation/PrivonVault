@@ -3,7 +3,7 @@ import React from 'react';
 import { Plus, FolderPlus, Database, Search, Trash2, Settings } from 'lucide-react';
 import { ViewState } from '../types';
 import { useI18n } from '../locales/i18nContext';
-import logoImg from '../assets/logo.png';
+import logoImg from '../assets/Snow-logo-PrivonVault.png';
 
 interface TopActionsProps {
   activeTab: string;

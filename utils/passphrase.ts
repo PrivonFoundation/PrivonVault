@@ -1310,3 +1310,7 @@ export function generatePassphrase(): string {
   }
   return words.join(' ');
 }
+
+export function normalizePassphrase(value: string): string {
+  return value.trim().replace(/\s+/g, ' ');
+}
