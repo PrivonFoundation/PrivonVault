@@ -63,7 +63,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete }) => {
             className="text-center"
         >
             <h1 className="text-5xl font-black tracking-tighter text-white mb-2 font-mono">
-                CRYTO<span className="bg-gradient-to-r from-zinc-300 via-zinc-400 to-zinc-500 bg-clip-text text-transparent drop-shadow-[0_0_10px_rgba(212,212,216,0.4)]">TOOL</span>
+                PRIVON<span className="bg-gradient-to-r from-zinc-300 via-zinc-400 to-zinc-500 bg-clip-text text-transparent drop-shadow-[0_0_10px_rgba(212,212,216,0.4)]">VAULT</span>
             </h1>
             <motion.div 
                 className="h-0.5 mx-auto opacity-50"
