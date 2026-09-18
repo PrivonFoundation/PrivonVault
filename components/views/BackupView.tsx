@@ -44,6 +44,9 @@ export const BackupView: React.FC<BackupViewProps> = ({ onBack, theme }) => {
             localStorage: {
                 'privon_theme_config': localStorage.getItem('app_theme_config'),
                 'privon_vault_cats': localStorage.getItem('privon_vault_cats'),
+                'privon_vault_keys': localStorage.getItem('privon_vault_keys'),
+                'privon_devcreds': localStorage.getItem('privon_devcreds'),
+                'privon_devcreds_meta': localStorage.getItem('privon_devcreds_meta'),
                 'privon_salt': localStorage.getItem('privon_salt'),
                 'privon_iv': localStorage.getItem('privon_iv'),
                 'privon_vault_blob': localStorage.getItem('privon_vault_blob'),
@@ -105,6 +108,8 @@ export const BackupView: React.FC<BackupViewProps> = ({ onBack, theme }) => {
             'privon_salt', 'privon_iv', 'privon_vault_blob',
             'privon_crypto_metadata', 'privon_vault_wrappers',
             'privon_vault_pin_hash', 'privon_vault_enabled',
+            'privon_vault_cats', 'privon_vault_keys',
+            'privon_devcreds', 'privon_devcreds_meta', 'privon_devcreds_cats',
             'privon_ad_enabled', 'privon_ad_attempts', 'privon_ad_inactivity', 'privon_ad_countdown',
             'privon_blur_time', 'privon_lock_time',
             'privon_prog_lock_time', 'privon_prog_attempts',
