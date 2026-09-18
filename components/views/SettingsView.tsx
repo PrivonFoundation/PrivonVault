@@ -43,6 +43,7 @@ interface SettingsViewProps {
     vaultPinAllowed?: boolean;
   };
   onOpenAbout: () => void;
+  onOpenDevCreds: () => void;
 }
 
 export const SettingsView: React.FC<SettingsViewProps> = (props) => {
@@ -407,6 +408,18 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                     <p className="text-[10px] text-muted mb-3">{t('vaultKeysDesc')}</p>
                 </div>
 )}
+
+{/* --- DEVELOPER CREDENTIALS --- */}
+<div className="pb-6 border-b border-border">
+    <button onClick={props.onOpenDevCreds} className="w-full flex items-center justify-between group">
+        <div className="flex items-center gap-2">
+            <Terminal size={16} className="text-neon-green" />
+            <label className="text-sm font-bold uppercase tracking-wider text-primary cursor-pointer">{t('devCredsTitle')}</label>
+        </div>
+        <ChevronRight size={16} className="text-muted group-hover:text-neon-green group-hover:translate-x-1 transition-all" />
+    </button>
+    <p className="text-[10px] text-muted mt-2">{t('devCredsDesc')}</p>
+</div>
 
                  {/* PROGRESSIVE LOCK UI */}
                 <div className="space-y-6 pt-2">

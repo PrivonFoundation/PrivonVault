@@ -34,6 +34,7 @@ import { MusicView } from './views/MusicView';
 import { SearchView } from './views/SearchView';
 import { TrashView } from './views/TrashView';
 import { VaultView } from './views/VaultView';
+import { DevCredentialsView } from './views/DevCredentialsView';
 import { BackupView } from './views/BackupView';
 
 interface DashboardProps {
@@ -1174,12 +1175,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 disableVault: handleDisableVault
               }}
               onOpenAbout={() => setCurrentView('about')} 
+              onOpenDevCreds={() => setCurrentView('devcreds')}
             />
           )}
           {currentView === 'search' && <SearchView items={items} onNavigate={(item) => { handleNavigate(item); setCurrentView('dashboard'); }} onBack={() => setCurrentView('dashboard')} theme={appTheme} />}
           {currentView === 'trash' && <TrashView trashItems={trashItems} onRestore={restoreFromTrash} onDeleteForever={deletePermanently} onBack={() => setCurrentView('dashboard')} theme={appTheme} />}
           {currentView === 'about' && <AboutView onBack={() => setCurrentView('settings')} accentColor={accentColor} />}
           {currentView === 'vault' && <VaultView onBack={() => setCurrentView('settings')} />}
+          {currentView === 'devcreds' && <DevCredentialsView onBack={() => setCurrentView('settings')} />}
           {currentView === 'backup' && <BackupView onBack={() => setCurrentView('dashboard')} theme={appTheme} />}
         </AnimatePresence>
       </div>

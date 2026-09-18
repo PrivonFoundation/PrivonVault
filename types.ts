@@ -24,7 +24,7 @@ export interface LocationItem {
   id: string; name: string; lat: number; lng: number; region: string;
 }
 
-export type ViewState = 'dashboard' | 'search' | 'trash' | 'settings' | 'storage' | 'about' | 'vault';
+export type ViewState = 'dashboard' | 'search' | 'trash' | 'settings' | 'storage' | 'about' | 'vault' | 'devcreds';
 export type AppTheme = 'dark' | 'light' | 'system';
 
 // --- CRYPTO TYPES ---
