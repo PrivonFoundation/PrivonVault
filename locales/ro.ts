@@ -686,4 +686,6 @@ export const translations: Translations = {
   devCredsKindSecret: 'Secret',
   devCredsKindOther: 'Altul',
   devCredsValueLabel: 'Valoare',
+  devCredsDecryptError: 'Nu am putut decripta credențialele de developer. Nimic nu a fost suprascris.',
+  devCredsNoKeyError: 'Cheia de criptare nu e disponibilă. Blochează și deblochează aplicația, apoi încearcă din nou.',
 }

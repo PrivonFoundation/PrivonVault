@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, Plus, Terminal,
@@ -34,6 +34,12 @@ interface DevCredentialCategory {
   color: string;
 }
 
+type StoreError = 'decrypt-failed' | 'no-key';
+
+type EntriesResult =
+  | { ok: true; entries: DevCredentialEntry[] }
+  | { ok: false; error: StoreError };
+
 const CATEGORY_ICONS: Record<string, React.ReactNode> = {
   'terminal': <Terminal />,
   'card': <CreditCard />,
@@ -51,21 +57,77 @@ const DEFAULT_CATEGORIES: DevCredentialCategory[] = [
 
 const KINDS: DevCredentialKind[] = ['api-key', 'token', 'secret', 'other'];
 
-function loadAll(): DevCredentialEntry[] {
+const MASK = '••••••••';
+
+function freshDefaults(): DevCredentialCategory[] {
+  return DEFAULT_CATEGORIES.map(c => ({ ...c, count: 0 }));
+}
+
+function loadEntries(): EntriesResult {
   const raw = localStorage.getItem('privon_devcreds');
+  if (!raw) return { ok: true, entries: [] };
   const vk = getVaultKey();
-  if (!raw || !vk) return [];
+  if (!vk) return { ok: false, error: 'no-key' };
   try {
-    return JSON.parse(vault_decrypt_keys(raw, vk)) as DevCredentialEntry[];
+    const parsed = JSON.parse(vault_decrypt_keys(raw, vk));
+    if (!Array.isArray(parsed)) return { ok: false, error: 'decrypt-failed' };
+    return { ok: true, entries: parsed as DevCredentialEntry[] };
   } catch {
-    return [];
+    return { ok: false, error: 'decrypt-failed' };
   }
 }
 
-function saveAll(entries: DevCredentialEntry[]) {
+function saveEntries(entries: DevCredentialEntry[]): boolean {
   const vk = getVaultKey();
-  if (!vk) return;
-  localStorage.setItem('privon_devcreds', vault_encrypt_keys(JSON.stringify(entries), vk));
+  if (!vk) return false;
+  try {
+    localStorage.setItem('privon_devcreds', vault_encrypt_keys(JSON.stringify(entries), vk));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function loadCategories(): { ok: true; cats: DevCredentialCategory[] } | { ok: false } {
+  const vk = getVaultKey();
+  const meta = localStorage.getItem('privon_devcreds_meta');
+  if (meta) {
+    if (!vk) return { ok: false };
+    try {
+      const parsed = JSON.parse(vault_decrypt_keys(meta, vk));
+      if (!Array.isArray(parsed)) return { ok: false };
+      return { ok: true, cats: parsed as DevCredentialCategory[] };
+    } catch {
+      return { ok: false };
+    }
+  }
+  const legacy = localStorage.getItem('privon_devcreds_cats');
+  if (legacy) {
+    let cats: DevCredentialCategory[] = freshDefaults();
+    try {
+      const parsed = JSON.parse(legacy);
+      if (Array.isArray(parsed) && parsed.length > 0) cats = parsed as DevCredentialCategory[];
+    } catch {}
+    if (vk && cats.length > 0) {
+      try {
+        localStorage.setItem('privon_devcreds_meta', vault_encrypt_keys(JSON.stringify(cats), vk));
+        localStorage.removeItem('privon_devcreds_cats');
+      } catch {}
+    }
+    return { ok: true, cats };
+  }
+  return { ok: true, cats: freshDefaults() };
+}
+
+function saveCategories(cats: DevCredentialCategory[]): boolean {
+  const vk = getVaultKey();
+  if (!vk) return false;
+  try {
+    localStorage.setItem('privon_devcreds_meta', vault_encrypt_keys(JSON.stringify(cats), vk));
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export const DevCredentialsView: React.FC<DevCredentialsViewProps> = ({ onBack }) => {
@@ -80,22 +142,26 @@ export const DevCredentialsView: React.FC<DevCredentialsViewProps> = ({ onBack }
     }
   };
 
-  const [categories, setCategories] = useState<DevCredentialCategory[]>(() => {
-    const saved = localStorage.getItem('privon_devcreds_cats');
-    if (saved) {
-      try { return JSON.parse(saved); } catch {}
-    }
-    return DEFAULT_CATEGORIES.map(c => ({ ...c, count: 0 }));
-  });
+  const [catInit] = useState(() => loadCategories());
+  const [categories, setCategories] = useState<DevCredentialCategory[]>(
+    catInit.ok ? catInit.cats : freshDefaults()
+  );
+  const [storeError, setStoreError] = useState<StoreError | null>(
+    catInit.ok ? null : 'decrypt-failed'
+  );
   const [totalCount, setTotalCount] = useState(0);
 
   useEffect(() => {
-    const all = loadAll();
+    const res = loadEntries();
+    if (!res.ok) {
+      setStoreError(res.error);
+      return;
+    }
     setCategories(prev => prev.map(c => ({
       ...c,
-      count: all.filter(k => k.categoryId === c.id).length
+      count: res.entries.filter(k => k.categoryId === c.id).length
     })));
-    setTotalCount(all.length);
+    setTotalCount(res.entries.length);
   }, []);
 
   const [activeCategory, setActiveCategory] = useState<DevCredentialCategory | null>(null);
@@ -111,14 +177,37 @@ export const DevCredentialsView: React.FC<DevCredentialsViewProps> = ({ onBack }
   const [newKind, setNewKind] = useState<DevCredentialKind>('api-key');
   const [newValue, setNewValue] = useState('');
 
-  useEffect(() => {
-    localStorage.setItem('privon_devcreds_cats', JSON.stringify(categories));
-  }, [categories]);
+  const hideTimers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
+  const clipboardTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (activeCategory) {
-      setItems(loadAll().filter(k => k.categoryId === activeCategory.id));
+    return () => {
+      setItems([]);
+      setVisibleIds(new Set());
+      hideTimers.current.forEach(clearTimeout);
+      hideTimers.current.clear();
+      if (clipboardTimer.current) clearTimeout(clipboardTimer.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (storeError) return;
+    saveCategories(categories);
+  }, [categories, storeError]);
+
+  useEffect(() => {
+    if (!activeCategory) {
+      setItems([]);
+      setVisibleIds(new Set());
+      return;
     }
+    const res = loadEntries();
+    if (!res.ok) {
+      setStoreError(res.error);
+      setItems([]);
+      return;
+    }
+    setItems(res.entries.filter(k => k.categoryId === activeCategory.id));
   }, [activeCategory]);
 
   const handleCreateCategory = () => {
@@ -126,8 +215,12 @@ export const DevCredentialsView: React.FC<DevCredentialsViewProps> = ({ onBack }
       setIsCreating(false);
       return;
     }
+    if (storeError) {
+      setIsCreating(false);
+      return;
+    }
     const newCat: DevCredentialCategory = {
-      id: `devcat_${Date.now()}`,
+      id: crypto.randomUUID(),
       name: newCatName,
       icon: 'terminal',
       count: 0,
@@ -139,17 +232,25 @@ export const DevCredentialsView: React.FC<DevCredentialsViewProps> = ({ onBack }
   };
 
   const handleAddCredential = () => {
-    if (!activeCategory || !newName.trim() || !newValue.trim()) return;
+    if (storeError || !activeCategory || !newName.trim() || !newValue.trim()) return;
+    const res = loadEntries();
+    if (!res.ok) {
+      setStoreError(res.error);
+      return;
+    }
     const entry: DevCredentialEntry = {
-      id: `dev_${Date.now()}`,
+      id: crypto.randomUUID(),
       name: newName.trim(),
       kind: newKind,
       value: newValue.trim(),
       categoryId: activeCategory.id,
       date: new Date().toISOString().slice(0, 10)
     };
-    const all = [...loadAll(), entry];
-    saveAll(all);
+    const all = [...res.entries, entry];
+    if (!saveEntries(all)) {
+      setStoreError('no-key');
+      return;
+    }
     setItems(all.filter(k => k.categoryId === activeCategory.id));
     setCategories(prev => prev.map(c =>
       c.id === activeCategory.id ? { ...c, count: c.count + 1 } : c
@@ -160,15 +261,40 @@ export const DevCredentialsView: React.FC<DevCredentialsViewProps> = ({ onBack }
     setNewKind('api-key');
   };
 
-  const handleCopy = (value: string, id: string) => {
-    navigator.clipboard.writeText(value);
+  const handleCopy = async (value: string, id: string) => {
+    try {
+      await navigator.clipboard.writeText(value);
+    } catch {
+      return;
+    }
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
+    if (clipboardTimer.current) clearTimeout(clipboardTimer.current);
+    clipboardTimer.current = setTimeout(async () => {
+      try {
+        const current = await navigator.clipboard.readText();
+        if (current === value) await navigator.clipboard.writeText('');
+      } catch {}
+    }, 30000);
   };
 
   const handleDelete = (id: string) => {
-    const filtered = loadAll().filter(k => k.id !== id);
-    saveAll(filtered);
+    if (storeError) {
+      setDeleteConfirm(null);
+      return;
+    }
+    const res = loadEntries();
+    if (!res.ok) {
+      setStoreError(res.error);
+      setDeleteConfirm(null);
+      return;
+    }
+    const filtered = res.entries.filter(k => k.id !== id);
+    if (!saveEntries(filtered)) {
+      setStoreError('no-key');
+      setDeleteConfirm(null);
+      return;
+    }
     setItems(prev => prev.filter(i => i.id !== id));
     setCategories(prev => prev.map(c =>
       c.id === activeCategory?.id ? { ...c, count: Math.max(0, c.count - 1) } : c
@@ -177,11 +303,43 @@ export const DevCredentialsView: React.FC<DevCredentialsViewProps> = ({ onBack }
     setDeleteConfirm(null);
   };
 
+  const handleDeleteAll = () => {
+    if (storeError) return;
+    if (!confirm(t('devCredsDeleteAllConfirm'))) return;
+    const defaults = freshDefaults();
+    localStorage.removeItem('privon_devcreds');
+    localStorage.removeItem('privon_devcreds_cats');
+    if (!saveCategories(defaults)) {
+      setStoreError('no-key');
+      return;
+    }
+    setCategories(defaults);
+    setItems([]);
+    setVisibleIds(new Set());
+    setTotalCount(0);
+  };
+
   const toggleVisibility = (id: string) => {
+    const pending = hideTimers.current.get(id);
+    if (pending) {
+      clearTimeout(pending);
+      hideTimers.current.delete(id);
+    }
     setVisibleIds(prev => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      if (next.has(id)) {
+        next.delete(id);
+        return next;
+      }
+      next.add(id);
+      hideTimers.current.set(id, setTimeout(() => {
+        hideTimers.current.delete(id);
+        setVisibleIds(cur => {
+          const n = new Set(cur);
+          n.delete(id);
+          return n;
+        });
+      }, 30000));
       return next;
     });
   };
@@ -219,6 +377,12 @@ export const DevCredentialsView: React.FC<DevCredentialsViewProps> = ({ onBack }
           />
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600" />
         </div>
+
+        {storeError && (
+          <div className="mt-3 text-red-400 text-xs font-medium bg-red-500/10 p-2.5 rounded-lg border border-red-500/20 text-center">
+            {storeError === 'no-key' ? t('devCredsNoKeyError') : t('devCredsDecryptError')}
+          </div>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto p-5 custom-scrollbar">
@@ -297,13 +461,7 @@ export const DevCredentialsView: React.FC<DevCredentialsViewProps> = ({ onBack }
               {totalCount > 0 && (
                 <div className="pt-4 border-t border-zinc-800">
                   <button
-                    onClick={() => {
-                      if (confirm(t('devCredsDeleteAllConfirm'))) {
-                        localStorage.removeItem('privon_devcreds');
-                        setCategories(prev => prev.map(c => ({ ...c, count: 0 })));
-                        setTotalCount(0);
-                      }
-                    }}
+                    onClick={handleDeleteAll}
                     className="w-full p-3 rounded-xl bg-red-500/5 border border-red-500/20 text-red-400 text-xs font-bold hover:bg-red-500/10 transition-colors flex items-center justify-center gap-2 relative overflow-hidden"
                   >
                     <span className="relative z-10 flex items-center justify-center gap-2">
@@ -342,6 +500,7 @@ export const DevCredentialsView: React.FC<DevCredentialsViewProps> = ({ onBack }
                 </div>
                 <input
                   type="password"
+                  autoComplete="off"
                   placeholder={t('devCredsValuePlaceholder')}
                   value={newValue}
                   onChange={(e) => setNewValue(e.target.value)}
@@ -350,7 +509,7 @@ export const DevCredentialsView: React.FC<DevCredentialsViewProps> = ({ onBack }
                 />
                 <button
                   onClick={handleAddCredential}
-                  disabled={!newName.trim() || !newValue.trim()}
+                  disabled={storeError !== null || !newName.trim() || !newValue.trim()}
                   className="w-full py-3 rounded-xl bg-neon-green text-black text-xs font-bold uppercase tracking-wide disabled:opacity-40 active:scale-[0.99] transition-all flex items-center justify-center gap-2"
                 >
                   <Plus size={14} /> {t('devCredsAddButton')}
@@ -418,8 +577,8 @@ export const DevCredentialsView: React.FC<DevCredentialsViewProps> = ({ onBack }
                       </div>
                       <div className="flex items-center gap-2 bg-black/50 rounded-lg px-3 py-2 font-mono text-[10px] break-all">
                         <span className="text-neon-green/60 shrink-0">{t('devCredsValueLabel')}:</span>
-                        <span className={visibleIds.has(item.id) ? 'text-neon-green' : 'text-zinc-700 blur-sm select-none'}>
-                          {item.value}
+                        <span className={visibleIds.has(item.id) ? 'text-neon-green' : 'text-zinc-700 select-none'}>
+                          {visibleIds.has(item.id) ? item.value : MASK}
                         </span>
                       </div>
                     </motion.div>

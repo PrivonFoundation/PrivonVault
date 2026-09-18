@@ -686,4 +686,6 @@ export const translations: Translations = {
   devCredsKindSecret: 'Secreto',
   devCredsKindOther: 'Otro',
   devCredsValueLabel: 'Valor',
+  devCredsDecryptError: 'No se pudieron descifrar las credenciales de desarrollador. No se sobrescribió nada.',
+  devCredsNoKeyError: 'Clave de cifrado no disponible. Bloquea y desbloquea la app e inténtalo de nuevo.',
 }

@@ -683,4 +683,6 @@ export const translations: Translations = {
   devCredsKindSecret: 'Secret',
   devCredsKindOther: 'Other',
   devCredsValueLabel: 'Value',
+  devCredsDecryptError: 'Could not decrypt developer credentials. Nothing was overwritten.',
+  devCredsNoKeyError: 'Encryption key unavailable. Lock and unlock the app, then try again.',
 }
