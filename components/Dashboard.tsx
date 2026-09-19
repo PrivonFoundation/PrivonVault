@@ -24,6 +24,7 @@ import { PinModal } from './PinModal';
 import { EncryptionModal } from './EncryptionModal';
 import { DecryptModal } from './DecryptModal';
 import { CopyMoveModal } from './CopyMoveModal';
+import { CustomizeModal } from './CustomizeModal';
 import { RecoveryCodesModal } from './RecoveryCodesModal';
 
 // Import Views
@@ -170,6 +171,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [isCopyMoveModalOpen, setIsCopyMoveModalOpen] = useState(false);
   const [copyMoveMode, setCopyMoveMode] = useState<'copy' | 'move' | null>(null);
   const [copyMoveItem, setCopyMoveItem] = useState<FileSystemItem | null>(null);
+  const [itemToCustomize, setItemToCustomize] = useState<FileSystemItem | null>(null);
   const decryptResolveRef = useRef<((url: string | null) => void) | null>(null);
 
   // Vault/Pin UI State
@@ -494,6 +496,34 @@ export const Dashboard: React.FC<DashboardProps> = ({
       setIsSelectionMode(true);
       setSelectedItems(new Set([item.id]));
     }
+    else if (action === 'customize') {
+      setItemToCustomize({
+        ...item,
+        name: (item as any).decryptedName || item.name,
+        tags: (item as any).decryptedTags || item.tags,
+        customIcon: (item as any).decryptedCustomIcon || item.customIcon,
+      });
+    }
+  };
+
+  const handleCustomizeSave = async (updated: FileSystemItem) => {
+    const dbItem: any = { ...updated, fileData: updated.rawBlob };
+    if (updated.encryptedMeta) {
+      const key = getVaultKey();
+      if (!key) throw new Error('no vault key');
+      const meta = JSON.parse(metadata_decrypt(JSON.stringify(updated.encryptedMeta), key));
+      meta.name = updated.name;
+      meta.tags = updated.tags;
+      meta.customIcon = updated.customIcon;
+      dbItem.encryptedMeta = JSON.parse(metadata_encrypt(JSON.stringify(meta), key));
+      dbItem.name = '';
+      delete dbItem.tags; delete dbItem.artist; delete dbItem.album;
+      delete dbItem.coverUrl; delete dbItem.customIcon; delete dbItem.externalUrl;
+    }
+    delete dbItem.url; delete dbItem.rawBlob;
+    await db.updateItem(dbItem);
+    loadFiles();
+    setItemToCustomize(null);
   };
 
   const handleItemSelect = (id: string) => {
@@ -821,17 +851,23 @@ export const Dashboard: React.FC<DashboardProps> = ({
               setIsDecryptModalOpen(false);
               setItemToDecrypt(null);
             }}
-            onSuccess={(blob, mimeType) => {
+            onSuccess={async (blob, mimeType) => {
               const url = URL.createObjectURL(blob);
               setDecryptedUrls(prev => ({ ...prev, [itemToDecrypt.id]: url }));
               if (decryptResolveRef.current) {
                 decryptResolveRef.current(url);
                 decryptResolveRef.current = null;
               }
-              
+
+              const dbItem: DBItem = { ...itemToDecrypt, fileData: blob, isEncrypted: false };
+              delete dbItem.iv; delete dbItem.salt; delete dbItem.algorithm;
+              delete (dbItem as any).url; delete (dbItem as any).rawBlob;
+              await db.updateItem(dbItem);
+              await loadFiles();
+
               const decryptedItem = { ...itemToDecrypt, url };
               setActiveItem(decryptedItem);
-              
+
               setIsDecryptModalOpen(false);
               setItemToDecrypt(null);
             }}
@@ -849,6 +885,15 @@ export const Dashboard: React.FC<DashboardProps> = ({
         allItems={allItems}
         onComplete={loadFiles}
       />
+
+      {itemToCustomize && (
+        <CustomizeModal
+          item={itemToCustomize}
+          isOpen={true}
+          onClose={() => setItemToCustomize(null)}
+          onSave={handleCustomizeSave}
+        />
+      )}
 
 
       <FileActionMenu 
