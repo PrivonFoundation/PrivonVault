@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Eye, EyeOff, Loader2, ShieldCheck, Timer, Copy, Check, ChevronRight, Target, ShieldAlert, FolderOpen, RefreshCw, Code2, Download, AlertTriangle } from 'lucide-react';
+import { Eye, EyeOff, Loader2, ShieldCheck, Timer, Copy, Check, ChevronLeft, ChevronRight, Target, ShieldAlert, FolderOpen, RefreshCw, Code2, Download } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useI18n } from '../locales/i18nContext';
 import logoImg from '../assets/Snow-logo-PrivonVault.png';
@@ -377,10 +377,13 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
     }
   }, [isSetup, setupStep, passphraseGenerated]);
 
+  const [phraseRevealed, setPhraseRevealed] = useState(false);
+
   const handleRegeneratePassphrase = () => {
     const phrase = generatePassphrase();
     setPassword(phrase);
     setConfirmPassword(phrase);
+    setPhraseRevealed(false);
     setError(null);
   };
 
@@ -567,92 +570,130 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
               {/* Noise texture — premium grain */}
               <div className="absolute inset-0 pointer-events-none opacity-[0.03]" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 256 256\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.8\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23n)\' opacity=\'1\'/%3E%3C/svg%3E")', backgroundRepeat: 'repeat', backgroundSize: '128px 128px' }} />
 
-              <div className="relative z-10 flex flex-col items-center h-full px-6 pt-8 pb-8 overflow-y-auto">
+              {/* Dark scrim — keeps the white headline legible over the metallic top */}
+              <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(180deg, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.7) 26%, rgba(0,0,0,0.45) 48%, rgba(0,0,0,0.14) 70%, rgba(0,0,0,0) 100%)' }} />
 
-              <button type="button" onClick={() => { setSetupStep('intro'); setPassword(''); setConfirmPassword(''); setError(null); }}
-                className="absolute left-6 top-8 text-[11px] text-white/50 hover:text-white transition-colors"
-              >← {t('backButton')}</button>
+              <div className="relative z-10 flex flex-col items-center h-full px-6 pt-4 pb-8 overflow-y-auto">
 
-              <motion.img
-                src={logoImg}
-                alt="Privon Vault"
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5, ease: 'easeOut' }}
-                className="w-20 h-20 md:w-40 md:h-40 object-contain"
-                style={{ filter: `drop-shadow(0 0 40px rgba(${accentRgb}, 0.55)) drop-shadow(0 0 90px rgba(${accentRgb}, 0.25))` }}
-              />
+              {/* Header — Anytype style: back chevron left, wordmark center */}
+              <div className="w-full flex items-center justify-between h-10 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => { setSetupStep('intro'); setPassword(''); setConfirmPassword(''); setPassphraseGenerated(false); setPhraseRevealed(false); setError(null); }}
+                  aria-label={t('backButton')}
+                  className="-ml-2 w-10 h-10 rounded-full flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-all active:scale-90"
+                >
+                  <ChevronLeft size={22} />
+                </button>
 
-              <div className="text-lg md:text-2xl font-bold tracking-tight mt-3 mb-4 md:mt-4 md:mb-8">
-                <span className="text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.4)]">{t('crytoPrefix')}</span>
-                {' '}
-                <span className="text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.4)]">{t('toolSuffix')}</span>
+                <span className="text-[15px] font-bold tracking-tight text-white/90">
+                  {t('crytoPrefix')} {t('toolSuffix')}
+                </span>
+
+                <div className="w-10" />
               </div>
 
-              <div className="flex-1 flex items-center justify-center w-full min-h-0">
-                <div className="relative w-full max-w-3xl px-4 md:px-10 py-5 md:py-8 rounded-3xl border border-white/20 bg-transparent">
-                  <div className="flex flex-col md:flex-row gap-5 md:gap-8">
-                    <div className="flex-1 min-w-0 flex flex-col items-center gap-4 md:gap-6">
-                      <div className="flex items-start gap-2.5 md:gap-3 w-full max-w-xl px-3 md:px-4 py-2.5 md:py-3.5 rounded-xl md:rounded-2xl bg-yellow-400/[0.07] border border-yellow-400/25">
-                        <AlertTriangle size={16} className="text-yellow-500 shrink-0 mt-0.5 md:w-5 md:h-5" />
-                        <div className="flex flex-col gap-1 md:gap-2 min-w-0">
-                          <p className="text-white/90 text-xs md:text-base font-medium text-left leading-relaxed">{t('setupCopyWarning1')}</p>
-                          <p className="text-white/90 text-xs md:text-base font-medium text-left leading-relaxed">{t('setupCopyWarning2')}</p>
-                        </div>
-                      </div>
-                      <div className="w-16 h-px bg-white/20" />
-                      <div className="w-full max-w-md">
-                        <div className="grid grid-cols-3 gap-1.5 md:gap-2">
-                          {passphraseGenerated && password.split(' ').filter(Boolean).map((word, i) => (
-                            <motion.div
-                              key={`${word}-${i}`}
-                              initial={{ opacity: 0, y: 10 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              transition={{ delay: 0.03 * i, duration: 0.35, ease: 'easeOut' }}
-                              className="flex items-center gap-1.5 md:gap-2 px-2 md:px-3 py-2 md:py-2.5 rounded-xl bg-white/[0.06] border border-white/10 min-w-0"
-                            >
-                              <span className="text-[10px] md:text-xs text-white/40 font-bold w-4 shrink-0 text-right tabular-nums">{i + 1}</span>
-                              <span className="text-xs sm:text-sm md:text-base font-bold text-white truncate">{word}</span>
-                            </motion.div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
+              {/* Headline — large, bold, centered */}
+              <motion.div
+                initial={{ opacity: 0, y: 14 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.55, ease: 'easeOut' }}
+                className="text-center mt-8 md:mt-14 mb-7 md:mb-10 max-w-md"
+              >
+                <h1 className="text-[30px] md:text-[44px] font-black tracking-[-0.02em] leading-[1.08] text-white drop-shadow-[0_2px_24px_rgba(0,0,0,0.5)]">
+                  {t('thisIsYourKey')}
+                </h1>
+                <p className="mt-4 md:mt-5 text-[13px] md:text-[15px] leading-relaxed text-white/60">
+                  {t('setupCopyWarning1')}
+                </p>
+                <p className="mt-2.5 text-[12px] md:text-[13px] leading-relaxed text-white/45">
+                  {t('setupCopyWarning2')}
+                </p>
+              </motion.div>
 
-                    <div className="grid grid-cols-3 md:flex md:flex-col gap-2 md:justify-center md:shrink-0 md:w-44">
-                      <button type="button" onClick={handleCopyPassword}
-                        className="flex items-center justify-center gap-1.5 md:gap-2 w-full px-2 md:px-5 py-2.5 md:py-3 rounded-xl md:rounded-2xl bg-white/10 border border-white/15 hover:bg-white/20 text-white text-[11px] md:text-xs font-bold tracking-wide transition-all active:scale-[0.96]"
+              {/* Phrase card — blurred until revealed */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.55, delay: 0.1, ease: 'easeOut' }}
+                className="w-full max-w-2xl rounded-[28px] md:rounded-[36px] p-4 md:p-7 border border-white/12 bg-white/[0.05] backdrop-blur-2xl shadow-[0_24px_60px_-20px_rgba(0,0,0,0.6)]"
+              >
+                <div className="grid grid-cols-3 md:grid-cols-5 gap-2 md:gap-2.5">
+                  {passphraseGenerated && password.split(' ').filter(Boolean).map((word, i) => (
+                    <motion.div
+                      key={`${word}-${i}`}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.02 * i, duration: 0.3, ease: 'easeOut' }}
+                      className="flex items-center justify-center gap-1.5 px-2 py-2.5 md:py-3 rounded-2xl bg-white/[0.07] border border-white/[0.08] min-w-0"
+                    >
+                      <span className="text-[9px] md:text-[10px] text-white/30 font-bold w-3.5 shrink-0 text-right tabular-nums">{i + 1}</span>
+                      <span
+                        className={`text-[11px] sm:text-xs md:text-sm font-bold text-white truncate transition-all duration-500 select-none ${phraseRevealed ? '' : 'blur-[7px]'}`}
+                        aria-hidden={!phraseRevealed}
                       >
-                        {copied ? <Check size={14} className="text-neon-green md:w-4 md:h-4" /> : <Copy size={14} className="md:w-4 md:h-4" />}
-                        {copied ? t('copied') : t('copyKey')}
-                      </button>
-                      <button type="button" onClick={handleDownloadPassphrase}
-                        className="flex items-center justify-center gap-1.5 md:gap-2 w-full px-2 md:px-5 py-2.5 md:py-3 rounded-xl md:rounded-2xl bg-white/10 border border-white/15 hover:bg-white/20 text-white text-[11px] md:text-xs font-bold tracking-wide transition-all active:scale-[0.96]"
-                      >
-                        <Download size={14} className="md:w-4 md:h-4" /> {t('downloadPhrase')}
-                      </button>
-                      <button type="button" onClick={handleRegeneratePassphrase}
-                        className="flex items-center justify-center gap-1.5 md:gap-2 w-full px-2 md:px-5 py-2.5 md:py-3 rounded-xl md:rounded-2xl bg-white/10 border border-white/15 hover:bg-white/20 text-white text-[11px] md:text-xs font-bold tracking-wide transition-all active:scale-[0.96]"
-                      >
-                        <RefreshCw size={14} className="md:w-4 md:h-4" /> {t('regenerate')}
-                      </button>
-                    </div>
-                  </div>
+                        {word}
+                      </span>
+                    </motion.div>
+                  ))}
                 </div>
-              </div>
+              </motion.div>
 
-              <div className="pt-3 md:pt-5 flex flex-col items-center gap-3 w-full">
-                <form onSubmit={handleCreateFormSubmit} className="w-full flex flex-col items-center gap-3">
+              {/* Actions row */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.5, delay: 0.3 }}
+                className="flex items-center justify-center gap-1 md:gap-2 mt-5 md:mt-6"
+              >
+                <button
+                  type="button"
+                  onClick={() => { setPhraseRevealed(true); handleCopyPassword(); }}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-[12px] md:text-[13px] font-semibold text-white/60 hover:text-white hover:bg-white/10 transition-all active:scale-95"
+                >
+                  {copied ? <Check size={15} style={{ color: 'var(--accent-color)' }} /> : <Copy size={15} />}
+                  {copied ? t('copied') : t('copyKey')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setPhraseRevealed(true); handleDownloadPassphrase(); }}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-[12px] md:text-[13px] font-semibold text-white/60 hover:text-white hover:bg-white/10 transition-all active:scale-95"
+                >
+                  <Download size={15} /> {t('downloadPhrase')}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleRegeneratePassphrase}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-[12px] md:text-[13px] font-semibold text-white/60 hover:text-white hover:bg-white/10 transition-all active:scale-95"
+                >
+                  <RefreshCw size={15} /> {t('regenerate')}
+                </button>
+              </motion.div>
+
+              {/* Primary + secondary actions */}
+              <div className="mt-auto pt-8 md:pt-12 w-full flex flex-col items-center">
+                <form onSubmit={handleCreateFormSubmit} className="w-full max-w-md flex flex-col items-center">
                 {error && (
-                  <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="text-red-500 text-xs font-medium bg-red-500/10 p-2 rounded-lg border border-red-500/20 text-center w-full max-w-sm">
+                  <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="text-red-400 text-xs font-medium bg-red-500/10 p-2.5 rounded-xl border border-red-500/20 text-center w-full mb-3">
                     {error}
                   </motion.div>
                 )}
-                <button type="submit"
-                  className="w-full max-w-sm py-3 md:py-3.5 rounded-2xl text-black font-bold text-sm flex items-center justify-center gap-2 hover:opacity-90 transition-all active:scale-[0.98]"
-                  style={{ backgroundColor: accentColor }}
+
+                <button
+                  type="button"
+                  onClick={() => { setPhraseRevealed(true); handleCopyPassword(); }}
+                  className="w-full py-4 md:py-[18px] rounded-full font-bold text-[15px] md:text-base flex items-center justify-center gap-2 hover:opacity-90 transition-all active:scale-[0.98]"
+                  style={{ backgroundColor: accentColor, color: 'var(--bg-main)', boxShadow: `0 10px 40px -8px rgba(${accentRgb}, 0.55)` }}
                 >
-                  {t('saveAndContinue')} <ChevronRight size={18} />
+                  {copied ? t('copied') : t('revealAndCopy')}
+                  {!copied && <ChevronRight size={18} />}
+                </button>
+
+                <button
+                  type="submit"
+                  className="mt-3 px-5 py-2.5 text-[14px] md:text-[15px] font-semibold text-white/55 hover:text-white transition-colors"
+                >
+                  {t('saveItLater')}
                 </button>
                 </form>
               </div>
