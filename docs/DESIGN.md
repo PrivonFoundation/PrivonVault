@@ -192,7 +192,7 @@ transition: { delay: index * 0.05 } // staggered
 
 ## 8. Theming System
 ### Modes
-Dark/light/system mode toggle. `data-theme` attribute on `<html>` drives Tailwind classes.
+Dark only. `data-theme="dark"` is set on `<html>` in `index.html` before first paint and re-asserted on Dashboard mount, so onboarding, unlock and the dashboard always render dark. Light/system modes were removed; no light theme variables exist in `index.css`.
 
 ### Accent Color Picker
 - Use `components/CustomColorPicker.tsx`
@@ -211,7 +211,7 @@ Before submitting a PR that changes UI/UX:
 - [ ] All text uses `t('key')` (no hardcoded strings)
 - [ ] A11y: keyboard navigable, screen-reader friendly
 - [ ] i18n: English source strings updated in `locales/en.ts` (community handles translations)
-- [ ] Theming: works with dark/light/system modes
+- [ ] Theming: app is dark-only, `data-theme="dark"` everywhere
 - [ ] Performance: no layout shifts, smooth animations (60fps)
 - [ ] Screenshots attached for visual changes
 

@@ -130,14 +130,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const { t } = useI18n();
   const [activeTab, setActiveTab] = useState('files');
   const [currentView, setCurrentView] = useState<ViewState | 'backup'>('dashboard');
-  const [appTheme, setAppTheme] = useState<AppTheme>(() => (localStorage.getItem('app_theme_mode') as AppTheme) || 'dark');
-
-  const resolveTheme = (mode: AppTheme): 'dark' | 'light' => {
-    if (mode === 'system') {
-      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-    }
-    return mode;
-  };
+  const [appTheme] = useState<AppTheme>('dark');
   const [accentColor, setAccentColor] = useState(() => {
     return localStorage.getItem('app_accent_manual') || localStorage.getItem('theme_accent') || '#E8E8E8';
   });
@@ -332,38 +325,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
   }, [accentColor]);
 
   useEffect(() => {
+    // Dark-only app: force dark theme and drop any stale light values
     const root = document.documentElement;
-    const mode = resolveTheme(appTheme);
-    document.documentElement.setAttribute('data-theme', mode);
-    localStorage.setItem('app_theme_mode', appTheme);
-  }, [appTheme]);
-
-  useEffect(() => {
-    const mq = window.matchMedia('(prefers-color-scheme: dark)');
-    const handler = () => {
-      if (appTheme === 'system') {
-        const root = document.documentElement;
-        const mode = resolveTheme('system');
-        if (mode === 'light') {
-          root.style.setProperty('--bg-main', '#ffffff');
-          root.style.setProperty('--bg-card', '#f4f4f5');
-          root.style.setProperty('--bg-surface', '#e4e4e7');
-          root.style.setProperty('--border-color', '#d4d4d8');
-          root.style.setProperty('--text-main', '#09090b');
-          root.style.setProperty('--text-muted', '#52525b');
-        } else {
-          root.style.setProperty('--bg-main', '#0a0a0a');
-          root.style.setProperty('--bg-card', '#1a1a1a');
-          root.style.setProperty('--bg-surface', '#2a2a2a');
-          root.style.setProperty('--border-color', '#3a3a3a');
-          root.style.setProperty('--text-main', '#ffffff');
-          root.style.setProperty('--text-muted', '#a1a1aa');
-        }
-      }
-    };
-    mq.addEventListener('change', handler);
-    return () => mq.removeEventListener('change', handler);
-  }, [appTheme]);
+    root.setAttribute('data-theme', 'dark');
+    localStorage.setItem('app_theme_mode', 'dark');
+    ['--bg-main', '--bg-card', '--bg-surface', '--border-color', '--text-main', '--text-muted'].forEach(p => root.style.removeProperty(p));
+  }, []);
 
   useEffect(() => {
     const syncAudio = async () => {
@@ -751,15 +718,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
       loadFiles();
   };
 
-  const mode = resolveTheme(appTheme);
   return (
     <div className="min-h-screen flex flex-col font-sans relative overflow-hidden text-primary">
-      {/* Premium metallic gradient background */}
-      {mode === 'light' ? (
-        <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, #ffffff 0%, #e8e8e8 15%, #b0b0b0 30%, #505050 50%, #1a1a1a 70%, #0a0a0a 85%, #000000 100%)' }} />
-      ) : (
-        <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, #2a2a2a 0%, #1f1f1f 15%, #151515 30%, #0d0d0d 50%, #080808 70%, #030303 85%, #000000 100%)' }} />
-      )}
+      {/* Premium metallic gradient background — dark only */}
+      <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, #2a2a2a 0%, #1f1f1f 15%, #151515 30%, #0d0d0d 50%, #080808 70%, #030303 85%, #000000 100%)' }} />
       <div className="absolute pointer-events-none" style={{ top: '-20%', left: '10%', width: '120px', height: '180%', background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.25) 20%, rgba(0,0,0,0.4) 35%, rgba(0,0,0,0.15) 60%, rgba(0,0,0,0) 100%)', transform: 'rotate(12deg)', filter: 'blur(18px)' }} />
       <div className="absolute pointer-events-none" style={{ top: '-15%', left: '35%', width: '80px', height: '170%', background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.15) 25%, rgba(0,0,0,0.3) 40%, rgba(0,0,0,0.1) 65%, rgba(0,0,0,0) 100%)', transform: 'rotate(8deg)', filter: 'blur(22px)' }} />
       <div className="absolute pointer-events-none" style={{ top: '-25%', left: '58%', width: '100px', height: '190%', background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.2) 18%, rgba(0,0,0,0.35) 32%, rgba(0,0,0,0.12) 55%, rgba(0,0,0,0) 100%)', transform: 'rotate(15deg)', filter: 'blur(15px)' }} />
@@ -1206,7 +1168,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
               key="settings-view"
               onBack={() => setCurrentView('dashboard')} 
               appTheme={appTheme} 
-              setAppTheme={setAppTheme} 
               accentColor={accentColor} 
               setManualAccent={setManualAccent} 
               clearManualAccent={clearManualAccent} 

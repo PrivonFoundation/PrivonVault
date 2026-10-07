@@ -117,8 +117,7 @@
   contain-intrinsic-size: auto 280px;
 }
 
-[data-theme="light"],
-:root:has(#theme-toggle:checked) {
+:root {
   --glass-accent-glow: rgba(var(--accent-rgb), 0.25);
 }
 
@@ -171,13 +170,6 @@
   backdrop-filter: var(--glass-blur-medium) saturate(180%);
   -webkit-backdrop-filter: var(--glass-blur-medium) saturate(180%);
   border-bottom: 1px solid var(--glass-border-subtle);
-}
-
-[data-theme="light"] .glass-nav {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: var(--glass-blur-medium) saturate(180%);
-  -webkit-backdrop-filter: var(--glass-blur-medium) saturate(180%);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
 }
 
 .glass-input {
@@ -352,11 +344,6 @@
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
   z-index: 40;
-}
-
-[data-theme="light"] .glass-overlay,
-:root:has(#theme-toggle:checked) .glass-overlay {
-  background: rgba(255, 255, 255, 0.5);
 }
 
 .glass-progress {
@@ -613,18 +600,6 @@
   
   .glass-enhanced {
     background: rgba(0, 0, 0, 0.85) !important;
-  }
-  
-  [data-theme="light"] .glass-surface,
-  [data-theme="light"] .glass-card,
-  [data-theme="light"] .glass-modal,
-  [data-theme="light"] .glass-button,
-  [data-theme="light"] .glass-input,
-  [data-theme="light"] .glass-nav,
-  [data-theme="light"] .glass-dropdown,
-  [data-theme="light"] .glass-overlay,
-  [data-theme="light"] .glass-tooltip {
-    background: rgba(255, 255, 255, 0.95) !important;
   }
 }
 

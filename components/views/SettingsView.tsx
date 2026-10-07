@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ArrowLeft, Monitor, LayoutGrid, Palette, PaintBucket, Moon, Sun, Shield, Terminal, 
+  ArrowLeft, LayoutGrid, Palette, PaintBucket, Shield, Terminal, 
   FileLock2, EyeOff, Heart, CheckCircle, Globe, Languages, KeyRound, Smartphone, Mail, 
   Info, CodeXml, MessageSquare, AtSign, ExternalLink, Ghost, Calendar, MapPin, 
   Type, CaseUpper, ShieldAlert, Power, ShieldCheck, Lock, Check, Key, Sparkles, ChevronRight,
@@ -17,7 +17,6 @@ import { useI18n } from '../../locales/i18nContext';
 interface SettingsViewProps {
   onBack: () => void;
   appTheme: AppTheme;
-  setAppTheme: (t: AppTheme) => void;
   accentColor: string;
   setManualAccent: (c: string) => void;
   clearManualAccent: () => void;
@@ -141,40 +140,14 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
     return (
         <motion.div key="settings-view" initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 50 }} className="absolute inset-0 z-50 flex flex-col bg-background">
         <div className="px-5 pt-6 pb-4 bg-background">
-            <div className="flex items-center gap-4"><button onClick={props.onBack} className="p-2 -ml-2 rounded-full hover:bg-surface transition-colors glass-button"><ArrowLeft size={24} className="text-primary" /></button><h2 className="text-xl font-bold tracking-wide text-primary light:text-zinc-800">{t('settings')}</h2></div>
+            <div className="flex items-center gap-4"><button onClick={props.onBack} className="p-2 -ml-2 rounded-full hover:bg-surface transition-colors glass-button"><ArrowLeft size={24} className="text-primary" /></button><h2 className="text-xl font-bold tracking-wide text-primary">{t('settings')}</h2></div>
         </div>
         <div className="flex-1 overflow-y-auto px-5 py-8 space-y-10">
             
             {/* SECTION 1: APPEARANCE */}
             <section>
-                <h3 className={`text-[10px] font-black uppercase tracking-[0.2em] mb-4 flex items-center gap-2 text-muted`}><Monitor size={14} />{t('themes')}</h3>
-                <div className="grid grid-cols-3 gap-3">
-                <button onClick={() => props.setAppTheme('dark')} className={`rounded-2xl p-4 flex flex-col items-center gap-3 transition-all active:scale-[0.97] ${props.appTheme === 'dark' ? 'glass-card border border-white/20' : 'glass-card opacity-70 hover:opacity-100'}`}>
-                  <div className="w-full h-16 rounded-xl overflow-hidden flex flex-col" style={{ border: '1px solid rgba(255,255,255,0.1)' }}>
-                    <div className="flex-1" style={{ backgroundColor: '#000000' }} />
-                    <div className="h-3" style={{ backgroundColor: '#18181b' }} />
-                    <div className="h-2" style={{ backgroundColor: '#27272a' }} />
-                  </div>
-                  <span className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-1.5"><Moon size={12} />{t('darkMode')}</span>
-                </button>
-                <button onClick={() => props.setAppTheme('light')} className={`rounded-2xl p-4 flex flex-col items-center gap-3 transition-all active:scale-[0.97] ${props.appTheme === 'light' ? 'glass-card border border-white/20' : 'glass-card opacity-70 hover:opacity-100'}`}>
-                  <div className="w-full h-16 rounded-xl overflow-hidden flex flex-col" style={{ border: '1px solid rgba(255,255,255,0.1)' }}>
-                    <div className="flex-1" style={{ backgroundColor: '#ffffff' }} />
-                    <div className="h-3" style={{ backgroundColor: '#f4f4f5' }} />
-                    <div className="h-2" style={{ backgroundColor: '#e4e4e7' }} />
-                  </div>
-                  <span className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-1.5"><Sun size={12} />{t('lightMode')}</span>
-                </button>
-                <button onClick={() => props.setAppTheme('system')} className={`rounded-2xl p-4 flex flex-col items-center gap-3 transition-all active:scale-[0.97] ${props.appTheme === 'system' ? 'glass-card border border-white/20' : 'glass-card opacity-70 hover:opacity-100'}`}>
-                  <div className="w-full h-16 rounded-xl overflow-hidden flex" style={{ border: '1px solid rgba(255,255,255,0.1)' }}>
-                    <div className="flex-1" style={{ backgroundColor: '#ffffff' }} />
-                    <div className="w-[2px]" style={{ backgroundColor: '#a1a1aa' }} />
-                    <div className="flex-1" style={{ backgroundColor: '#000000' }} />
-                  </div>
-                  <span className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-1.5"><Monitor size={12} />{t('systemButton')}</span>
-                </button>
-                </div>
-                <div className="relative mt-4 p-4 rounded-2xl glass-card overflow-hidden">
+                <h3 className={`text-[10px] font-black uppercase tracking-[0.2em] mb-4 flex items-center gap-2 text-muted`}><Palette size={14} />{t('style')}</h3>
+                <div className="relative p-4 rounded-2xl glass-card overflow-hidden">
                 <div className="flex items-center gap-2 mb-3">
                     <PaintBucket size={14} className="text-muted" />
                     <span className="text-[10px] font-black uppercase tracking-widest text-muted">{t('accentManual')}</span>
