@@ -5,6 +5,20 @@ All notable changes to Privon Vault will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Redesign (Anytype-inspired, `feat/onboarding-anytype-keyframe`)
+
+- Removed the Snow mascot (assets, texts, placeholders); text-only branding.
+- New native welcome (own slogan), Signal-style vault import with restore.
+- Settings as native bottom sheets (quick + full + option sub-sheets).
+- System theme mode (dark / light / system) with OS follow.
+- Dashboard: Anytype header, profile/add sheets, FAB, files grid, native rows.
+- Gallery: 3-column grid + immersive viewer (swipe, zoom, actions).
+- Music: Apple Music style tabs, drill-down, action sheet, shuffle.
+- Classic folders (Photos/Music/Videos/Documents) with auto-filing.
+- Docs: new `docs/REDESIGN.md` tracking this pass.
+
 ## [2.5.0-beta] - 2026-05-27
 
 ### First Official Beta Release
