@@ -21,8 +21,8 @@ export const BackupView: React.FC<BackupViewProps> = ({ onBack, theme }) => {
   const [step, setStep] = useState<BackupStep>('menu');
   const [generatedKey, setGeneratedKey] = useState('');
   const [copied, setCopied] = useState(false);
-  const [revealed, setRevealed] = useState(false);
-  const [showInfo, setShowInfo] = useState(false);
+  const [, setRevealed] = useState(false);
+  const [, setShowInfo] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   
   const [restoreKey, setRestoreKey] = useState('');

@@ -28,7 +28,6 @@ import { EncryptionModal } from './EncryptionModal';
 import { DecryptModal } from './DecryptModal';
 import { CopyMoveModal } from './CopyMoveModal';
 import { CustomizeModal } from './CustomizeModal';
-import { QuickSettingsSheet } from './QuickSettingsSheet';
 import { AddSheet, ProfileSheet } from './HomeSheets';
 import { RecoveryCodesModal } from './RecoveryCodesModal';
 
