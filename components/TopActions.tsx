@@ -1,162 +1,99 @@
-
 import React from 'react';
-import { Plus, FolderPlus, Database, Search, Trash2, Settings } from 'lucide-react';
-import { ViewState } from '../types';
+import { FolderPlus, Plus, Search } from 'lucide-react';
+import type { ViewState } from '../types';
 import { useI18n } from '../locales/i18nContext';
-import logoImg from '../assets/Snow-logo-PrivonVault.png';
+import type { TranslationKey } from '../locales';
 
 interface TopActionsProps {
   activeTab: string;
   isCreatingFolder: boolean;
   newFolderName: string;
   folderInputRef: React.MutableRefObject<HTMLInputElement | null>;
-  onAddFile: () => void;
-  onStartFolderCreation: () => void;
   onNewFolderNameChange: (val: string) => void;
   onConfirmFolderCreation: () => void;
   onCancelFolderCreation: () => void;
   onNavigateView: (view: ViewState) => void;
+  onOpenProfileMenu: () => void;
+  onOpenAddMenu: () => void;
 }
+
+const TITLES: Record<string, TranslationKey> = {
+  files: 'files',
+  gallery: 'gallery',
+  music: 'music',
+  docs: 'documentsTab',
+};
 
 export const TopActions: React.FC<TopActionsProps> = ({
   activeTab,
   isCreatingFolder,
   newFolderName,
   folderInputRef,
-  onAddFile,
-  onStartFolderCreation,
   onNewFolderNameChange,
   onConfirmFolderCreation,
   onCancelFolderCreation,
   onNavigateView,
+  onOpenProfileMenu,
+  onOpenAddMenu,
 }) => {
   const { t } = useI18n();
-  
-  if (activeTab !== 'files') {
-    return (
-      <header className="px-5 pt-8 pb-4 bg-transparent">
-        <div className="flex items-center gap-2.5 mb-2">
-          <div className="w-16 h-16 flex items-center justify-center">
-            <img src={logoImg} alt="Privon Vault" className="w-full h-full object-contain" />
-          </div>
-          <h1 className="text-3xl font-bold tracking-tight text-primary">{t('crytoPrefix')} <span className="text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]">{t('toolSuffix')}</span></h1>
-        </div>
-      </header>
-    );
-  }
 
   return (
-    <header className="px-5 pt-8 pb-4 space-y-6 bg-transparent">
-      {/* LOGO & NAME */}
-      <div className="flex items-center gap-3 mb-2">
-        <div className="w-16 h-16 flex items-center justify-center">
-          <img src={logoImg} alt="Privon Vault" className="w-full h-full object-contain" />
+    <header className="px-5 pt-8 pb-3 bg-transparent shrink-0">
+      <div className="flex items-center justify-between h-12 mb-3">
+        <button
+          type="button"
+          onClick={onOpenProfileMenu}
+          aria-label={t('settings')}
+          className="w-11 h-11 rounded-full flex items-center justify-center text-lg font-semibold text-primary transition-all active:scale-90"
+          style={{ backgroundColor: 'var(--onb-surface-strong)' }}
+        >
+          P
+        </button>
+        <h1 className="text-[22px] font-bold tracking-tight text-primary">
+          {t(TITLES[activeTab] ?? 'files')}
+        </h1>
+        <button
+          type="button"
+          onClick={onOpenAddMenu}
+          aria-label={t('addFile')}
+          className="w-11 h-11 rounded-full flex items-center justify-center text-primary transition-all active:scale-90"
+          style={{ backgroundColor: 'var(--onb-surface-strong)' }}
+        >
+          <Plus size={22} />
+        </button>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => onNavigateView('search')}
+        className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl text-left transition-all active:opacity-70"
+        style={{ backgroundColor: 'var(--onb-surface)' }}
+      >
+        <Search size={20} className="text-muted shrink-0" />
+        <span className="text-[17px] text-muted truncate">{t('searchFiles')}</span>
+      </button>
+
+      {isCreatingFolder && (
+        <div
+          className="mt-3 flex items-center gap-3 px-4 py-3 rounded-2xl"
+          style={{ backgroundColor: 'var(--onb-surface)' }}
+        >
+          <FolderPlus size={18} className="text-muted shrink-0" />
+          <input
+            ref={folderInputRef}
+            value={newFolderName}
+            onChange={(e) => onNewFolderNameChange(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') onConfirmFolderCreation();
+              if (e.key === 'Escape') onCancelFolderCreation();
+            }}
+            onBlur={onCancelFolderCreation}
+            className="flex-1 min-w-0 bg-transparent border-none outline-none text-primary text-[16px] placeholder:text-muted"
+            placeholder={t('folderName')}
+          />
         </div>
-        <h1 className="text-3xl font-bold tracking-tight text-primary">{t('crytoPrefix')} <span className="text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]">{t('toolSuffix')}</span></h1>
-      </div>
-
-        <div className="space-y-2.5">
-          {/* First row: Add File, Add Folder, Storage */}
-          <div className="flex items-center gap-2">
-            <button 
-              onClick={onAddFile} 
-              className="flex-[2.5] font-bold py-2.5 px-3 rounded-2xl flex items-center justify-center gap-2 text-white transition-all active:scale-95 text-sm relative overflow-hidden border border-neon-green/30"
-              style={{
-                background: 'linear-gradient(135deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.2) 100%)',
-                backdropFilter: 'blur(12px) saturate(180%)',
-                WebkitBackdropFilter: 'blur(12px) saturate(180%)',
-                boxShadow: '0 4px 20px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.1)',
-              }}
-            >
-              <Plus size={18} strokeWidth={3} className="relative z-10 drop-shadow-[0_0_8px_rgba(34,197,94,0.6)]" />
-              <span className="relative z-10 drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]">{t('addFile')}</span>
-            </button>
-             
-            <button 
-              onClick={!isCreatingFolder ? onStartFolderCreation : undefined} 
-              className="flex-[2.5] font-bold py-2.5 px-3 rounded-2xl flex items-center justify-center gap-2 text-primary transition-all active:scale-95 text-sm relative overflow-hidden border border-white/10"
-              style={{
-                background: 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 100%)',
-                backdropFilter: 'blur(12px) saturate(180%)',
-                WebkitBackdropFilter: 'blur(12px) saturate(180%)',
-                boxShadow: '0 4px 20px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.08)',
-              }}
-            >
-              <FolderPlus size={18} className="relative z-10" />
-              <span className="relative z-10">
-                {isCreatingFolder ? (
-                  <input 
-                    ref={folderInputRef} 
-                    value={newFolderName}
-                    onChange={(e) => onNewFolderNameChange(e.target.value)}
-                    onKeyDown={(e) => { 
-                      if (e.key === 'Enter') onConfirmFolderCreation(); 
-                      if (e.key === 'Escape') onCancelFolderCreation(); 
-                    }}
-                    onBlur={onCancelFolderCreation}
-                    className="bg-transparent border-none outline-none text-primary w-full min-w-[60px] font-bold text-sm"
-                    placeholder={t('folderName')}
-                  />
-                ) : (
-                  t('addFolder')
-                )}
-              </span>
-            </button>
-
-            <button 
-              onClick={() => onNavigateView('storage')} 
-              className="w-11 h-11 flex items-center justify-center rounded-2xl text-primary transition-all active:scale-95 shrink-0 relative overflow-hidden border border-white/10"
-              style={{
-                background: 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 100%)',
-                backdropFilter: 'blur(12px) saturate(180%)',
-                WebkitBackdropFilter: 'blur(12px) saturate(180%)',
-                boxShadow: '0 4px 20px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.08)',
-              }}
-            >
-              <Database size={18} className="relative z-10" />
-            </button>
-          </div>
-
-          {/* Second row: Search, Trash, Settings */}
-          <div className="flex items-center gap-2">
-            <button 
-              onClick={() => onNavigateView('search')} 
-              className="w-12 h-12 flex items-center justify-center rounded-2xl text-primary transition-all active:scale-95 relative overflow-hidden border border-white/10"
-              style={{
-                background: 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 100%)',
-                backdropFilter: 'blur(12px) saturate(180%)',
-                WebkitBackdropFilter: 'blur(12px) saturate(180%)',
-                boxShadow: '0 4px 20px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.08)',
-              }}
-            >
-              <Search size={18} className="relative z-10" />
-            </button>
-            <button 
-              onClick={() => onNavigateView('trash')} 
-              className="w-12 h-12 flex items-center justify-center rounded-2xl text-primary transition-all active:scale-95 relative overflow-hidden border border-white/10"
-              style={{
-                background: 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 100%)',
-                backdropFilter: 'blur(12px) saturate(180%)',
-                WebkitBackdropFilter: 'blur(12px) saturate(180%)',
-                boxShadow: '0 4px 20px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.08)',
-              }}
-            >
-              <Trash2 size={18} className="relative z-10" />
-            </button>
-            <button 
-              onClick={() => onNavigateView('settings')} 
-              className="w-12 h-12 flex items-center justify-center rounded-2xl text-primary transition-all active:scale-95 relative overflow-hidden border border-white/10"
-              style={{
-                background: 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 100%)',
-                backdropFilter: 'blur(12px) saturate(180%)',
-                WebkitBackdropFilter: 'blur(12px) saturate(180%)',
-                boxShadow: '0 4px 20px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.08)',
-              }}
-            >
-              <Settings size={18} className="relative z-10" />
-            </button>
-          </div>
-      </div>
+      )}
     </header>
   );
 };

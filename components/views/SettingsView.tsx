@@ -2,14 +2,13 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ArrowLeft, LayoutGrid, Palette, PaintBucket, Shield, Terminal, 
-  FileLock2, EyeOff, Heart, CheckCircle, Globe, Languages, KeyRound, Smartphone, Mail, 
+  ArrowLeft, LayoutGrid, PaintBucket, Terminal, 
+  FileLock2, EyeOff, Heart, CheckCircle, Globe, Languages, KeyRound, Mail, 
   Info, CodeXml, MessageSquare, AtSign, ExternalLink, Ghost, Calendar, MapPin, 
   Type, CaseUpper, ShieldAlert, Power, ShieldCheck, Lock, Check, Key, Sparkles, ChevronRight,
   Target
 } from 'lucide-react';
-import logoImg from '../../assets/Snow-logo-PrivonVault.png';
-import { AppTheme } from '../../types';
+import { AppTheme, ThemeMode } from '../../types';
 import { CustomColorPicker } from '../CustomColorPicker';
 import { LANGUAGES } from '../../locales';
 import { useI18n } from '../../locales/i18nContext';
@@ -17,6 +16,8 @@ import { useI18n } from '../../locales/i18nContext';
 interface SettingsViewProps {
   onBack: () => void;
   appTheme: AppTheme;
+  themeMode: ThemeMode;
+  setAppTheme: (t: ThemeMode) => void;
   accentColor: string;
   setManualAccent: (c: string) => void;
   clearManualAccent: () => void;
@@ -45,6 +46,33 @@ interface SettingsViewProps {
   onOpenDevCreds: () => void;
 }
 
+export const SettingsRow: React.FC<{
+  icon: React.ReactNode;
+  label: string;
+  sub?: string;
+  value?: string;
+  expanded?: boolean;
+  action?: React.ReactNode;
+  onClick?: () => void;
+}> = ({ icon, label, sub, value, expanded, action, onClick }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className="w-full flex items-center gap-3 px-4 py-3 text-left transition-all active:opacity-60 border-t first:border-t-0"
+    style={{ borderTopColor: 'var(--onb-border)' }}
+  >
+    <span className="text-muted shrink-0">{icon}</span>
+    <span className="flex-1 min-w-0">
+      <span className="block text-[16px] leading-snug text-primary truncate">{label}</span>
+      {sub && <span className="block text-[13px] leading-snug text-muted truncate">{sub}</span>}
+    </span>
+    {value && <span className="text-[15px] text-muted shrink-0 truncate max-w-[40%]">{value}</span>}
+    {action ? action : onClick ? (
+      <ChevronRight size={18} className={`text-muted shrink-0 transition-transform ${expanded ? 'rotate-90' : ''}`} />
+    ) : null}
+  </button>
+);
+
 export const SettingsView: React.FC<SettingsViewProps> = (props) => {
     const { t, language, setLanguage, languageOptions } = useI18n();
     const [region, setRegion] = useState(() => {
@@ -52,9 +80,10 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
         const foundLang = LANGUAGES.find(l => l.code === langCode);
         return foundLang ? foundLang.capital : 'Bucharest';
     });
-    const [isLangOpen, setIsLangOpen] = useState(false);
-    const [isRegionOpen, setIsRegionOpen] = useState(false);
     const [lockedLang, setLockedLang] = useState<string | null>(null);
+    const [openSection, setOpenSection] = useState<string | null>(null);
+    const toggleSection = (s: string) => setOpenSection(cur => cur === s ? null : s);
+    const [subSheet, setSubSheet] = useState<null | 'appearance' | 'language' | 'region'>(null);
     // Glass intensity state
     const [glassIntensity, setGlassIntensity] = useState(() => parseInt(localStorage.getItem('app_glass_intensity') || '100'));
 
@@ -138,267 +167,108 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
     };
 
     return (
-        <motion.div key="settings-view" initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 50 }} className="absolute inset-0 z-50 flex flex-col bg-background">
-        <div className="px-5 pt-6 pb-4 bg-background">
-            <div className="flex items-center gap-4"><button onClick={props.onBack} className="p-2 -ml-2 rounded-full hover:bg-surface transition-colors glass-button"><ArrowLeft size={24} className="text-primary" /></button><h2 className="text-xl font-bold tracking-wide text-primary">{t('settings')}</h2></div>
+        <motion.div key="settings-view" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[150] bg-black/60" onClick={props.onBack}>
+        <motion.div
+          initial={{ y: 80, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: 80, opacity: 0 }}
+          transition={{ duration: 0.3, ease: 'easeOut' }}
+          onClick={(e) => e.stopPropagation()}
+          className="absolute bottom-0 left-0 right-0 max-w-md mx-auto rounded-t-[28px] border-t border-x bg-background overflow-hidden flex flex-col"
+          style={{ borderColor: 'var(--onb-border)', maxHeight: '88vh' }}
+        >
+        <div className="px-6 pt-4 pb-1 flex items-center justify-center shrink-0">
+          <div className="w-10 h-1 rounded-full bg-[var(--onb-border)]" />
         </div>
-        <div className="flex-1 overflow-y-auto px-5 py-8 space-y-10">
+        <div className="px-5 pb-2 flex items-center justify-between shrink-0">
+            <div className="w-16" />
+            <h2 className="text-[17px] font-semibold tracking-tight text-primary">{t('settings')}</h2>
+            <button onClick={props.onBack} className="w-16 text-right text-[17px] transition-colors" style={{ color: 'var(--accent-color)' }}>{t('done')}</button>
+        </div>
+        <div className="flex-1 overflow-y-auto px-4 pt-2 pb-8 space-y-5 custom-scrollbar">
             
-            {/* SECTION 1: APPEARANCE */}
-            <section>
-                <h3 className={`text-[10px] font-black uppercase tracking-[0.2em] mb-4 flex items-center gap-2 text-muted`}><Palette size={14} />{t('style')}</h3>
-                <div className="relative p-4 rounded-2xl glass-card overflow-hidden">
-                <div className="flex items-center gap-2 mb-3">
-                    <PaintBucket size={14} className="text-muted" />
-                    <span className="text-[10px] font-black uppercase tracking-widest text-muted">{t('accentManual')}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="flex-1">
-                    <CustomColorPicker color={props.accentColor} onChange={props.setManualAccent} />
-                  </div>
-                  <button
-                    onClick={props.clearManualAccent}
-                    className="px-4 py-3 rounded-xl border border-border text-[10px] font-black uppercase tracking-widest text-muted hover:text-white hover:border-red-500/50 hover:bg-red-500/10 transition-all shrink-0"
-                    title={t('resetAccentTitle')}
-                  >
-                    {t('reset')}
-                  </button>
-                </div>
-                </div>
+            {/* Profile */}
+            <div className="pt-3 pb-1 flex flex-col items-center text-center">
+              <div
+                className="w-16 h-16 rounded-full flex items-center justify-center"
+                style={{ backgroundColor: 'var(--onb-surface-strong)' }}
+              >
+                <span className="text-3xl font-semibold text-primary">P</span>
+              </div>
+              <p className="mt-3 text-[13px] text-muted">{t('settingsProfileName')}</p>
+              <p className="text-[22px] font-bold tracking-tight text-primary">{t('crytoPrefix')} {t('toolSuffix')}</p>
+            </div>
 
-                <div className="relative mt-4 p-4 rounded-2xl glass-card overflow-hidden">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Sparkles size={14} className="text-muted" />
-                    <span className="text-[10px] font-black uppercase tracking-widest text-muted">{t('glassIntensity' as any)}</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    value={glassIntensity}
-                    onChange={e => {
-                      const val = parseInt(e.target.value);
-                      setGlassIntensity(val);
-                      applyGlassIntensity(val);
-                    }}
-                    className="w-full h-1 appearance-none bg-zinc-800 rounded-full cursor-pointer accent-[var(--accent-color)] [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow-lg [&::-webkit-slider-thumb]:cursor-pointer"
-                  />
+            {/* GROUP: APPLICATION */}
+            <section>
+                <p className="px-2 pb-2 text-[12px] font-semibold uppercase tracking-widest text-muted">{t('settingsGroupApplication')}</p>
+                <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: 'var(--onb-surface-strong)' }}>
+                <SettingsRow
+                  icon={<PaintBucket size={19} />}
+                  label={t('settingsAppearance')}
+                  value={props.themeMode === 'system' ? t('systemButton') : props.themeMode === 'dark' ? t('darkMode') : t('lightMode')}
+                  onClick={() => setSubSheet('appearance')}
+                />
+
+                <SettingsRow
+                  icon={<Languages size={19} />}
+                  label={t('languageInterface')}
+                  value={languageOptions.find(l => l.value === language)?.label}
+                  onClick={() => setSubSheet('language')}
+                />
+                <SettingsRow
+                  icon={<MapPin size={19} />}
+                  label={t('region')}
+                  value={regionOptions.find(r => r.value === region)?.label}
+                  onClick={() => setSubSheet('region')}
+                />
                 </div>
             </section>
 
-                {/* SECTION 2: LANGUAGE & REGION */}
+            {/* GROUP: SECURITY */}
             <section>
-                <h3 className={`text-[10px] font-black uppercase tracking-[0.2em] mb-4 flex items-center gap-2 text-muted`}><Globe size={14} /> {t('languageAndRegion')}</h3>
-                <div className={`p-5 rounded-[32px] glass-card space-y-4 relative overflow-hidden ${isLangOpen || isRegionOpen ? 'z-50' : ''}`}>
-                    <div className="absolute top-0 right-0 p-8 opacity-[0.03] pointer-events-none">
-                        <Globe size={120} className="text-primary" />
-                    </div>
-                    
-                    {/* Language Trigger */}
-                    <div 
-                        onClick={() => { setIsLangOpen(!isLangOpen); setIsRegionOpen(false); }}
-                        className="w-full h-16 px-4 rounded-2xl border border-border cursor-pointer flex items-center justify-between bg-surface hover:border-neon-green/50 hover:bg-surface/80 transition-all group shadow-sm relative overflow-hidden"
-                    >
-                        <div className="flex items-center gap-4 relative z-10">
-                            <div className="w-8 h-8 rounded-lg bg-black border border-border flex items-center justify-center text-muted group-hover:text-neon-green group-hover:border-neon-green transition-colors">
-                                <Languages size={18} />
-                            </div>
-                            <div className="flex flex-col items-start">
-                                <span className="text-[10px] font-black uppercase tracking-widest text-muted group-hover:text-primary transition-colors">{t('languageInterface')}</span>
-                                <span className="text-sm font-bold text-primary">{languageOptions.find(l => l.value === language)?.label}</span>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-3 relative z-10">
-                            <div className="px-3 py-1 rounded-full bg-black border border-border text-[10px] font-mono text-neon-green">
-                                {language.toUpperCase()}
-                            </div>
-                            <ChevronRight size={16} className={`text-muted group-hover:text-neon-green transition-all ${isLangOpen ? 'rotate-90' : ''}`} />
-                        </div>
-                    </div>
-                    
-                    {/* Language Dropdown */}
-                    <AnimatePresence>
-                        {isLangOpen && (
-                            <motion.div 
-                                initial={{ opacity: 0, height: 0 }}
-                                animate={{ opacity: 1, height: 'auto' }}
-                                exit={{ opacity: 0, height: 0 }}
-                                className="overflow-hidden z-50 relative"
-                            >
-                                <div className="max-h-40 overflow-y-auto space-y-1 custom-scrollbar pr-2 pb-2">
-                                    {languageOptions.map((lang) => (
-                                        <button
-                                            key={lang.value}
-                                            onClick={() => { if (lang.locked) { setLockedLang(lang.label); setIsLangOpen(false); } else { handleLanguageChange(lang.value); setIsLangOpen(false); } }}
-                                            className={`w-full p-3 rounded-xl border flex items-center justify-between transition-all ${
-                                                lang.locked ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'
-                                            } ${
-                                                language === lang.value 
-                                                ? 'bg-neon-green/10 border-neon-green' 
-                                                : 'bg-surface/50 border-border hover:bg-surface hover:border-zinc-600'
-                                            }`}
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border ${
-                                                    language === lang.value 
-                                                    ? 'bg-neon-green text-black border-neon-green' 
-                                                    : 'bg-black text-muted border-border'
-                                                }`}>
-                                                    {lang.value.toUpperCase()}
-                                                </div>
-                                                <div className="text-left">
-                                                    <div className={`text-sm font-bold ${language === lang.value ? 'text-white' : 'text-primary'}`}>{lang.label}</div>
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="text-[10px] text-muted">{lang.desc}</span>
-                                                        <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded-full ${
-                                                            lang.locked ? 'bg-zinc-800 text-zinc-500' : 'bg-neon-green/20 text-neon-green'
-                                                        }`}>
-                                                            {lang.completion}%
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            {!lang.locked && language === lang.value && (
-                                                <motion.div 
-                                                    initial={{ scale: 0 }} animate={{ scale: 1 }}
-                                                    className="w-5 h-5 rounded-full bg-neon-green flex items-center justify-center text-black"
-                                                >
-                                                    <Check size={12} strokeWidth={3} />
-                                                </motion.div>
-                                            )}
-                                            {lang.locked && (
-                                                <div className="w-5 h-5 flex items-center justify-center text-zinc-600">
-                                                    <Lock size={12} />
-                                                </div>
-                                            )}
-                                        </button>
-                                    ))}
-                                </div>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
-
-                    <div className="h-px bg-border mx-4 opacity-50" />
-                    
-                    {/* Region Trigger */}
-                    <div 
-                        onClick={() => { setIsRegionOpen(!isRegionOpen); setIsLangOpen(false); }}
-                        className="w-full h-16 px-4 rounded-2xl border border-border cursor-pointer flex items-center justify-between bg-surface hover:border-neon-green/50 hover:bg-surface/80 transition-all group shadow-sm relative overflow-hidden"
-                    >
-                        <div className="flex items-center gap-4 relative z-10">
-                            <div className="w-8 h-8 rounded-lg bg-black border border-border flex items-center justify-center text-muted group-hover:text-neon-green group-hover:border-neon-green transition-colors">
-                                <MapPin size={18} />
-                            </div>
-                            <div className="flex flex-col items-start">
-                                <span className="text-[10px] font-black uppercase tracking-widest text-muted group-hover:text-primary transition-colors">{t('region')}</span>
-                                <span className="text-sm font-bold text-primary">{regionOptions.find(r => r.value === region)?.label}</span>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-3 relative z-10">
-                            <div className="px-3 py-1 rounded-full bg-black border border-border text-[10px] font-mono text-neon-green">
-                                {region.substring(0, 2).toUpperCase()}
-                            </div>
-                            <ChevronRight size={16} className={`text-muted group-hover:text-neon-green transition-all ${isRegionOpen ? 'rotate-90' : ''}`} />
-                        </div>
-                    </div>
-                    
-                    {/* Region Dropdown */}
-                    <AnimatePresence>
-                        {isRegionOpen && (
-                            <motion.div 
-                                initial={{ opacity: 0, height: 0 }}
-                                animate={{ opacity: 1, height: 'auto' }}
-                                exit={{ opacity: 0, height: 0 }}
-                                className="overflow-hidden z-50 relative"
-                            >
-                                <div className="max-h-40 overflow-y-auto space-y-1 custom-scrollbar pr-2 pb-2">
-                                    {regionOptions.map((reg) => (
-                                        <button
-                                            key={reg.value}
-                                            onClick={() => { setRegion(reg.value); setIsRegionOpen(false); }}
-                                            className={`w-full p-3 rounded-xl border flex items-center justify-between transition-all ${
-                                                region === reg.value 
-                                                ? 'bg-neon-green/10 border-neon-green' 
-                                                : 'bg-surface/50 border-border hover:bg-surface hover:border-zinc-600'
-                                            }`}
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border ${
-                                                    region === reg.value 
-                                                    ? 'bg-neon-green text-black border-neon-green' 
-                                                    : 'bg-black text-muted border-border'
-                                                }`}>
-                                                    {reg.value.substring(0, 2).toUpperCase()}
-                                                </div>
-                                                <div className="text-left">
-                                                    <div className={`text-sm font-bold ${region === reg.value ? 'text-white' : 'text-primary'}`}>{reg.label}</div>
-                                                </div>
-                                            </div>
-                                            {region === reg.value && (
-                                                <motion.div 
-                                                    initial={{ scale: 0 }} animate={{ scale: 1 }}
-                                                    className="w-5 h-5 rounded-full bg-neon-green flex items-center justify-center text-black"
-                                                >
-                                                    <Check size={12} strokeWidth={3} />
-                                                </motion.div>
-                                            )}
-                                        </button>
-                                    ))}
-                                </div>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
-                </div>
-            </section>
-
-            {/* SECTION 3: SECURITY */}
-            <section>
-                <h3 className={`text-[10px] font-black uppercase tracking-[0.2em] mb-4 flex items-center gap-2 text-muted`}><Shield size={14} /> {t('securityAndInfo')}</h3>
-                <div className="relative p-6 rounded-[32px] glass-card space-y-8 overflow-hidden">
+                <p className="px-2 pt-5 pb-2 text-[12px] font-semibold uppercase tracking-widest text-muted">{t('settingsGroupSecurity')}</p>
+                <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: 'var(--onb-surface-strong)' }}>
 
 
-{/* --- VAULT (NEW) --- */}
 {props.vaultSettings.vaultPinAllowed !== false && (
-<div className="pb-6 border-b border-border">
-    <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
-             <Key size={16} className={props.vaultSettings.enabled ? "text-neon-green" : "text-muted"} />
-             <label className="text-sm font-bold uppercase tracking-wider text-primary">{t('vaultKeys')}</label>
-        </div>
-        <div className="flex items-center gap-2">
-<button
-                                 onClick={props.vaultSettings.enabled ? props.vaultSettings.disableVault : props.vaultSettings.openVault}
-                                 className={`w-12 h-7 rounded-full transition-colors flex items-center px-1 ${props.vaultSettings.enabled ? 'bg-neon-green' : 'bg-surface border border-border'}`}
-                            >
-                                <motion.div
-                                    layout
-                                    className={`w-5 h-5 rounded-full bg-white shadow-sm`}
-                                    animate={{ x: props.vaultSettings.enabled ? 18 : 0 }}
-                                />
-                            </button>
-                        </div>
-                    </div>
-                    <p className="text-[10px] text-muted mb-3">{t('vaultKeysDesc')}</p>
-                </div>
+<SettingsRow
+  icon={<Key size={19} />}
+  label={t('vaultKeys')}
+  sub={t('vaultKeysDesc')}
+  action={(
+    <button
+      type="button"
+      onClick={props.vaultSettings.enabled ? props.vaultSettings.disableVault : props.vaultSettings.openVault}
+      aria-label={t('vaultKeys')}
+      className={`w-12 h-7 rounded-full transition-colors flex items-center px-1 shrink-0 ${props.vaultSettings.enabled ? '' : 'border border-border'}`}
+      style={props.vaultSettings.enabled ? { backgroundColor: 'var(--accent-color)' } : { backgroundColor: 'var(--onb-surface-strong)' }}
+    >
+      <motion.div
+        layout
+        className="w-5 h-5 rounded-full bg-white shadow-sm"
+        animate={{ x: props.vaultSettings.enabled ? 18 : 0 }}
+      />
+    </button>
+  )}
+/>
 )}
 
-{/* --- DEVELOPER CREDENTIALS --- */}
-<div className="pb-6 border-b border-border">
-    <button onClick={props.onOpenDevCreds} className="w-full flex items-center justify-between group">
-        <div className="flex items-center gap-2">
-            <Terminal size={16} className="text-neon-green" />
-            <label className="text-sm font-bold uppercase tracking-wider text-primary cursor-pointer">{t('devCredsTitle')}</label>
-        </div>
-        <ChevronRight size={16} className="text-muted group-hover:text-neon-green group-hover:translate-x-1 transition-all" />
-    </button>
-    <p className="text-[10px] text-muted mt-2">{t('devCredsDesc')}</p>
-</div>
-
-                 {/* PROGRESSIVE LOCK UI */}
-                <div className="space-y-6 pt-2">
-                    <h4 className="text-[10px] font-black uppercase tracking-widest text-neon-green flex items-center gap-2">
-                    <ShieldAlert size={14} /> {t('progressiveBlocking')}
-                    </h4>
+                 <SettingsRow
+                   icon={<ShieldAlert size={19} />}
+                   label={t('progressiveBlocking')}
+                   expanded={openSection === 'progressive'}
+                   onClick={() => toggleSection('progressive')}
+                 />
+                 <AnimatePresence>
+                 {openSection === 'progressive' && (
+                 <motion.div
+                   initial={{ opacity: 0, height: 0 }}
+                   animate={{ opacity: 1, height: 'auto' }}
+                   exit={{ opacity: 0, height: 0 }}
+                   className="overflow-hidden"
+                 >
+                 <div className="px-5 py-4 space-y-6">
                     
                     <div className="space-y-4">
                     <div className="flex justify-between items-center">
@@ -427,13 +297,27 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                     />
                     <p className="text-[10px] text-muted">{t('lockDurationDesc')}</p>
                     </div>
-                </div>
+                 </div>
+                 </motion.div>
+                 )}
+                 </AnimatePresence>
 
-                    {/* RECOVERY CODES SECTION */}
-                <div className="border-t border-border pt-6 mt-4">
-                    <h4 className="text-[10px] font-black uppercase tracking-widest text-neon-green flex items-center gap-2 mb-4">
-                        <KeyRound size={14} /> {t('recoverySectionTitle')}
-                    </h4>
+                    <SettingsRow
+                      icon={<KeyRound size={19} />}
+                      label={t('recoverySectionTitle')}
+                      value={String(props.recoverySettings.count)}
+                      expanded={openSection === 'recovery'}
+                      onClick={() => toggleSection('recovery')}
+                    />
+                    <AnimatePresence>
+                    {openSection === 'recovery' && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="overflow-hidden"
+                    >
+                    <div className="px-5 pb-4">
 
                     <div className="p-4 rounded-2xl bg-zinc-900/80 border border-zinc-800 mb-4">
                         <div className="flex items-center justify-between mb-3">
@@ -461,50 +345,207 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                     <p className="text-[9px] text-zinc-600 leading-relaxed">
                         {t('recoveryCodesSaveWarning')}
                     </p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4 border-t border-border pt-6">
-                    <div className="p-3 rounded-2xl border border-border bg-surface/50">
-                        <Terminal size={16} className="text-neon-green mb-2" />
-                        <h4 className="font-bold text-[10px] uppercase tracking-wide mb-1 text-primary">{t('openSource')}</h4>
-                        <p className="text-[10px] text-muted">{t('transparency')}</p>
                     </div>
-                    <div className="p-3 rounded-2xl border border-border bg-surface/50">
-                        <FileLock2 size={16} className="text-neon-green mb-2" />
-                        <h4 className="font-bold text-[10px] uppercase tracking-wide mb-1 text-primary">{t('clientSide')}</h4>
-                        <p className="text-[10px] text-muted">{t('localEncryption')}</p>
-                    </div>
+                    </motion.div>
+                    )}
+                    </AnimatePresence>
                 </div>
 
-                <div className="border-t border-border pt-2">
-                    <button 
-                        onClick={props.onOpenAbout}
-                        className="w-full py-4 mt-2 rounded-xl bg-surface border border-border flex items-center justify-between px-6 hover:border-neon-green hover:bg-surface/80 group transition-all relative overflow-hidden"
-                    >
-                        <span className="relative z-10 flex items-center justify-between w-full">
-                            <div className="flex items-center gap-4">
-                                <div className="p-2 bg-black rounded-full border border-border text-neon-green group-hover:scale-110 transition-transform">
-                                    <Info size={20} />
-                                </div>
-                                <div className="text-left">
-                                    <h4 className="text-sm font-bold text-primary">{t('aboutUs')}</h4>
-                                    <p className="text-[10px] text-muted">{t('obscuritySecurity')}</p>
-                                </div>
-                            </div>
-                            <ArrowLeft className="rotate-180 text-muted group-hover:text-neon-green transition-colors" size={18} />
-                        </span>
-                    </button>
+                <p className="px-2 pt-5 pb-2 text-[12px] font-semibold uppercase tracking-widest text-muted">{t('settingsGroupMore')}</p>
+                <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: 'var(--onb-surface-strong)' }}>
+                <SettingsRow
+                  icon={<Terminal size={19} />}
+                  label={t('devCredsTitle')}
+                  sub={t('devCredsDesc')}
+                  onClick={props.onOpenDevCreds}
+                />
+                <SettingsRow
+                  icon={<Info size={19} />}
+                  label={t('aboutUs')}
+                  sub={t('obscuritySecurity')}
+                  onClick={props.onOpenAbout}
+                />
                 </div>
 
-                <div className="pt-2 text-center space-y-2">
-                    <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-surface border border-border">
-                        <span className="w-2 h-2 rounded-full bg-neon-green animate-pulse"></span>
+                <div className="pt-6 pb-2 text-center">
+                    <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-border">
+                        <span className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: 'var(--accent-color)' }}></span>
                         <span className="text-[10px] font-mono text-muted">{t('versionLabel')}</span>
                     </div>
                 </div>
-                </div>
             </section>
         </div>
+        </motion.div>
+
+      {/* Sub-sheet for option picking — appearance, language, region */}
+      <AnimatePresence>
+      {subSheet && (
+        <motion.div
+          key="settings-subsheet"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="absolute inset-0 z-[160] flex items-end bg-black/40"
+          onClick={() => setSubSheet(null)}
+        >
+          <motion.div
+            initial={{ y: 60, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 60, opacity: 0 }}
+            transition={{ duration: 0.3, ease: 'easeOut' }}
+            onClick={(e) => e.stopPropagation()}
+            className="w-full rounded-t-[28px] border-t border-x bg-background overflow-hidden flex flex-col"
+            style={{ borderColor: 'var(--onb-border)', maxHeight: '78%' }}
+          >
+            <div className="px-6 pt-4 pb-1 flex items-center justify-center shrink-0">
+              <div className="w-10 h-1 rounded-full bg-[var(--onb-border)]" />
+            </div>
+            <p className="pb-3 text-center text-[17px] font-semibold tracking-tight text-primary shrink-0">
+              {subSheet === 'appearance' ? t('settingsAppearance') : subSheet === 'language' ? t('languageInterface') : t('region')}
+            </p>
+            <div className="overflow-y-auto px-4 pb-6 custom-scrollbar">
+              {subSheet === 'appearance' && (
+                <div className="flex flex-col gap-4">
+                  <div>
+                    <p className="px-2 pb-2 text-center text-[15px] text-muted">{t('settingsModeLabel')}</p>
+                    <div className="grid grid-cols-3 gap-3">
+                      {([
+                        { mode: 'light' as const, label: t('lightMode') },
+                        { mode: 'dark' as const, label: t('darkMode') },
+                        { mode: 'system' as const, label: t('systemButton') },
+                      ]).map((item) => {
+                        const selected = props.themeMode === item.mode;
+                        return (
+                          <button
+                            key={item.mode}
+                            type="button"
+                            onClick={() => props.setAppTheme(item.mode)}
+                            className="flex flex-col items-center gap-2 transition-all active:scale-[0.97]"
+                          >
+                            <span
+                              className="w-20 h-20 rounded-2xl overflow-hidden flex"
+                              style={selected ? { border: '2px solid var(--accent-color)' } : { border: '1px solid var(--onb-border)' }}
+                            >
+                              {item.mode === 'system' ? (
+                                <>
+                                  <span className="flex-1 flex items-center justify-center text-[26px] font-bold bg-white text-black">A</span>
+                                  <span className="flex-1 flex items-center justify-center text-[26px] font-bold bg-black text-white">a</span>
+                                </>
+                              ) : (
+                                <span
+                                  className="flex-1 flex items-center justify-center text-[28px] font-bold"
+                                  style={item.mode === 'light' ? { backgroundColor: '#ffffff', color: '#000000' } : { backgroundColor: '#000000', color: '#ffffff' }}
+                                >
+                                  Aa
+                                </span>
+                              )}
+                            </span>
+                            <span className="text-[13px] text-muted">{item.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <div className="rounded-2xl p-4" style={{ backgroundColor: 'var(--onb-surface-strong)' }}>
+                    <div className="flex items-center gap-2 mb-3">
+                      <PaintBucket size={14} className="text-muted" />
+                      <span className="text-[10px] font-black uppercase tracking-widest text-muted">{t('accentManual')}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1">
+                        <CustomColorPicker color={props.accentColor} onChange={props.setManualAccent} />
+                      </div>
+                      <button
+                        onClick={props.clearManualAccent}
+                        className="px-4 py-3 rounded-xl border border-border text-[10px] font-black uppercase tracking-widest text-muted hover:text-white hover:border-red-500/50 hover:bg-red-500/10 transition-all shrink-0"
+                        title={t('resetAccentTitle')}
+                      >
+                        {t('reset')}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="rounded-2xl p-4" style={{ backgroundColor: 'var(--onb-surface-strong)' }}>
+                    <div className="flex items-center gap-2 mb-3">
+                      <Sparkles size={14} className="text-muted" />
+                      <span className="text-[10px] font-black uppercase tracking-widest text-muted">{t('glassIntensity' as any)}</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={glassIntensity}
+                      onChange={e => {
+                        const val = parseInt(e.target.value);
+                        setGlassIntensity(val);
+                        applyGlassIntensity(val);
+                      }}
+                      className="w-full h-1 appearance-none bg-zinc-800 rounded-full cursor-pointer accent-[var(--accent-color)] [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow-lg [&::-webkit-slider-thumb]:cursor-pointer"
+                    />
+                  </div>
+                </div>
+              )}
+              {subSheet === 'language' && (
+                <div className="flex flex-col gap-2">
+                  {languageOptions.map((lang) => (
+                    <button
+                      key={lang.value}
+                      type="button"
+                      onClick={() => { if (lang.locked) { setLockedLang(lang.label); } else { handleLanguageChange(lang.value); setSubSheet(null); } }}
+                      className={`w-full p-3 rounded-2xl border flex items-center justify-between transition-all active:opacity-60 ${
+                        lang.locked ? 'opacity-40' : ''
+                      }`}
+                      style={language === lang.value ? { borderColor: 'var(--accent-color)', backgroundColor: 'var(--onb-surface-strong)' } : { borderColor: 'var(--onb-border)', backgroundColor: 'var(--onb-surface)' }}
+                    >
+                      <span className="flex items-center gap-3 min-w-0">
+                        <span
+                          className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
+                          style={language === lang.value ? { backgroundColor: 'var(--accent-color)', color: 'var(--accent-contrast)' } : { backgroundColor: 'var(--onb-surface-strong)', color: 'var(--accent-color)' }}
+                        >
+                          {lang.value.toUpperCase()}
+                        </span>
+                        <span className="text-left min-w-0">
+                          <span className="block text-[16px] text-primary truncate">{lang.label}</span>
+                          <span className="block text-[12px] text-muted truncate">{lang.desc} · {lang.completion}%</span>
+                        </span>
+                      </span>
+                      {language === lang.value && !lang.locked && <Check size={18} className="shrink-0" style={{ color: 'var(--accent-color)' }} />}
+                      {lang.locked && <Lock size={16} className="text-muted shrink-0" />}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {subSheet === 'region' && (
+                <div className="flex flex-col gap-2">
+                  {regionOptions.map((reg) => (
+                    <button
+                      key={reg.value}
+                      type="button"
+                      onClick={() => { setRegion(reg.value); setSubSheet(null); }}
+                      className="w-full p-3 rounded-2xl border flex items-center justify-between transition-all active:opacity-60"
+                      style={region === reg.value ? { borderColor: 'var(--accent-color)', backgroundColor: 'var(--onb-surface-strong)' } : { borderColor: 'var(--onb-border)', backgroundColor: 'var(--onb-surface)' }}
+                    >
+                      <span className="flex items-center gap-3 min-w-0">
+                        <span
+                          className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
+                          style={region === reg.value ? { backgroundColor: 'var(--accent-color)', color: 'var(--accent-contrast)' } : { backgroundColor: 'var(--onb-surface-strong)', color: 'var(--accent-color)' }}
+                        >
+                          {reg.value.substring(0, 2).toUpperCase()}
+                        </span>
+                        <span className="text-left min-w-0">
+                          <span className="block text-[16px] text-primary truncate">{reg.label}</span>
+                          <span className="block text-[12px] text-muted truncate">{reg.desc}</span>
+                        </span>
+                      </span>
+                      {region === reg.value && <Check size={18} className="shrink-0" style={{ color: 'var(--accent-color)' }} />}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+      </AnimatePresence>
 
       {renderLockedDialog()}
     </motion.div>
@@ -530,7 +571,7 @@ export const AboutView: React.FC<{
                   <div className="absolute inset-0 blur-3xl rounded-full" style={{ backgroundColor: `${accentColor}20` }}></div>
                    <div className="relative w-48 h-48 rounded-[32px] bg-gradient-to-br from-zinc-900 to-black border-2 flex items-center justify-center overflow-hidden" style={{ borderColor: `${accentColor}50`, boxShadow: `0_0_80px_${accentColor}40, 0_0_160px_${accentColor}20` }}>
                        <div className="absolute inset-0 blur-[80px] rounded-full" style={{ backgroundColor: `${accentColor}15` }} />
-                       <img src={logoImg} alt="Privon Vault" className="w-full h-full object-cover relative z-10 drop-shadow-[0_0_30px_rgba(var(--accent-rgb),0.5)]" />
+                       <span className="font-mono font-black relative z-10" style={{ fontSize: '6rem', lineHeight: 1, color: accentColor }}>P</span>
                    </div>
               </div>
               <h1 className="text-4xl font-black text-primary mb-3 tracking-tight">

@@ -10,6 +10,7 @@ import * as IoIcons from 'react-icons/io5';
 import * as RiIcons from 'react-icons/ri';
 import * as TbIcons from 'react-icons/tb';
 
+import { FolderIcon } from './FolderIcon';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FileSystemItem, AppTheme } from '../types';
 import { is_safe_image_url as isSafeImageUrl } from '../crypto-core/index';
@@ -42,10 +43,12 @@ export const FileItem: React.FC<{
   onRenameCancel?: () => void;
   isSelected?: boolean;
   onSelect?: (id: string, selected: boolean) => void;
+  layout?: 'list' | 'grid';
+  thumbnailUrl?: string;
 }> = ({
     item, onAction, onClick, theme, minimal, onOpenMenu,
     isRenaming, renameValue, onRenameChange, onRenameConfirm, onRenameCancel,
-    isSelected, onSelect
+    isSelected, onSelect, layout = 'list', thumbnailUrl
 }) => {
 
   const { t } = useI18n();
@@ -109,22 +112,20 @@ export const FileItem: React.FC<{
       }
   }
 
-  // Fallback Logic if no custom icon
+  // Fallback Logic if no custom icon (system entries render as plain folders)
   if (!RenderedIcon) {
-    if (item.name === t('systemFolderVault' as any)) {
-        DefaultIcon = LucideIcons.Vault; iconColorClass = "text-black"; iconBgClass = "bg-neon-green border-none";
-    } else if (item.name === t('systemFolderBackup' as any)) {
-        DefaultIcon = LucideIcons.RefreshCcw; iconColorClass = "text-black"; iconBgClass = "bg-neon-green border-none"; 
-    } else if (item.type === 'folder') {
-        DefaultIcon = LucideIcons.Folder; iconColorClass = "text-black"; iconBgClass = "bg-neon-green border-none";
+    if (item.type === 'system' || item.type === 'folder') {
+        DefaultIcon = FolderIcon as unknown as typeof LucideIcons.File; iconColorClass = "text-[var(--accent-color)]"; iconBgClass = "bg-[var(--onb-surface-strong)] border-none";
     } else {
-        if (item.category === 'image') { DefaultIcon = LucideIcons.Image; iconColorClass = "text-black"; }
-        else if (item.category === 'video') { DefaultIcon = LucideIcons.Video; iconColorClass = "text-black"; }
-        else if (item.category === 'audio') { DefaultIcon = LucideIcons.Music; iconColorClass = "text-black"; }
-        else if (item.category === 'doc') { DefaultIcon = LucideIcons.FileText; iconColorClass = "text-black"; }
-        iconBgClass = "bg-neon-green border-none";
+        if (item.category === 'image') { DefaultIcon = LucideIcons.Image; iconColorClass = "text-[var(--accent-color)]"; }
+        else if (item.category === 'video') { DefaultIcon = LucideIcons.Video; iconColorClass = "text-[var(--accent-color)]"; }
+        else if (item.category === 'audio') { DefaultIcon = LucideIcons.Music; iconColorClass = "text-[var(--accent-color)]"; }
+        else if (item.category === 'doc') { DefaultIcon = LucideIcons.FileText; iconColorClass = "text-[var(--accent-color)]"; }
+        iconBgClass = "bg-[var(--onb-surface-strong)] border-none";
     }
   }
+
+  const isBareFolder = !RenderedIcon && (item.type === 'folder' || item.type === 'system');
 
   const handleMenuClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -137,14 +138,19 @@ export const FileItem: React.FC<{
     return (
       <motion.div 
         onClick={onClick}
-        className="group flex items-center p-3 rounded-xl glass-card-premium cursor-pointer file-item"
-        whileHover={{ y: -2, boxShadow: '0 8px 24px rgba(var(--accent-rgb), 0.12)' }}
-        whileTap={{ scale: 0.98 }}
+        className="group flex items-center px-2 py-2 rounded-xl cursor-pointer file-item transition-colors active:bg-white/5"
+        whileTap={{ scale: 0.99 }}
         transition={{ type: 'spring', stiffness: 400, damping: 20 }}
       >
+        {isBareFolder ? (
+          <div className="w-10 h-10 flex items-center justify-center mr-4 shrink-0" style={{ color: 'var(--accent-color)' }}>
+            <FolderIcon size={36} />
+          </div>
+        ) : (
         <div className={`w-10 h-10 rounded-lg flex items-center justify-center mr-4 bg-surface shrink-0 overflow-hidden`}>
           {RenderedIcon || <DefaultIcon size={20} className={iconColorClass} />}
         </div>
+        )}
         <div className="flex-1 min-w-0">
           <h4 className="text-sm font-semibold truncate text-primary">{(item as any).decryptedName || item.name}</h4>
           {item.isEncrypted && item.salt && (
@@ -158,91 +164,164 @@ export const FileItem: React.FC<{
     );
   }
 
-  return (
-    <motion.div 
-      onClick={!isRenaming ? onClick : undefined}
-      className={`relative w-full p-4 rounded-2xl transition-colors duration-200 cursor-pointer mb-4 glass-card-premium overflow-hidden file-item ${isRenaming ? 'border-neon-green ring-1 ring-neon-green' : isSelected ? 'border-neon-green ring-2 ring-neon-green' : ''}`}
-      whileHover={!isRenaming ? { y: -3, boxShadow: '0 12px 30px rgba(var(--accent-rgb), 0.15)' } : undefined}
-      whileTap={!isRenaming && !isSelected ? { scale: 0.98 } : undefined}
-      transition={{ type: 'spring', stiffness: 350, damping: 18 }}
-    >
-      {isSelected && (
-        <div className="absolute top-2 right-2 w-5 h-5 bg-neon-green rounded-full flex items-center justify-center">
-          <LucideIcons.Check size={12} className="text-black" />
-        </div>
-      )}
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-4 flex-1 min-w-0">
-          <div className={`w-12 h-12 rounded-xl flex items-center justify-center overflow-hidden shrink-0 ${iconBgClass}`}>
-             {RenderedIcon || <DefaultIcon size={24} className={iconColorClass} strokeWidth={2} />}
-          </div>
-          <div className="min-w-0 flex-1">
-            {isRenaming ? (
-                <input 
-                    ref={renameInputRef}
-                    value={renameValue}
-                    onChange={(e) => onRenameChange?.(e.target.value)}
-                    onBlur={onRenameConfirm}
-                    onKeyDown={(e) => {
-                        if (e.key === 'Enter') onRenameConfirm?.();
-                        if (e.key === 'Escape') onRenameCancel?.();
-                    }}
-                    className="w-full bg-transparent border-none outline-none text-lg font-bold text-neon-green p-0 truncate"
-                />
-            ) : (
-                <h4 className="text-lg font-bold text-primary mb-1 truncate">{(item as any).decryptedName || item.name}</h4>
-            )}
-            
-            {!isRenaming && ((item as any).decryptedTags || item.tags) && ((item as any).decryptedTags || item.tags).length > 0 && (
-                <div className="flex gap-1 flex-wrap">
-                    {((item as any).decryptedTags || item.tags).map((t: any) => (
-                        <span key={t.id} className="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wide text-black" style={{ backgroundColor: t.color }}>
-                            {t.label}
-                        </span>
-                    ))}
-                </div>
-            )}
-          </div>
-        </div>
-        
-        {!isRenaming && item.type !== 'system' && (
-            <div className="relative">
-                <button 
-                    onClick={handleMenuClick}
-                    className="p-2 rounded-full transition-colors hover:bg-surface text-muted"
-                >
-                    <LucideIcons.MoreVertical size={20} />
-                </button>
+  if (layout === 'grid') {
+    const thumb = thumbnailUrl || (!item.isEncrypted ? item.url : undefined);
+    const showThumb = !!thumb && (item.category === 'image' || item.category === 'video');
+    const isGridDefault = !RenderedIcon && !showThumb;
+    const displayName = (item as any).decryptedName || item.name;
+    return (
+      <motion.div
+        onClick={!isRenaming ? onClick : undefined}
+        className="relative flex flex-col items-center px-1 py-3 rounded-2xl cursor-pointer transition-colors active:bg-white/5"
+        style={isSelected ? { backgroundColor: 'rgba(var(--accent-rgb), 0.12)' } : undefined}
+        whileTap={!isRenaming && !isSelected ? { scale: 0.97 } : undefined}
+      >
+        <div className="relative">
+          {(item.type === 'folder' || item.type === 'system') && !RenderedIcon && !showThumb ? (
+            <div className="w-16 h-16 flex items-center justify-center" style={{ color: 'var(--accent-color)' }}>
+              <FolderIcon size={58} />
             </div>
-        )}
-      </div>
-      <div>
-        {item.status ? (
-          <span className={`inline-block px-4 py-1.5 rounded-full text-xs font-bold tracking-wide ${
-            item.status === 'Active' 
-              ? 'bg-neon-green text-black' 
-              : 'bg-surface text-muted'
-          }`}>
-            {item.status}
-          </span>
-        ) : (
-          <div className={`flex items-center justify-between mt-1 ${isRenaming ? 'opacity-0' : 'pl-16'}`}>
-             <div className="flex items-center gap-2 text-xs text-muted font-mono">
-                 <span>{item.date}</span>
-                 <span>•</span>
-                 <span>{item.size || t('folder')}</span>
-             </div>
-
-              {/* ENCRYPTION BADGE - Only show for manual encryption (has salt) */}
-              {item.isEncrypted && item.salt && (
-                  <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-black border border-neon-green/30 shadow-[0_0_10px_rgba(var(--accent-rgb),0.15)]">
-                      <LucideIcons.ShieldCheck size={10} className="text-neon-green" />
-                      <span className="text-[9px] font-black text-neon-green font-mono uppercase tracking-widest">
-                         {getAlgoDisplay(item.algorithm)}
-                      </span>
-                  </div>
-              )}
+          ) : (
+          <div
+            className={`w-16 h-16 rounded-[20px] flex items-center justify-center overflow-hidden ${showThumb ? 'border border-border' : isGridDefault ? '' : iconBgClass}`}
+            style={isGridDefault ? { backgroundColor: 'var(--onb-surface-strong)' } : undefined}
+          >
+            {showThumb ? (
+              item.category === 'video' ? (
+                <video src={thumb} className="w-full h-full object-cover" muted playsInline preload="metadata" />
+              ) : (
+                <img src={thumb} className="w-full h-full object-cover" alt="" draggable={false} />
+              )
+            ) : RenderedIcon ? (
+              RenderedIcon
+            ) : (
+              <DefaultIcon
+                size={30}
+                strokeWidth={1.75}
+                className={isGridDefault ? undefined : iconColorClass}
+                style={isGridDefault ? { color: 'var(--accent-color)' } : undefined}
+              />
+            )}
           </div>
+          )}
+          {item.isEncrypted && item.salt && (
+            <span className="absolute bottom-1 left-1 w-5 h-5 rounded-full bg-black/55 backdrop-blur-sm flex items-center justify-center pointer-events-none">
+              <LucideIcons.Lock size={10} className="text-white" />
+            </span>
+          )}
+          {isSelected ? (
+            <span className="absolute -top-1.5 -right-1.5 w-6 h-6 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--accent-color)' }}>
+              <LucideIcons.Check size={13} strokeWidth={3} style={{ color: 'var(--accent-contrast)' }} />
+            </span>
+          ) : !isRenaming && item.type !== 'system' && (
+            <button
+              onClick={handleMenuClick}
+              aria-label="More"
+              className="absolute -top-1.5 -right-1.5 w-6 h-6 rounded-full bg-black/45 backdrop-blur-sm text-white flex items-center justify-center active:scale-90 transition-transform"
+            >
+              <LucideIcons.MoreVertical size={13} />
+            </button>
+          )}
+        </div>
+        {isRenaming ? (
+          <input
+            ref={renameInputRef}
+            value={renameValue}
+            onChange={(e) => onRenameChange?.(e.target.value)}
+            onBlur={onRenameConfirm}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') onRenameConfirm?.();
+              if (e.key === 'Escape') onRenameCancel?.();
+            }}
+            className="mt-2 w-full bg-transparent border-none outline-none text-center text-[13px] font-semibold text-primary p-0"
+          />
+        ) : (
+          <p className="mt-2 h-8 text-[13px] font-semibold text-center leading-4 text-primary line-clamp-2 px-0.5">{displayName}</p>
+        )}
+      </motion.div>
+    );
+  }
+
+  return (
+    <motion.div
+      onClick={!isRenaming ? onClick : undefined}
+      className="relative w-full px-2 py-2 rounded-xl transition-colors cursor-pointer active:bg-white/5"
+      style={isSelected ? { backgroundColor: 'rgba(var(--accent-rgb), 0.1)' } : undefined}
+      whileTap={!isRenaming && !isSelected ? { scale: 0.99 } : undefined}
+      transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+    >
+      <div className="flex items-center gap-3">
+        {isBareFolder ? (
+          <div className="w-11 h-11 flex items-center justify-center shrink-0" style={{ color: 'var(--accent-color)' }}>
+            <FolderIcon size={40} />
+          </div>
+        ) : (
+        <div className={`w-11 h-11 rounded-xl flex items-center justify-center overflow-hidden shrink-0 ${iconBgClass}`}>
+           {RenderedIcon || <DefaultIcon size={22} className={iconColorClass} strokeWidth={2} />}
+        </div>
+        )}
+        <div className="min-w-0 flex-1">
+          {isRenaming ? (
+            <input
+                ref={renameInputRef}
+                value={renameValue}
+                onChange={(e) => onRenameChange?.(e.target.value)}
+                onBlur={onRenameConfirm}
+                onKeyDown={(e) => {
+                    if (e.key === 'Enter') onRenameConfirm?.();
+                    if (e.key === 'Escape') onRenameCancel?.();
+                }}
+                className="w-full bg-transparent border-none outline-none text-[16px] font-semibold text-primary p-0 truncate"
+            />
+          ) : (
+            <h4 className="text-[16px] font-semibold text-primary truncate">{(item as any).decryptedName || item.name}</h4>
+          )}
+
+          {!isRenaming && ((item as any).decryptedTags || item.tags) && ((item as any).decryptedTags || item.tags).length > 0 && (
+            <div className="flex gap-1 flex-wrap mt-0.5">
+                {((item as any).decryptedTags || item.tags).map((t: any) => (
+                    <span key={t.id} className="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wide text-black" style={{ backgroundColor: t.color }}>
+                        {t.label}
+                    </span>
+                ))}
+            </div>
+          )}
+
+          {!isRenaming && (
+            <div className="flex items-center gap-1.5 mt-0.5 text-[12px] text-muted">
+              {item.status ? (
+                <span className={`font-bold ${item.status === 'Active' ? '' : ''}`} style={item.status === 'Active' ? { color: 'var(--accent-color)' } : undefined}>
+                  {item.status}
+                </span>
+              ) : (
+                <>
+                  <span className="truncate">{item.date}</span>
+                  <span>•</span>
+                  <span className="shrink-0">{item.size || t('folder')}</span>
+                </>
+              )}
+              {item.isEncrypted && item.salt && (
+                <span className="flex items-center gap-1 font-mono font-bold uppercase tracking-widest shrink-0" style={{ color: 'var(--accent-color)', fontSize: '10px' }}>
+                  <LucideIcons.ShieldCheck size={10} />
+                  {getAlgoDisplay(item.algorithm)}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+
+        {isSelected ? (
+          <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: 'var(--accent-color)' }}>
+            <LucideIcons.Check size={13} strokeWidth={3} style={{ color: 'var(--accent-contrast)' }} />
+          </div>
+        ) : !isRenaming && item.type !== 'system' && (
+          <button
+              onClick={handleMenuClick}
+              aria-label="More"
+              className="p-2 -mr-2 rounded-full transition-colors text-muted active:opacity-60"
+          >
+              <LucideIcons.MoreVertical size={19} />
+          </button>
         )}
       </div>
     </motion.div>

@@ -6,7 +6,6 @@ import { FileSystemItem } from '../types';
 import { db, DBItem, getVaultKey } from '../crypto-core/db';
 import type { CryptoAlgorithm } from '../types';
 import { useI18n } from '../locales/i18nContext';
-import snowEncryptionImg from '../assets/snow-encryption.png';
 import {
   encrypt_with_passphrase,
   decrypt,
@@ -501,16 +500,17 @@ export const EncryptionModal: React.FC<EncryptionModalProps> = ({ isOpen, onClos
                           >
                               <div className="relative">
                                   <div className="absolute inset-0 bg-neon-green/20 blur-xl rounded-full" />
-                                  <motion.img
-                                    src={snowEncryptionImg}
-                                    alt="Encrypting"
-                                    className="w-48 h-48 object-contain relative z-10"
+                                  <motion.div
+                                    className="w-48 h-48 flex items-center justify-center relative z-10"
+                                    style={{ color: 'var(--accent-color)' }}
                                     animate={{ scale: [1, 1.05, 1] }}
                                     transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-                                  />
+                                  >
+                                    <Shield size={120} />
+                                  </motion.div>
                               </div>
                               <div className="text-center">
-                                   <h4 className="text-xl font-bold text-white">Snow is encrypting your file</h4>
+                                   <h4 className="text-xl font-bold text-white">Encrypting your file</h4>
                                    <p className="text-zinc-400 text-xs mt-2">Your data is being locked with strong encryption. This will only take a moment!</p>
                               </div>
                           </motion.div>

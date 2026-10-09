@@ -21,6 +21,8 @@ export const BackupView: React.FC<BackupViewProps> = ({ onBack, theme }) => {
   const [step, setStep] = useState<BackupStep>('menu');
   const [generatedKey, setGeneratedKey] = useState('');
   const [copied, setCopied] = useState(false);
+  const [revealed, setRevealed] = useState(false);
+  const [showInfo, setShowInfo] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   
   const [restoreKey, setRestoreKey] = useState('');
@@ -30,6 +32,9 @@ export const BackupView: React.FC<BackupViewProps> = ({ onBack, theme }) => {
   const startBackup = () => {
     const key = generate_passphrase();
     setGeneratedKey(key);
+    setRevealed(false);
+    setShowInfo(false);
+    setCopied(false);
     setStep('create_gen');
   };
 
@@ -136,6 +141,7 @@ export const BackupView: React.FC<BackupViewProps> = ({ onBack, theme }) => {
   };
 
   const copyKey = () => {
+      setRevealed(true);
       navigator.clipboard.writeText(generatedKey);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);

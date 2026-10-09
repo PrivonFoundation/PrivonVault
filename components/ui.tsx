@@ -53,7 +53,7 @@ export const Button: React.FC<ButtonProps> = ({
   };
   
   const variantClasses = {
-    primary: 'bg-neon-green text-black shadow-[0_0_20px_rgba(228,228,231,0.3)]',
+    primary: 'bg-neon-green text-[var(--accent-contrast)] shadow-[0_0_20px_rgba(228,228,231,0.3)]',
     secondary: 'bg-surface border border-border text-primary hover:border-neon-green hover:bg-surface/80',
     ghost: 'bg-transparent text-muted hover:text-primary hover:bg-surface',
     danger: 'bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500 hover:text-white',
@@ -311,7 +311,7 @@ export const Badge: React.FC<BadgeProps> = ({
   
   const variantClasses = {
     default: 'bg-surface text-muted border border-border',
-    success: 'bg-neon-green text-black',
+    success: 'bg-neon-green text-[var(--accent-contrast)]',
     warning: 'bg-amber-500/10 text-amber-500 border border-amber-500/20',
     error: 'bg-red-500/10 text-red-500 border border-red-500/20',
     accent: 'bg-neon-green/10 text-neon-green border border-neon-green/20'

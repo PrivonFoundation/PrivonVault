@@ -1,10 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Eye, EyeOff, Loader2, ShieldCheck, Timer, Copy, Check, ChevronLeft, ChevronRight, Target, ShieldAlert, FolderOpen, RefreshCw, Code2, Download } from 'lucide-react';
+import { Eye, EyeOff, Loader2, ShieldCheck, Timer, Copy, Check, ChevronLeft, ChevronRight, Target, ShieldAlert, FolderOpen, RefreshCw, Download, Settings, CheckCircle, Plus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useI18n } from '../locales/i18nContext';
-import logoImg from '../assets/Snow-logo-PrivonVault.png';
-import welcomeImg from '../assets/snow-welcome.png';
-import snowBenefitsImg from '../assets/snow-benefits.png';
+import { QuickSettingsSheet } from './QuickSettingsSheet';
 const threatModelVideo = undefined;
 import { AutoDestructCountdown } from './AutoDestructCountdown';
 import { generatePassphrase, normalizePassphrase } from '../utils/passphrase';
@@ -19,10 +17,11 @@ import {
   base64_encode,
   generate_recovery_codes,
   generate_vault_key,
+  backup_decrypt,
   decrypt,
   get_argon_params,
 } from '../crypto-core/index';
-import { setVaultKey } from '../crypto-core/db';
+import { db, setVaultKey } from '../crypto-core/db';
 import type { CryptoMetadata, VaultWrappers } from '../types';
 
 interface AuthScreenProps {
@@ -47,11 +46,20 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
   const [error, setError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [timeLeft, setTimeLeft] = useState(0);
-  const [setupStep, setSetupStep] = useState<'welcome' | 'intro' | 'create'>('welcome');
+  const [setupStep, setSetupStep] = useState<'welcome' | 'create' | 'restore'>('welcome');
   const [selectedTier, setSelectedTier] = useState<number | null>(null);
   const [infoTier, setInfoTier] = useState<number | null>(null);
   const [confirmTier, setConfirmTier] = useState<number | null>(null);
   const [copied, setCopied] = useState(false);
+  const [showLangSheet, setShowLangSheet] = useState(false);
+  const [restoreFile, setRestoreFile] = useState<File | null>(null);
+  const [restoreForm, setRestoreForm] = useState(false);
+  const [restoreKey, setRestoreKey] = useState('');
+  const [showRestoreKey, setShowRestoreKey] = useState(false);
+  const [restoreError, setRestoreError] = useState('');
+  const [restoreBusy, setRestoreBusy] = useState(false);
+  const [restoreDone, setRestoreDone] = useState(false);
+  const restoreFileRef = useRef<HTMLInputElement | null>(null);
 
   const [setupProgress, setSetupProgress] = useState(0);
   const [setupProgressLabel, setSetupProgressLabel] = useState('');
@@ -162,6 +170,10 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
 
   const handleCreateFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    submitCreate();
+  };
+
+  const submitCreate = () => {
     setError(null);
     const pw = normalizePassphrase(password);
     if (!passphraseGenerated && pw.length < 30) {
@@ -407,22 +419,83 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
     } catch {}
   };
 
+  const resetRestore = () => {
+    setRestoreFile(null);
+    setRestoreForm(false);
+    setRestoreKey('');
+    setShowRestoreKey(false);
+    setRestoreError('');
+    setRestoreBusy(false);
+    setRestoreDone(false);
+  };
+
+  const handleRestoreFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files?.[0]) {
+      setRestoreFile(e.target.files[0]);
+      setRestoreError('');
+    }
+  };
+
+  const startFreshVault = () => {
+    setSelectedTier(1);
+    setConfirmTier(1);
+    const tier = TIERS.find(t => t.id === 1);
+    if (tier) onApplyThreatModel?.(tier.config);
+    setSetupStep('create');
+  };
+
+  const executeSetupRestore = async () => {
+    if (!restoreFile || !restoreKey) {
+      setRestoreError(t('selectFileAndKey'));
+      return;
+    }
+    setRestoreBusy(true);
+    setRestoreError('');
+    try {
+      const fileBytes = new Uint8Array(await restoreFile.arrayBuffer());
+      const jsonBytes = await backup_decrypt(fileBytes, restoreKey, 3, 65536, 4);
+      const data = JSON.parse(new TextDecoder().decode(jsonBytes));
+      if (!data.db || !data.localStorage) throw new Error('Format invalid');
+      const allowedKeys = new Set([
+        'privon_salt', 'privon_iv', 'privon_vault_blob',
+        'privon_crypto_metadata', 'privon_vault_wrappers',
+        'privon_vault_pin_hash', 'privon_vault_enabled',
+        'privon_vault_cats', 'privon_vault_keys',
+        'privon_devcreds', 'privon_devcreds_meta', 'privon_devcreds_cats',
+        'privon_ad_enabled', 'privon_ad_attempts', 'privon_ad_inactivity', 'privon_ad_countdown',
+        'privon_blur_time', 'privon_lock_time',
+        'privon_prog_lock_time', 'privon_prog_attempts',
+        'privon_destruct_time',
+        'theme_accent', 'app_language', 'app_region',
+      ]);
+      Object.entries(data.localStorage).forEach(([k, v]) => {
+        if (v && allowedKeys.has(k)) localStorage.setItem(k, v as string);
+      });
+      await db.importDatabase(data.db);
+      setRestoreDone(true);
+    } catch (e) {
+      console.error(e);
+      setRestoreError(t('wrongKeyOrCorrupt'));
+    } finally {
+      setRestoreBusy(false);
+    }
+  };
+
   const Logo = () => (
-    <div className={`relative w-48 h-48 md:w-64 md:h-64 flex items-center justify-center transition-all duration-700`}>
+    <div className={`relative flex items-center justify-center px-10 py-6 transition-all duration-700`}>
       <div className={`absolute -inset-4 md:-inset-6 blur-[80px] md:blur-[120px] rounded-full animate-pulse transition-all duration-700 ${isLocked ? 'bg-red-500/20' : ''}`} style={{ backgroundColor: isLocked ? undefined : `rgba(${accentRgb}, 0.3)` }} />
-      <div className={`absolute inset-0 md:inset-2 blur-2xl md:blur-3xl rounded-full ${isLocked ? 'bg-red-500/10' : ''}`} style={{ backgroundColor: isLocked ? undefined : `rgba(${accentRgb}, 0.2)` }} />
-      <img
-        src={logoImg}
-        alt="Privon Vault"
-        className={`w-full h-full object-contain transition-all duration-500 ${isLocked ? 'opacity-50 grayscale' : ''}`}
-        style={{ filter: isLocked ? 'none' : `drop-shadow(0 0 40px rgba(${accentRgb}, 0.6)) drop-shadow(0 0 80px rgba(${accentRgb}, 0.3)) drop-shadow(0 0 120px rgba(${accentRgb}, 0.15))` }}
-      />
+      <span
+        className={`relative z-10 text-6xl md:text-7xl font-black tracking-tighter font-mono transition-all duration-500 ${isLocked ? 'opacity-50 grayscale' : ''}`}
+        style={{ color: 'var(--accent-color)', filter: isLocked ? 'none' : `drop-shadow(0 0 40px rgba(${accentRgb}, 0.6)) drop-shadow(0 0 80px rgba(${accentRgb}, 0.3))` }}
+      >
+        P
+      </span>
     </div>
   );
 
   if (isSetup) {
     return (
-      <div className="bg-black h-screen h-dvh overflow-hidden">
+      <div className="bg-background h-screen h-dvh overflow-hidden">
         <AnimatePresence mode="wait">
           {setupStep === 'welcome' ? (
             <motion.div
@@ -433,111 +506,283 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
               transition={{ duration: 0.5, ease: 'easeOut' }}
               className="absolute inset-0 overflow-hidden bg-background"
             >
-              {/* Gradient base — dark metallic, black bottom */}
-              <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, #2a2a2a 0%, #1f1f1f 15%, #151515 30%, #0d0d0d 50%, #080808 70%, #030303 85%, #000000 100%)' }} />
+              {/* Content — Anytype style: wordmark top, headline middle, actions bottom */}
+              <div className="relative z-10 flex flex-col items-center h-full w-full max-w-md mx-auto px-6 pt-6 pb-8">
 
-              {/* Metal reflections — soft blurred light streaks */}
-              <div className="absolute pointer-events-none" style={{ top: '-20%', left: '10%', width: '120px', height: '180%', background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.25) 20%, rgba(0,0,0,0.4) 35%, rgba(0,0,0,0.15) 60%, rgba(0,0,0,0) 100%)', transform: 'rotate(12deg)', filter: 'blur(18px)' }} />
-              <div className="absolute pointer-events-none" style={{ top: '-15%', left: '35%', width: '80px', height: '170%', background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.15) 25%, rgba(0,0,0,0.3) 40%, rgba(0,0,0,0.1) 65%, rgba(0,0,0,0) 100%)', transform: 'rotate(8deg)', filter: 'blur(22px)' }} />
-              <div className="absolute pointer-events-none" style={{ top: '-25%', left: '58%', width: '100px', height: '190%', background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.2) 18%, rgba(0,0,0,0.35) 32%, rgba(0,0,0,0.12) 55%, rgba(0,0,0,0) 100%)', transform: 'rotate(15deg)', filter: 'blur(15px)' }} />
-              <div className="absolute pointer-events-none" style={{ top: '-10%', left: '78%', width: '90px', height: '160%', background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.18) 22%, rgba(0,0,0,0.28) 38%, rgba(0,0,0,0.08) 62%, rgba(0,0,0,0) 100%)', transform: 'rotate(10deg)', filter: 'blur(20px)' }} />
-
-              {/* Metallic blobs — top zone */}
-              <div className="absolute w-96 h-96 opacity-25" style={{ top: '-15%', left: '-10%', background: 'radial-gradient(circle, #d4d4d4 0%, transparent 70%)', borderRadius: '60% 40% 70% 30% / 50% 60% 40% 50%', animation: 'blobFloat1 20s ease-in-out infinite', filter: 'blur(60px)' }} />
-              <div className="absolute w-80 h-80 opacity-20" style={{ top: '-5%', right: '-5%', background: 'radial-gradient(circle, #c0c0c0 0%, transparent 70%)', borderRadius: '40% 60% 50% 50% / 50% 40% 60% 50%', animation: 'blobFloat2 25s ease-in-out infinite', filter: 'blur(50px)' }} />
-              <div className="absolute w-64 h-64 opacity-15" style={{ top: '10%', left: '25%', background: 'radial-gradient(circle, #e0e0e0 0%, transparent 70%)', borderRadius: '50% 60% 40% 60% / 60% 40% 60% 40%', animation: 'blobFloat3 18s ease-in-out infinite', filter: 'blur(45px)' }} />
-
-              {/* Dark blobs — bottom zone */}
-              <div className="absolute w-80 h-80 opacity-30" style={{ bottom: '-10%', right: '-10%', background: 'radial-gradient(circle, #1a1a1a 0%, transparent 70%)', borderRadius: '55% 45% 60% 40% / 45% 55% 45% 55%', animation: 'blobFloat2 28s ease-in-out infinite', filter: 'blur(50px)' }} />
-              <div className="absolute w-64 h-64 opacity-20" style={{ bottom: '5%', left: '-5%', background: 'radial-gradient(circle, #2a2a2a 0%, transparent 70%)', borderRadius: '45% 55% 35% 65% / 55% 45% 55% 45%', animation: 'blobFloat3 22s ease-in-out infinite', filter: 'blur(40px)' }} />
-
-              {/* Noise texture — premium grain */}
-              <div className="absolute inset-0 pointer-events-none opacity-[0.03]" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 256 256\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.8\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23n)\' opacity=\'1\'/%3E%3C/svg%3E")', backgroundRepeat: 'repeat', backgroundSize: '128px 128px' }} />
-
-              {/* Content */}
-              <div className="relative z-10 flex flex-col items-center h-full px-6 pt-12 pb-8">
-
-                {/* Paw icon */}
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.5, delay: 0.15 }}
-                  className="glass-card w-12 h-12 rounded-full flex items-center justify-center mb-4"
-                >
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="var(--accent-color)">
-                    <ellipse cx="8" cy="7" rx="2.5" ry="3" />
-                    <ellipse cx="16" cy="7" rx="2.5" ry="3" />
-                    <ellipse cx="4.5" cy="12" rx="2" ry="2.5" />
-                    <ellipse cx="19.5" cy="12" rx="2" ry="2.5" />
-                    <path d="M12 22c-4 0-7-3-7-6 0-2 1.5-3.5 3-4 1-.3 2.5-.5 4-.5s3 .2 4 .5c1.5.5 3 2 3 4 0 3-3 6-7 6z" />
-                  </svg>
-                </motion.div>
-
-                {/* Title */}
-                <motion.h1
-                  className="text-3xl md:text-4xl font-black tracking-tight text-center mb-1"
-                  style={{ color: '#ffffff' }}
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: 0.25 }}
-                >
-                  {t('setupWelcomeTitle')}
-                </motion.h1>
-
-                {/* Subtitle */}
-                <motion.p
-                  className="text-sm md:text-base text-center max-w-sm leading-relaxed glass-card rounded-2xl px-5 py-3"
-                  style={{ color: '#ffffff' }}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: 0.35 }}
-                >
-                  Hi! I'm Snow. Welcome to Privon Vault! I'll help keep your files private. Everything you store stays encrypted on your device, and only you hold the key.
-                </motion.p>
-
-                {/* Mascot - video, centered */}
-                <motion.div
-                  className="flex-1 flex items-center justify-center w-full"
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.7, delay: 0.3 }}
-                >
-                  <div className="relative w-full max-w-[800px]">
-                    <img src={welcomeImg} alt="Welcome" className="w-full h-auto object-contain rounded-2xl" />
-                  </div>
-                </motion.div>
-
-                {/* Button */}
-                <motion.button
-                  onClick={() => setSetupStep('intro')}
-                  className="w-full max-w-xs flex items-center justify-center gap-3 py-4 rounded-[28px] font-bold text-sm transition-all duration-300 active:scale-[0.97]"
-                  style={{ backgroundColor: 'var(--accent-color)', color: 'var(--bg-main)', boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }}
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: 0.5 }}
-                  whileHover={{ scale: 1.02, boxShadow: '0 12px 40px rgba(0,0,0,0.18)' }}
-                  whileTap={{ scale: 0.97 }}
-                >
-                  {t('welcomeLetsStart')}
-                  <span className="w-7 h-7 rounded-full flex items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.1)' }}>
-                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M3 8h10M9 4l4 4-4 4" />
-                    </svg>
+                {/* Top bar — wordmark center, settings right */}
+                <div className="w-full flex items-center justify-between h-11 shrink-0">
+                  <div className="w-11" />
+                  <span className="text-[17px] font-semibold tracking-tight text-primary lowercase">
+                    {t('crytoPrefix')} {t('toolSuffix')}
                   </span>
-                </motion.button>
+                  <button
+                    type="button"
+                    onClick={() => setShowLangSheet(true)}
+                    aria-label={t('languageInterface')}
+                    className="w-11 h-11 rounded-full flex items-center justify-center text-muted hover:text-primary active:scale-90 transition-all"
+                  >
+                    <Settings size={22} />
+                  </button>
+                </div>
 
-                {/* Pagination dots */}
+                {/* Headline */}
+                <div className="flex-1 w-full flex flex-col items-center justify-center text-center px-2">
+                  <motion.h1
+                    initial={{ opacity: 0, y: 16 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6, ease: 'easeOut' }}
+                  >
+                    <span className="block text-[38px] md:text-[52px] font-semibold tracking-[-0.02em] leading-[1.1] text-primary">
+                      {t('welcomeHeroLine1')}
+                    </span>
+                    <span
+                      className="block text-[38px] md:text-[52px] leading-[1.15] text-muted italic"
+                      style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
+                    >
+                      {t('welcomeHeroLine2')}
+                    </span>
+                  </motion.h1>
+                </div>
+
+                {/* Actions */}
                 <motion.div
-                  className="flex items-center gap-2 mt-5"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.5, delay: 0.7 }}
+                  initial={{ opacity: 0, y: 14 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.55, delay: 0.15, ease: 'easeOut' }}
+                  className="w-full flex flex-col items-center gap-3"
                 >
-                  <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: 'var(--accent-color)' }} />
-                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--border-color)' }} />
-                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--border-color)' }} />
-                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--border-color)' }} />
+                  <button
+                    type="button"
+                    onClick={startFreshVault}
+                    className="w-full py-4 rounded-full font-semibold text-[17px] transition-all active:scale-[0.98]"
+                    style={{ backgroundColor: 'var(--accent-color)', color: 'var(--accent-contrast)' }}
+                  >
+                    {t('welcomeNewHere')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { resetRestore(); setSetupStep('restore'); }}
+                    className="w-full py-4 rounded-full font-semibold text-[17px] text-primary border transition-all active:scale-[0.98]"
+                    style={{ backgroundColor: 'var(--onb-surface-strong)', borderColor: 'var(--onb-border)' }}
+                  >
+                    {t('welcomeHaveKey')}
+                  </button>
+                  <p
+                    className="text-[12px] leading-relaxed text-center max-w-[300px] mt-1"
+                    style={{ color: 'var(--onb-text-faint)' }}
+                  >
+                    {t('welcomeConsent')}
+                  </p>
                 </motion.div>
+              </div>
+
+              {/* Quick settings sheet — appearance + language */}
+              <QuickSettingsSheet open={showLangSheet} onClose={() => setShowLangSheet(false)} />
+            </motion.div>
+          ) : setupStep === 'restore' ? (
+            <motion.div
+              key="restore"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.4, ease: 'easeOut' }}
+              className="absolute inset-0 overflow-hidden bg-background"
+            >
+              <div className="relative z-10 flex flex-col h-full w-full max-w-md mx-auto px-6 pt-6 pb-8 overflow-y-auto">
+
+                {/* Top bar — back only */}
+                <div className="w-full flex items-center h-11 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (restoreDone || !restoreForm) {
+                        resetRestore();
+                        setSetupStep('welcome');
+                      } else {
+                        setRestoreForm(false);
+                        setRestoreError('');
+                      }
+                    }}
+                    aria-label={t('backButton')}
+                    className="w-11 h-11 -ml-2 rounded-full flex items-center justify-center text-muted hover:text-primary active:scale-90 transition-all"
+                  >
+                    <ChevronLeft size={24} />
+                  </button>
+                </div>
+
+                {!restoreDone ? (
+                  !restoreForm ? (
+                    <>
+                      <motion.div
+                        initial={{ opacity: 0, y: 14 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5, ease: 'easeOut' }}
+                        className="mt-6 mb-7"
+                      >
+                        <h1 className="text-[34px] font-semibold tracking-tight leading-[1.12] text-primary">
+                          {t('restoreTitle')}
+                        </h1>
+                        <p className="mt-3 text-[16px] leading-relaxed text-muted">
+                          {t('restoreSubtitle')}
+                        </p>
+                      </motion.div>
+
+                      <div className="w-full flex flex-col gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setRestoreForm(true)}
+                          className="w-full flex items-center gap-5 p-5 rounded-[22px] text-left transition-all active:scale-[0.98]"
+                          style={{ backgroundColor: 'var(--onb-surface-strong)' }}
+                        >
+                          <FolderOpen size={42} strokeWidth={1.5} className="shrink-0" style={{ color: 'var(--accent-color)' }} />
+                          <span className="min-w-0">
+                            <span className="block text-[19px] font-semibold text-primary">
+                              {t('restoreFromFile')}
+                            </span>
+                            <span className="block mt-1 text-[15px] leading-snug text-muted">
+                              {t('restoreFromFileDesc')}
+                            </span>
+                          </span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={startFreshVault}
+                          className="w-full flex items-center gap-5 p-5 rounded-[22px] text-left transition-all active:scale-[0.98]"
+                          style={{ backgroundColor: 'var(--onb-surface-strong)' }}
+                        >
+                          <Plus size={42} strokeWidth={1.5} className="shrink-0" style={{ color: 'var(--accent-color)' }} />
+                          <span className="min-w-0">
+                            <span className="block text-[19px] font-semibold text-primary">
+                              {t('restoreStartFresh')}
+                            </span>
+                            <span className="block mt-1 text-[15px] leading-snug text-muted">
+                              {t('restoreStartFreshDesc')}
+                            </span>
+                          </span>
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                    <motion.div
+                      initial={{ opacity: 0, y: 14 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.5, ease: 'easeOut' }}
+                      className="mt-6 mb-6"
+                    >
+                      <h1 className="text-[26px] font-bold tracking-tight text-primary">
+                        {t('restoreFromFile')}
+                      </h1>
+                      <p className="mt-2 text-[14px] leading-relaxed text-muted">
+                        {t('restoreFromFileDesc')}
+                      </p>
+                    </motion.div>
+
+                    <div className="w-full flex flex-col gap-3">
+                      <input
+                        ref={restoreFileRef}
+                        type="file"
+                        accept=".enc"
+                        className="hidden"
+                        onChange={handleRestoreFile}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => restoreFileRef.current?.click()}
+                        className="w-full flex items-center gap-4 p-4 rounded-[24px] border-2 border-dashed text-left transition-all active:scale-[0.98]"
+                        style={{ borderColor: restoreFile ? 'var(--accent-color)' : 'var(--onb-border)', backgroundColor: 'var(--onb-surface)' }}
+                      >
+                        <span
+                          className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0"
+                          style={{ backgroundColor: 'var(--onb-surface-strong)', color: 'var(--accent-color)' }}
+                        >
+                          <FolderOpen size={22} />
+                        </span>
+                        <span className="min-w-0">
+                          <span className="block text-[15px] font-semibold text-primary truncate">
+                            {restoreFile ? restoreFile.name : t('backupFile')}
+                          </span>
+                          <span className="block text-[12px] text-muted">
+                            {restoreFile ? `${(restoreFile.size / 1024).toFixed(1)} KB` : '.enc'}
+                          </span>
+                        </span>
+                      </button>
+
+                      <div
+                        className="w-full flex items-center gap-3 px-4 rounded-[24px] border"
+                        style={{ backgroundColor: 'var(--onb-surface)', borderColor: 'var(--onb-border)' }}
+                      >
+                        <input
+                          type={showRestoreKey ? 'text' : 'password'}
+                          value={restoreKey}
+                          onChange={(e) => { setRestoreKey(e.target.value); setRestoreError(''); }}
+                          placeholder={t('decryptionKey')}
+                          autoComplete="off"
+                          className="flex-1 min-w-0 bg-transparent py-4 text-[15px] text-primary placeholder:text-muted focus:outline-none font-mono"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowRestoreKey(v => !v)}
+                          className="p-2 -mr-2 rounded-full text-muted hover:text-primary transition-colors"
+                        >
+                          {showRestoreKey ? <EyeOff size={18} /> : <Eye size={18} />}
+                        </button>
+                      </div>
+
+                      {restoreError && (
+                        <p className="text-red-400 text-[13px] font-medium bg-red-500/10 px-4 py-3 rounded-2xl border border-red-500/20 text-center">
+                          {restoreError}
+                        </p>
+                      )}
+
+                      <p
+                        className="text-[12px] leading-relaxed text-center px-2"
+                        style={{ color: 'var(--onb-text-faint)' }}
+                      >
+                        {t('restoreWarning')}
+                      </p>
+                    </div>
+
+                    <div className="mt-auto pt-8 w-full">
+                      <button
+                        type="button"
+                        onClick={executeSetupRestore}
+                        disabled={restoreBusy}
+                        className="w-full py-4 rounded-full font-semibold text-[17px] flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-60"
+                        style={{ backgroundColor: 'var(--accent-color)', color: 'var(--accent-contrast)' }}
+                      >
+                        {restoreBusy && <Loader2 size={18} className="animate-spin" />}
+                        {restoreBusy ? t('restoring') : t('restoreAll')}
+                      </button>
+                    </div>
+                    </>
+                  )
+                ) : (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="flex-1 w-full flex flex-col items-center justify-center text-center gap-4"
+                  >
+                    <span
+                      className="w-20 h-20 rounded-full flex items-center justify-center"
+                      style={{ backgroundColor: 'var(--accent-color)', color: 'var(--accent-contrast)' }}
+                    >
+                      <CheckCircle size={40} />
+                    </span>
+                    <h1 className="text-[26px] font-bold tracking-tight text-primary">
+                      {t('restoreSuccess')}
+                    </h1>
+                    <p className="text-[14px] text-muted">{t('appReload')}</p>
+                    <button
+                      type="button"
+                      onClick={() => window.location.reload()}
+                      className="mt-2 w-full py-4 rounded-full font-semibold text-[17px] transition-all active:scale-[0.98]"
+                      style={{ backgroundColor: 'var(--accent-color)', color: 'var(--accent-contrast)' }}
+                    >
+                      {t('reload')}
+                    </button>
+                  </motion.div>
+                )}
               </div>
             </motion.div>
           ) : setupStep === 'create' ? (
@@ -549,26 +794,9 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
               transition={{ duration: 0.18, ease: 'easeOut' }}
               className="absolute inset-0 overflow-hidden bg-background"
             >
-              {/* Gradient base — dark metallic, black bottom */}
-              <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, #2a2a2a 0%, #1f1f1f 15%, #151515 30%, #0d0d0d 50%, #080808 70%, #030303 85%, #000000 100%)' }} />
-
-              {/* Metal reflections — soft blurred light streaks */}
-              <div className="absolute pointer-events-none" style={{ top: '-20%', left: '10%', width: '120px', height: '180%', background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.25) 20%, rgba(0,0,0,0.4) 35%, rgba(0,0,0,0.15) 60%, rgba(0,0,0,0) 100%)', transform: 'rotate(12deg)', filter: 'blur(18px)' }} />
-              <div className="absolute pointer-events-none" style={{ top: '-15%', left: '35%', width: '80px', height: '170%', background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.15) 25%, rgba(0,0,0,0.3) 40%, rgba(0,0,0,0.1) 65%, rgba(0,0,0,0) 100%)', transform: 'rotate(8deg)', filter: 'blur(22px)' }} />
-              <div className="absolute pointer-events-none" style={{ top: '-25%', left: '58%', width: '100px', height: '190%', background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.2) 18%, rgba(0,0,0,0.35) 32%, rgba(0,0,0,0.12) 55%, rgba(0,0,0,0) 100%)', transform: 'rotate(15deg)', filter: 'blur(15px)' }} />
-              <div className="absolute pointer-events-none" style={{ top: '-10%', left: '78%', width: '90px', height: '160%', background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.18) 22%, rgba(0,0,0,0.28) 38%, rgba(0,0,0,0.08) 62%, rgba(0,0,0,0) 100%)', transform: 'rotate(10deg)', filter: 'blur(20px)' }} />
-
-              {/* Metallic blobs — top zone */}
-              <div className="absolute w-96 h-96 opacity-25" style={{ top: '-15%', left: '-10%', background: 'radial-gradient(circle, #d4d4d4 0%, transparent 70%)', borderRadius: '60% 40% 70% 30% / 50% 60% 40% 50%', animation: 'blobFloat1 20s ease-in-out infinite', filter: 'blur(60px)' }} />
-              <div className="absolute w-80 h-80 opacity-20" style={{ top: '-5%', right: '-5%', background: 'radial-gradient(circle, #c0c0c0 0%, transparent 70%)', borderRadius: '40% 60% 50% 50% / 50% 40% 60% 50%', animation: 'blobFloat2 25s ease-in-out infinite', filter: 'blur(50px)' }} />
-              <div className="absolute w-64 h-64 opacity-15" style={{ top: '10%', left: '25%', background: 'radial-gradient(circle, #e0e0e0 0%, transparent 70%)', borderRadius: '50% 60% 40% 60% / 60% 40% 60% 40%', animation: 'blobFloat3 18s ease-in-out infinite', filter: 'blur(45px)' }} />
-
-              {/* Dark blobs — bottom zone */}
-              <div className="absolute w-80 h-80 opacity-30" style={{ bottom: '-10%', right: '-10%', background: 'radial-gradient(circle, #1a1a1a 0%, transparent 70%)', borderRadius: '55% 45% 60% 40% / 45% 55% 45% 55%', animation: 'blobFloat2 28s ease-in-out infinite', filter: 'blur(50px)' }} />
-              <div className="absolute w-64 h-64 opacity-20" style={{ bottom: '5%', left: '-5%', background: 'radial-gradient(circle, #2a2a2a 0%, transparent 70%)', borderRadius: '45% 55% 35% 65% / 55% 45% 55% 45%', animation: 'blobFloat3 22s ease-in-out infinite', filter: 'blur(40px)' }} />
-
-              {/* Noise texture — premium grain */}
-              <div className="absolute inset-0 pointer-events-none opacity-[0.03]" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 256 256\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.8\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23n)\' opacity=\'1\'/%3E%3C/svg%3E")', backgroundRepeat: 'repeat', backgroundSize: '128px 128px' }} />
+              {/* Solid background — deep black in dark mode, clean white in light mode */}
+              <div className="absolute inset-0 bg-background" />
+              <div className="absolute w-96 h-96 opacity-[0.07]" style={{ top: '-12%', left: '-8%', background: 'radial-gradient(circle, var(--accent-color) 0%, transparent 70%)', borderRadius: '50%', filter: 'blur(70px)' }} />
 
               <div className="relative z-10 flex flex-col items-center h-full px-6 pt-4 pb-8 overflow-y-auto">
 
@@ -576,14 +804,14 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
               <div className="w-full flex items-center justify-between h-10 shrink-0">
                 <button
                   type="button"
-                  onClick={() => { setSetupStep('intro'); setPassword(''); setConfirmPassword(''); setPassphraseGenerated(false); setPhraseRevealed(false); setError(null); }}
+                  onClick={() => { setSetupStep('welcome'); setPassword(''); setConfirmPassword(''); setPassphraseGenerated(false); setPhraseRevealed(false); setError(null); }}
                   aria-label={t('backButton')}
-                  className="-ml-2 w-10 h-10 rounded-full flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-all active:scale-90"
+                  className="-ml-2 w-10 h-10 rounded-full flex items-center justify-center text-muted hover:text-primary hover:bg-[var(--onb-surface)] transition-all active:scale-90"
                 >
                   <ChevronLeft size={22} />
                 </button>
 
-                <span className="text-[15px] font-bold tracking-tight text-white/90">
+                <span className="text-[15px] font-bold tracking-tight text-primary">
                   {t('crytoPrefix')} {t('toolSuffix')}
                 </span>
 
@@ -597,13 +825,13 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
                 transition={{ duration: 0.55, ease: 'easeOut' }}
                 className="text-center mt-8 md:mt-14 mb-7 md:mb-10 max-w-md"
               >
-                <h1 className="text-[30px] md:text-[44px] font-black tracking-[-0.02em] leading-[1.08] text-white drop-shadow-[0_2px_24px_rgba(0,0,0,0.5)]">
+                <h1 className="text-[30px] md:text-[44px] font-black tracking-[-0.02em] leading-[1.08] text-primary">
                   {t('thisIsYourKey')}
                 </h1>
-                <p className="mt-4 md:mt-5 text-[13px] md:text-[15px] leading-relaxed text-white/60">
+                <p className="mt-4 md:mt-5 text-[13px] md:text-[15px] leading-relaxed text-muted">
                   {t('setupCopyWarning1')}
                 </p>
-                <p className="mt-2.5 text-[12px] md:text-[13px] leading-relaxed text-white/45">
+                <p className="mt-2.5 text-[12px] md:text-[13px] leading-relaxed" style={{ color: 'var(--onb-text-faint)' }}>
                   {t('setupCopyWarning2')}
                 </p>
               </motion.div>
@@ -613,7 +841,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.55, delay: 0.1, ease: 'easeOut' }}
-                className="w-full max-w-2xl rounded-[28px] md:rounded-[36px] p-4 md:p-7 border border-white/12 bg-white/[0.05] backdrop-blur-2xl shadow-[0_24px_60px_-20px_rgba(0,0,0,0.6)]"
+                className="w-full max-w-2xl rounded-[28px] md:rounded-[36px] p-4 md:p-7 border bg-[var(--onb-surface)] backdrop-blur-2xl"
+                style={{ borderColor: 'var(--onb-border)' }}
               >
                 <div className="grid grid-cols-3 md:grid-cols-5 gap-2 md:gap-2.5">
                   {passphraseGenerated && password.split(' ').filter(Boolean).map((word, i) => (
@@ -622,11 +851,12 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
                       initial={{ opacity: 0, y: 8 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.02 * i, duration: 0.3, ease: 'easeOut' }}
-                      className="flex items-center justify-center gap-1.5 px-2 py-2.5 md:py-3 rounded-2xl bg-white/[0.07] border border-white/[0.08] min-w-0"
+                      className="flex items-center justify-center gap-1.5 px-2 py-2.5 md:py-3 rounded-2xl border min-w-0"
+                      style={{ backgroundColor: 'var(--onb-surface-strong)', borderColor: 'var(--onb-border)' }}
                     >
-                      <span className="text-[9px] md:text-[10px] text-white/30 font-bold w-3.5 shrink-0 text-right tabular-nums">{i + 1}</span>
+                      <span className="text-[9px] md:text-[10px] text-muted font-bold w-3.5 shrink-0 text-right tabular-nums">{i + 1}</span>
                       <span
-                        className={`text-[11px] sm:text-xs md:text-sm font-bold text-white truncate transition-all duration-500 select-none ${phraseRevealed ? '' : 'blur-[7px]'}`}
+                        className={`text-[11px] sm:text-xs md:text-sm font-bold text-primary truncate transition-all duration-500 select-none ${phraseRevealed ? '' : 'blur-[7px]'}`}
                         aria-hidden={!phraseRevealed}
                       >
                         {word}
@@ -646,7 +876,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
                 <button
                   type="button"
                   onClick={() => { setPhraseRevealed(true); handleCopyPassword(); }}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-[12px] md:text-[13px] font-semibold text-white/60 hover:text-white hover:bg-white/10 transition-all active:scale-95"
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-[12px] md:text-[13px] font-semibold text-muted hover:text-primary hover:bg-[var(--onb-surface)] transition-all active:scale-95"
                 >
                   {copied ? <Check size={15} style={{ color: 'var(--accent-color)' }} /> : <Copy size={15} />}
                   {copied ? t('copied') : t('copyKey')}
@@ -654,14 +884,14 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
                 <button
                   type="button"
                   onClick={() => { setPhraseRevealed(true); handleDownloadPassphrase(); }}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-[12px] md:text-[13px] font-semibold text-white/60 hover:text-white hover:bg-white/10 transition-all active:scale-95"
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-[12px] md:text-[13px] font-semibold text-muted hover:text-primary hover:bg-[var(--onb-surface)] transition-all active:scale-95"
                 >
                   <Download size={15} /> {t('downloadPhrase')}
                 </button>
                 <button
                   type="button"
                   onClick={handleRegeneratePassphrase}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-[12px] md:text-[13px] font-semibold text-white/60 hover:text-white hover:bg-white/10 transition-all active:scale-95"
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-[12px] md:text-[13px] font-semibold text-muted hover:text-primary hover:bg-[var(--onb-surface)] transition-all active:scale-95"
                 >
                   <RefreshCw size={15} /> {t('regenerate')}
                 </button>
@@ -678,131 +908,40 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
 
                 <button
                   type="button"
-                  onClick={() => { setPhraseRevealed(true); handleCopyPassword(); }}
+                  onClick={() => {
+                    if (!phraseRevealed) {
+                      setPhraseRevealed(true);
+                      handleCopyPassword();
+                    } else {
+                      submitCreate();
+                    }
+                  }}
                   className="w-full py-4 md:py-[18px] rounded-full font-bold text-[15px] md:text-base flex items-center justify-center gap-2 hover:opacity-90 transition-all active:scale-[0.98]"
-                  style={{ backgroundColor: accentColor, color: 'var(--bg-main)', boxShadow: `0 10px 40px -8px rgba(${accentRgb}, 0.55)` }}
+                  style={{ backgroundColor: accentColor, color: 'var(--accent-contrast)' }}
                 >
-                  {copied ? t('copied') : t('revealAndCopy')}
-                  {!copied && <ChevronRight size={18} />}
-                </button>
-
-                <button
-                  type="submit"
-                  className="mt-3 px-5 py-2.5 text-[14px] md:text-[15px] font-semibold text-white/55 hover:text-white transition-colors"
-                >
-                  {t('saveItLater')}
+                  {!phraseRevealed && !copied ? t('revealAndCopy') : !phraseRevealed ? t('copied') : t('continueButton')}
+                  <ChevronRight size={18} />
                 </button>
                 </form>
               </div>
               </div>
             </motion.div>
-          ) : (
-            <motion.div
-              key="intro"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.5, ease: 'easeOut' }}
-              className="absolute inset-0 overflow-hidden bg-background"
-            >
-              <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, #2a2a2a 0%, #1f1f1f 15%, #151515 30%, #0d0d0d 50%, #080808 70%, #030303 85%, #000000 100%)' }} />
-              <div className="absolute pointer-events-none" style={{ top: '-20%', left: '10%', width: '120px', height: '180%', background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.25) 20%, rgba(0,0,0,0.4) 35%, rgba(0,0,0,0.15) 60%, rgba(0,0,0,0) 100%)', transform: 'rotate(12deg)', filter: 'blur(18px)' }} />
-              <div className="absolute pointer-events-none" style={{ top: '-15%', left: '35%', width: '80px', height: '170%', background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.15) 25%, rgba(0,0,0,0.3) 40%, rgba(0,0,0,0.1) 65%, rgba(0,0,0,0) 100%)', transform: 'rotate(8deg)', filter: 'blur(22px)' }} />
-              <div className="absolute pointer-events-none" style={{ top: '-25%', left: '58%', width: '100px', height: '190%', background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.2) 18%, rgba(0,0,0,0.35) 32%, rgba(0,0,0,0.12) 55%, rgba(0,0,0,0) 100%)', transform: 'rotate(15deg)', filter: 'blur(15px)' }} />
-              <div className="absolute pointer-events-none" style={{ top: '-10%', left: '78%', width: '90px', height: '160%', background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.18) 22%, rgba(0,0,0,0.28) 38%, rgba(0,0,0,0.08) 62%, rgba(0,0,0,0) 100%)', transform: 'rotate(10deg)', filter: 'blur(20px)' }} />
-              <div className="absolute w-96 h-96 opacity-25" style={{ top: '-15%', left: '-10%', background: 'radial-gradient(circle, #d4d4d4 0%, transparent 70%)', borderRadius: '60% 40% 70% 30% / 50% 60% 40% 50%', animation: 'blobFloat1 20s ease-in-out infinite', filter: 'blur(60px)' }} />
-              <div className="absolute w-80 h-80 opacity-20" style={{ top: '-5%', right: '-5%', background: 'radial-gradient(circle, #c0c0c0 0%, transparent 70%)', borderRadius: '40% 60% 50% 50% / 50% 40% 60% 50%', animation: 'blobFloat2 25s ease-in-out infinite', filter: 'blur(50px)' }} />
-              <div className="absolute w-64 h-64 opacity-15" style={{ top: '10%', left: '25%', background: 'radial-gradient(circle, #e0e0e0 0%, transparent 70%)', borderRadius: '50% 60% 40% 60% / 60% 40% 60% 40%', animation: 'blobFloat3 18s ease-in-out infinite', filter: 'blur(45px)' }} />
-              <div className="absolute w-80 h-80 opacity-30" style={{ bottom: '-10%', right: '-10%', background: 'radial-gradient(circle, #1a1a1a 0%, transparent 70%)', borderRadius: '55% 45% 60% 40% / 45% 55% 45% 55%', animation: 'blobFloat2 28s ease-in-out infinite', filter: 'blur(50px)' }} />
-              <div className="absolute w-64 h-64 opacity-20" style={{ bottom: '5%', left: '-5%', background: 'radial-gradient(circle, #2a2a2a 0%, transparent 70%)', borderRadius: '45% 55% 35% 65% / 55% 45% 55% 45%', animation: 'blobFloat3 22s ease-in-out infinite', filter: 'blur(40px)' }} />
-              <div className="absolute inset-0 pointer-events-none opacity-[0.03]" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 256 256\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.8\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23n)\' opacity=\'1\'/%3E%3C/svg%3E")', backgroundRepeat: 'repeat', backgroundSize: '128px 128px' }} />
-
-              <div className="relative z-10 flex flex-col items-center h-full px-6 pt-16 pb-8 overflow-y-auto">
-                <motion.div
-                  className="w-full max-w-sm space-y-3 mb-6"
-                  variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.15 } } }}
-                  initial="hidden"
-                  animate="visible"
-                >
-                  {([
-                    { icon: null, image: snowBenefitsImg, title: 'Total Privacy', desc: 'Everything you store stays encrypted on your device. Nobody — not even us — can see your files.' },
-                    { icon: Code2, image: null, title: 'Open Source', desc: 'Privon Vault is a free, open-source project. The source code is public, auditable, and licensed under AGPL-3.0.' },
-                    { icon: FolderOpen, image: null, title: 'All-in-One Vault', desc: 'Secure vault, file manager, photo gallery, music player, and document viewer — all in one place.' },
-                    { icon: RefreshCw, image: null, title: 'Backup & Restore', desc: 'Encrypted backups — your data stays safe even if you lose access.' },
-                  ] as const).map((item, i) => (
-                    <motion.div
-                      key={i}
-                      variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0 } }}
-                      className="glass-card rounded-[16px] p-3.5 flex flex-col gap-3"
-                    >
-                      {item.image && (
-                        <img src={item.image} alt={item.title} className="w-full h-auto rounded-xl scale-105" />
-                      )}
-                      <div className="flex items-start gap-3">
-                        {item.icon && (
-                          <span className="shrink-0 mt-0.5" style={{ color: 'var(--accent-color)' }}><item.icon size={20} /></span>
-                        )}
-                        <div>
-                          <p className="text-sm font-semibold text-white">{item.title}</p>
-                          <p className="text-[11px] leading-relaxed" style={{ color: 'rgba(255,255,255,0.55)' }}>{item.desc}</p>
-                        </div>
-                      </div>
-                    </motion.div>
-                  ))}
-                </motion.div>
-
-                <motion.button
-                  onClick={() => {
-                    setSelectedTier(1);
-                    setConfirmTier(1);
-                    const tier = TIERS.find(t => t.id === 1);
-                    if (tier) onApplyThreatModel?.(tier.config);
-                    setSetupStep('create');
-                  }}
-                  className="w-full max-w-xs flex items-center justify-center gap-3 py-4 rounded-[28px] font-bold text-sm transition-all duration-300 active:scale-[0.97]"
-                  style={{ backgroundColor: 'var(--accent-color)', color: 'var(--bg-main)', boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }}
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: 0.7 }}
-                  whileHover={{ scale: 1.02, boxShadow: '0 12px 40px rgba(0,0,0,0.18)' }}
-                  whileTap={{ scale: 0.97 }}
-                >
-                  {t('continueButton')}
-                  <span className="w-7 h-7 rounded-full flex items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.1)' }}>
-                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M3 8h10M9 4l4 4-4 4" />
-                    </svg>
-                  </span>
-                </motion.button>
-
-                <motion.div
-                  className="flex items-center gap-2 mt-5"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.5, delay: 0.8 }}
-                >
-                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--border-color)' }} />
-                  <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: 'var(--accent-color)' }} />
-                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--border-color)' }} />
-                </motion.div>
-              </div>
-            </motion.div>
-          )}
+          ) : null}
           </AnimatePresence>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col items-center bg-black px-4 pt-12 md:pt-24 pb-6 font-sans text-primary min-h-screen min-h-dvh overflow-y-auto">
+    <div className="flex flex-col items-center bg-background px-4 pt-12 md:pt-24 pb-6 font-sans text-primary min-h-screen min-h-dvh overflow-y-auto">
       <div className="flex flex-col items-center space-y-3 md:space-y-5">
         <Logo />
         <div className="text-2xl md:text-3xl font-bold tracking-tight">
-          <span className={`font-bold tracking-tight ${isLocked ? 'text-red-500' : 'text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.4)]'}`}>{t('crytoPrefix')}</span>
+          <span className={`font-bold tracking-tight ${isLocked ? 'text-red-500' : 'text-primary'}`}>{t('crytoPrefix')}</span>
           {' '}
-          <span className={isLocked ? 'text-red-500' : 'text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.4)]'}>{t('toolSuffix')}</span>
+          <span className={isLocked ? 'text-red-500' : 'text-primary'}>{t('toolSuffix')}</span>
         </div>
-        <p className={`text-sm tracking-wide ${isLocked ? 'text-muted' : 'text-zinc-400 drop-shadow-[0_0_8px_rgba(161,161,170,0.3)]'}`}>{t('allInOnePrivacyTagline')}</p>
+        <p className="text-sm tracking-wide text-muted">{t('allInOnePrivacyTagline')}</p>
       </div>
 
       <motion.div

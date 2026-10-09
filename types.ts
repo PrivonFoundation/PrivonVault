@@ -25,7 +25,8 @@ export interface LocationItem {
 }
 
 export type ViewState = 'dashboard' | 'search' | 'trash' | 'settings' | 'storage' | 'about' | 'vault' | 'devcreds';
-export type AppTheme = 'dark';
+export type AppTheme = 'dark' | 'light';
+export type ThemeMode = 'dark' | 'light' | 'system';
 
 // --- CRYPTO TYPES ---
 export type CryptoAlgorithm = 'AES-GCM' | 'AES-CTR' | 'ChaCha20-Poly1305' | 'XChaCha20-Poly1305' | 'Salsa20-Poly1305' | 'AES-GCM-Stream';
