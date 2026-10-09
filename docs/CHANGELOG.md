@@ -7,15 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Redesign (Anytype-inspired, `feat/onboarding-anytype-keyframe`)
+### Redesign (`feat/onboarding-anytype-keyframe`)
 
 - Removed the Snow mascot (assets, texts, placeholders); text-only branding.
-- New native welcome (own slogan), Signal-style vault import with restore.
+- New native welcome (own slogan), rebuilt vault import with restore.
 - Settings as native bottom sheets (quick + full + option sub-sheets).
 - System theme mode (dark / light / system) with OS follow.
-- Dashboard: Anytype header, profile/add sheets, FAB, files grid, native rows.
+- Dashboard: compact header, profile/add sheets, FAB, files grid, native rows.
 - Gallery: 3-column grid + immersive viewer (swipe, zoom, actions).
-- Music: Apple Music style tabs, drill-down, action sheet, shuffle.
+- Music: working tabs, drill-down, action sheet, shuffle.
 - Classic folders (Photos/Music/Videos/Documents) with auto-filing.
 - Docs: new `docs/REDESIGN.md` tracking this pass.
 

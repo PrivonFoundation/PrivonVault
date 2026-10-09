@@ -8,7 +8,6 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Virtuoso } from 'react-virtuoso';
-import { useVirtualizer } from '@tanstack/react-virtual';
 import { db, DBItem, getVaultKey } from '../crypto-core/db';
 import { is_safe_image_url as isSafeImageUrl, decrypt, base64_encode, metadata_encrypt, metadata_decrypt } from '../crypto-core/index';
 import { FileSystemItem, ViewState, AppTheme } from '../types';
@@ -16,7 +15,7 @@ import { useI18n } from '../locales/i18nContext';
 import { FullPlayer } from './FullPlayer';
 import { seedTestData, clearTestData } from '../utils/seedData';
 import { applyAccent, applyThemeMode, getSavedThemeMode, resolveThemeMode } from '../utils/theme';
-import { classicFolderIdForCategory, classicRenameFlag, ensureClassicFolders, isClassicFolderId, CLASSIC_FOLDER_NAME_KEYS } from '../utils/defaultFolders';
+import { classifyUpload, classicRenameFlag, ensureClassicFolders, isClassicFolderId, CLASSIC_FOLDER_NAME_KEYS } from '../utils/defaultFolders';
 import type { ThemeMode } from '../types';
 
 // Import Shared Components
@@ -29,6 +28,7 @@ import { DecryptModal } from './DecryptModal';
 import { CopyMoveModal } from './CopyMoveModal';
 import { CustomizeModal } from './CustomizeModal';
 import { AddSheet, ProfileSheet } from './HomeSheets';
+import { FilesGrid } from './FilesGrid';
 import { RecoveryCodesModal } from './RecoveryCodesModal';
 
 // Import Views
@@ -441,22 +441,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
     return [...list].sort((a, b) => rank(a) - rank(b));
   }, [items, currentFolderId]);
 
-  const filesGridRows = useMemo(() => {
-    const r: FileSystemItem[][] = [];
-    for (let i = 0; i < visibleItems.length; i += 3) {
-      r.push(visibleItems.slice(i, i + 3));
-    }
-    return r;
-  }, [visibleItems]);
-
-  const filesScrollRef = useRef<HTMLDivElement | null>(null);
-  const filesVirtualizer = useVirtualizer({
-    count: filesGridRows.length,
-    getScrollElement: () => filesScrollRef.current,
-    estimateSize: () => 136,
-    overscan: 5,
-  });
-
   const storageStats = useMemo(() => {
     let limit = 64 * 1024 * 1024 * 1024; let used = 0;
     const breakdown = { image: 0, video: 0, audio: 0, doc: 0, other: 0 };
@@ -663,8 +647,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      const category = file.type.startsWith('image/') ? 'image' : file.type.startsWith('video/') ? 'video' : file.type.startsWith('audio/') ? 'audio' : 'doc';
-      const autoParent = currentFolderId ?? classicFolderIdForCategory(category);
+      const { category, folderId } = classifyUpload(file);
+      const autoParent = currentFolderId ?? folderId;
       const parentOk = autoParent === null || autoParent === currentFolderId || allItems.some(i => i.id === autoParent && !i.isTrashed);
       const newItem: DBItem = {
         id: Date.now().toString(),
@@ -963,33 +947,22 @@ export const Dashboard: React.FC<DashboardProps> = ({
                               <span className="font-semibold text-[16px] text-primary truncate">{items.find(i => i.id === currentFolderId)?.name}</span>
                             </div>
                           )}
-                         <div ref={filesScrollRef} className="flex-1 overflow-y-auto">
-                           <div style={{ height: filesVirtualizer.getTotalSize(), position: 'relative' }}>
-                             {filesVirtualizer.getVirtualItems().map(virtualRow => (
-                               <div
-                                 key={virtualRow.index}
-                                 style={{ position: 'absolute', top: 0, left: 0, width: '100%', transform: `translateY(${virtualRow.start}px)` }}
-                               >
-                                 <div className="grid grid-cols-3 gap-2 pb-2">
-                                   {filesGridRows[virtualRow.index].map(item => (
-                                     <FileItem
-                                         key={item.id} item={item} onAction={(act) => handleItemAction(act, item)}
-                                         onOpenMenu={() => { if(item.type !== 'system') setMenuOpenItem(item); }}
-                                         onClick={() => isSelectionMode ? handleItemSelect(item.id) : handleNavigate(item)}
-                                         theme={appTheme}
-                                         layout="grid"
-                                         thumbnailUrl={decryptedUrls[item.id]}
-                                         isRenaming={renamingId === item.id} renameValue={renameValue}
-                                         onRenameChange={setRenameValue} onRenameConfirm={handleRenameConfirm}
-                                         onRenameCancel={() => setRenamingId(null)}
-                                         isSelected={selectedItems.has(item.id)}
-                                     />
-                                   ))}
-                                 </div>
-                               </div>
-                             ))}
-                           </div>
-                         </div>
+                         <FilesGrid
+                           items={visibleItems}
+                           theme={appTheme}
+                           decryptedUrls={decryptedUrls}
+                           isSelectionMode={isSelectionMode}
+                           selectedItems={selectedItems}
+                           renamingId={renamingId}
+                           renameValue={renameValue}
+                           onItemClick={handleNavigate}
+                           onItemSelect={handleItemSelect}
+                           onOpenMenu={setMenuOpenItem}
+                           onAction={(act, item) => handleItemAction(act, item)}
+                           onRenameChange={setRenameValue}
+                           onRenameConfirm={handleRenameConfirm}
+                           onRenameCancel={() => setRenamingId(null)}
+                         />
                         </div>
                       </motion.div>
                     )}

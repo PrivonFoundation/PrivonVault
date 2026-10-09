@@ -1,12 +1,10 @@
-# Privon Vault UX Redesign (Anytype-inspired)
+# Privon Vault UX Redesign
 
 _Branch: `feat/onboarding-anytype-keyframe` | Status: in progress_
 
-This document tracks the redesign pass that replaces the mascot-driven,
-glass-heavy UI with a native, monochrome, sheet-based UX inspired by
-Anytype, Signal and iOS system apps. Only the project's own slogan
-("All-in-One Privacy") is used — no slogans or assets copied from
-other products.
+This document tracks the redesign pass that replaces the mascot-driven UI
+with a native, monochrome, sheet-based UX. Only the project's own slogan
+("All-in-One Privacy") is used.
 
 ## Principles
 
@@ -23,13 +21,12 @@ other products.
   the quick settings sheet (Appearance + 51 languages).
 - Benefits screen removed. Key screen is now a two-step primary button
   (Reveal and copy → Continue); the "save it later" bypass is gone.
-- Import flow rebuilt Signal-style: option cards (backup file / start fresh)
-  → file + key form → restore via `backup_decrypt` with the same
+- Import flow rebuilt with option cards: backup file + key form → restore via `backup_decrypt` with the same
   localStorage whitelist as `BackupView` → reload.
 
 ### Settings
 - `components/QuickSettingsSheet.tsx` (new, reusable): Appearance rows +
-  language list, iOS grouped style. Used on welcome.
+  language list in grouped sheet style. Used on welcome.
 - `components/views/SettingsView.tsx`: full-page view converted to a native
   bottom sheet with profile header and grouped rows (Application / Security /
   More). Selection-type settings open dedicated sub-sheets (Appearance Aa
@@ -43,7 +40,7 @@ other products.
   changes live.
 
 ### Dashboard
-- `components/TopActions.tsx`: Anytype header (avatar → profile menu,
+- `components/TopActions.tsx`: compact header (avatar → profile menu,
   centered tab title, + → add menu, global search field).
 - `components/HomeSheets.tsx` (new): ProfileSheet (Settings/Storage/Trash)
   and AddSheet (Add file / New folder).
@@ -60,13 +57,13 @@ other products.
   with pan, share / favorite / delete actions, details panel.
 
 ### Music (`components/views/MusicView.tsx`)
-- Apple Music style: working Songs/Albums/Artists/Favorites tabs,
+- Tabbed browser style: working Songs/Albums/Artists/Favorites tabs,
   album/artist drill-down, Quick picks carousel, working shuffle,
   per-song action sheet (Play / Favorite / Delete).
 
 ### Classic folders (`utils/defaultFolders.ts`)
-- Every vault ships Photos, Music, Videos, Documents (stable IDs
-  `folder-*`, localized display names, user rename respected, safe to delete).
+- Every vault ships Photos, Music, Videos, Documents, Downloads, Archives
+  (stable IDs, localized display names, user rename respected, safe to delete).
 - Files added at root are auto-filed by category; explicit folder context is
   respected.
 
@@ -75,7 +72,7 @@ New keys in `TranslationKey` + `en`/`ro`/`es` (others fall back to English):
 `welcomeHeroLine1/2`, `welcomeNewHere`, `welcomeHaveKey`, `welcomeConsent`,
 `restoreTitle/Subtitle/FromFile/FromFileDesc/StartFresh/StartFreshDesc`,
 `settingsProfileName`, `settingsGroupApplication/Security/More`,
-`settingsAppearance`, `settingsModeLabel`, `folderPhotos/Music/Videos/Documents`.
+`settingsAppearance`, `settingsModeLabel`, `folderPhotos/Music/Videos/Documents/Downloads/Archives`.
 
 ## Verification
 - `npx tsc --noEmit` passes (required by PR template).

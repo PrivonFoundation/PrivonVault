@@ -228,6 +228,8 @@ export const translations: Translations = {
   folderMusic: 'Muzică',
   folderVideos: 'Video',
   folderDocuments: 'Documente',
+  folderDownloads: 'Descărcări',
+  folderArchives: 'Arhive',
   settingsProfileName: 'Nume',
   settingsGroupApplication: 'Aplicație',
   settingsGroupSecurity: 'Securitate',
