@@ -469,12 +469,9 @@ export const GalleryView: React.FC<GalleryViewProps> = ({ items, onNavigate, the
                   >
                     <div className="grid grid-cols-3 gap-[2px]">
                       {rowItems.map(item => (
-                        <motion.button
+                        <button
                           key={item.id}
                           type="button"
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          transition={{ duration: 0.25 }}
                           onClick={() => openViewer(filteredItems.indexOf(item))}
                           className="relative aspect-square overflow-hidden bg-surface cursor-pointer active:opacity-70 transition-opacity"
                         >
@@ -496,7 +493,7 @@ export const GalleryView: React.FC<GalleryViewProps> = ({ items, onNavigate, the
                               <Lock size={12} className="text-white" />
                             </span>
                           )}
-                        </motion.button>
+                        </button>
                       ))}
                     </div>
                   </div>
