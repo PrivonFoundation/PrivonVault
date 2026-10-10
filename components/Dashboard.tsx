@@ -189,6 +189,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [isFullPlayerOpen, setIsFullPlayerOpen] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [queueIds, setQueueIds] = useState<string[]>([]);
+  const [queueIndex, setQueueIndex] = useState(0);
+  const [isShuffled, setIsShuffled] = useState(false);
+  const [repeatMode, setRepeatMode] = useState<'off' | 'all' | 'one'>('off');
+  const [volume, setVolumeState] = useState(() => {
+    const v = parseFloat(localStorage.getItem('privon_volume') || '0.9');
+    return Number.isNaN(v) ? 0.9 : Math.min(1, Math.max(0, v));
+  });
   const [allItems, setAllItems] = useState<FileSystemItem[]>([]);
   const [deviceStorage, setDeviceStorage] = useState<{ quota: number; usage: number } | null>(null);
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
@@ -367,12 +375,106 @@ export const Dashboard: React.FC<DashboardProps> = ({
     if (audioRef.current) setDuration(audioRef.current.duration);
   };
 
-  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const time = parseFloat(e.target.value);
+  const seekToTime = (time: number) => {
     if (audioRef.current) {
         audioRef.current.currentTime = time;
         setCurrentTime(time);
     }
+  };
+
+  const setVolume = (v: number) => {
+    const clamped = Math.min(1, Math.max(0, v));
+    setVolumeState(clamped);
+    localStorage.setItem('privon_volume', String(clamped));
+    if (audioRef.current) audioRef.current.volume = clamped;
+  };
+
+  useEffect(() => {
+    if (audioRef.current) audioRef.current.volume = volume;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const audioSongs = useMemo(
+    () => allItems.filter(i => i.category === 'audio' && !i.isTrashed),
+    [allItems]
+  );
+
+  const playQueueIndex = (ids: string[], index: number) => {
+    for (let step = 0; step < ids.length; step++) {
+      const ni = (index + step + ids.length) % ids.length;
+      const item = allItems.find(i => i.id === ids[ni] && !i.isTrashed);
+      if (item) {
+        setQueueIds(ids);
+        setQueueIndex(ni);
+        setCurrentPlayingItem(item);
+        setIsPlaying(true);
+        return;
+      }
+    }
+  };
+
+  const playSong = (item: FileSystemItem) => {
+    const ids = audioSongs.map(s => s.id);
+    const order = isShuffled ? [...ids].sort(() => Math.random() - 0.5) : ids;
+    const at = order.indexOf(item.id);
+    const start = at >= 0 ? at : 0;
+    if (isShuffled) {
+      const [first, ...rest] = [...order.slice(start), ...order.slice(0, start)];
+      playQueueIndex([first, ...rest], 0);
+    } else {
+      playQueueIndex(order, start);
+    }
+  };
+
+  const stepQueue = (dir: 1 | -1, auto: boolean) => {
+    if (queueIds.length === 0) return;
+    if (auto && repeatMode === 'one') {
+      seekToTime(0);
+      if (audioRef.current) audioRef.current.play().catch(console.error);
+      return;
+    }
+    let ni = queueIndex + dir;
+    if (ni < 0 || ni >= queueIds.length) {
+      if (auto && repeatMode === 'off') {
+        setIsPlaying(false);
+        return;
+      }
+      ni = (ni + queueIds.length) % queueIds.length;
+    }
+    playQueueIndex(queueIds, ni);
+  };
+
+  const handleTrackEnded = () => {
+    stepQueue(1, true);
+  };
+
+  const toggleShuffle = () => {
+    const next = !isShuffled;
+    setIsShuffled(next);
+    if (queueIds.length === 0) return;
+    if (next) {
+      const current = queueIds[queueIndex];
+      const rest = queueIds.filter(id => id !== current);
+      for (let i = rest.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [rest[i], rest[j]] = [rest[j], rest[i]];
+      }
+      setQueueIds([current, ...rest]);
+      setQueueIndex(0);
+    } else {
+      const order = audioSongs.map(s => s.id);
+      const current = queueIds[queueIndex];
+      setQueueIds(order);
+      setQueueIndex(Math.max(0, order.indexOf(current)));
+    }
+  };
+
+  const cycleRepeat = () => {
+    setRepeatMode(prev => (prev === 'off' ? 'all' : prev === 'all' ? 'one' : 'off'));
+  };
+
+  const selectQueueIndex = (index: number) => {
+    playQueueIndex(queueIds, index);
   };
 
   useEffect(() => {
@@ -573,8 +675,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             decryptOnDemand(item).then((url) => {
                 if (url) {
                     if(item.category === 'audio') {
-                        setCurrentPlayingItem(item);
-                        setIsPlaying(true);
+                        playSong(item);
                     } else {
                         // For images/videos, logic is handled in Gallery/Dashboard rendering via decryptedUrls
                         // But for a generic file open, we might want a preview modal?
@@ -585,8 +686,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             });
         } else {
             if(item.category === 'audio') {
-                setCurrentPlayingItem(item);
-                setIsPlaying(true);
+                playSong(item);
             } else {
                 setActiveItem(item);
             }
@@ -766,7 +866,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileChange} />
       <audio 
         ref={audioRef} 
-        onEnded={() => setIsPlaying(false)} 
+        onEnded={handleTrackEnded} 
         onTimeUpdate={handleTimeUpdate}
         onLoadedMetadata={handleLoadedMetadata}
       />
@@ -901,7 +1001,20 @@ export const Dashboard: React.FC<DashboardProps> = ({
             duration={duration}
             onClose={() => setIsFullPlayerOpen(false)}
             onTogglePlay={() => setIsPlaying(!isPlaying)}
-            onSeek={handleSeek}
+            onSeekTime={seekToTime}
+            onPrev={() => stepQueue(-1, false)}
+            onNext={() => stepQueue(1, false)}
+            volume={volume}
+            onVolumeChange={setVolume}
+            shuffleOn={isShuffled}
+            onToggleShuffle={toggleShuffle}
+            repeatMode={repeatMode}
+            onCycleRepeat={cycleRepeat}
+            queue={queueIds.map(id => allItems.find(i => i.id === id)).filter((i): i is FileSystemItem => !!i)}
+            queueIndex={queueIndex}
+            onSelectQueueItem={selectQueueIndex}
+            sourceName={(currentPlayingItem as any).decryptedAlbum || currentPlayingItem.album || t('songs')}
+            onAction={(act, item) => handleItemAction(act, item)}
           />
         )}
       </AnimatePresence>
@@ -1001,7 +1114,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
                    {activeTab === 'music' && (
                      <motion.div key="music" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.2 }}>
-                       <MusicView items={items} onPlay={(item) => { setCurrentPlayingItem(item); setIsPlaying(true); }} currentSong={currentPlayingItem} isPlaying={isPlaying} theme={appTheme} onAction={(act, item) => handleItemAction(act, item)} />
+                       <MusicView items={items} onPlay={(item) => playSong(item)} currentSong={currentPlayingItem} isPlaying={isPlaying} theme={appTheme} onAction={(act, item) => handleItemAction(act, item)} />
                      </motion.div>
                    )}
 
