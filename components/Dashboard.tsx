@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Virtuoso } from 'react-virtuoso';
+import { parseBlob } from 'music-metadata';
 import { db, DBItem, getVaultKey } from '../crypto-core/db';
 import { is_safe_image_url as isSafeImageUrl, decrypt, base64_encode, metadata_encrypt, metadata_decrypt } from '../crypto-core/index';
 import { FileSystemItem, ViewState, AppTheme } from '../types';
@@ -648,6 +649,28 @@ export const Dashboard: React.FC<DashboardProps> = ({
     const file = event.target.files?.[0];
     if (file) {
       const { category, folderId } = classifyUpload(file);
+      let artist: string | undefined;
+      let album: string | undefined;
+      let coverUrl: string | undefined;
+      if (category === 'audio') {
+        try {
+          const meta = await parseBlob(file);
+          artist = meta.common.artist || undefined;
+          album = meta.common.album || undefined;
+          const pic = meta.common.picture?.[0];
+          if (pic?.data?.length) {
+            let bin = '';
+            const bytes = pic.data;
+            const CHUNK = 8192;
+            for (let i = 0; i < bytes.length; i += CHUNK) {
+              bin += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+            }
+            coverUrl = `data:${pic.format};base64,${btoa(bin)}`;
+          }
+        } catch (e) {
+          console.warn('Audio metadata parse failed', e);
+        }
+      }
       const autoParent = currentFolderId ?? folderId;
       const parentOk = autoParent === null || autoParent === currentFolderId || allItems.some(i => i.id === autoParent && !i.isTrashed);
       const newItem: DBItem = {
@@ -658,6 +681,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
         size: formatBytes(file.size),
         date: new Date().toLocaleDateString(),
         category,
+        artist,
+        album,
+        coverUrl,
         fileData: file,
         isTrashed: false,
         isFavorite: false
