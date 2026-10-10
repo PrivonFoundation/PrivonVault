@@ -217,6 +217,7 @@ export const translations: Translations = {
   folderDocuments: 'Documents',
   folderDownloads: 'Downloads',
   folderArchives: 'Archives',
+  folderProjects: 'Projects',
   settingsProfileName: 'Name',
   settingsGroupApplication: 'Application',
   settingsGroupSecurity: 'Security',

@@ -9,6 +9,7 @@ export const CLASSIC_FOLDER_CATEGORY: Record<string, 'image' | 'audio' | 'video'
   'folder-documents': 'doc',
   'folder-downloads': 'other',
   'folder-archives': 'other',
+  'folder-projects': 'other',
 };
 
 export const CLASSIC_FOLDER_NAME_KEYS: Record<string, TranslationKey> = {
@@ -18,9 +19,10 @@ export const CLASSIC_FOLDER_NAME_KEYS: Record<string, TranslationKey> = {
   'folder-documents': 'folderDocuments',
   'folder-downloads': 'folderDownloads',
   'folder-archives': 'folderArchives',
+  'folder-projects': 'folderProjects',
 };
 
-const ENSURED_FLAG = 'privon_classic_folders_v2';
+const ENSURED_FLAG = 'privon_classic_folders_v3';
 
 const CLASSIC_DISPLAY_NAMES: Record<string, string> = {
   'folder-photos': 'Photos',
@@ -29,6 +31,7 @@ const CLASSIC_DISPLAY_NAMES: Record<string, string> = {
   'folder-documents': 'Documents',
   'folder-downloads': 'Downloads',
   'folder-archives': 'Archives',
+  'folder-projects': 'Projects',
 };
 
 const ARCHIVE_EXTS = ['zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz', 'cbz', 'cbr', 'apk', 'dmg', 'msi', 'exe', 'appimage'];

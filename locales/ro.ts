@@ -230,6 +230,7 @@ export const translations: Translations = {
   folderDocuments: 'Documente',
   folderDownloads: 'Descărcări',
   folderArchives: 'Arhive',
+  folderProjects: 'Proiecte',
   settingsProfileName: 'Nume',
   settingsGroupApplication: 'Aplicație',
   settingsGroupSecurity: 'Securitate',
