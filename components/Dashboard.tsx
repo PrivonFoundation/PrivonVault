@@ -88,38 +88,30 @@ const formatTime = (seconds: number) => {
     onClick: () => void;
     icon: React.ReactNode;
     label: string;
-  }> = ({ active, onClick, icon }) => {
+  }> = ({ active, onClick, icon, label }) => {
     return (
       <motion.button
         onClick={onClick}
-        className="relative flex items-center justify-center p-2"
-        whileHover={{ scale: 1.08 }}
-        whileTap={{ scale: 0.85 }}
-        transition={{ type: 'spring', stiffness: 400, damping: 17 }}
+        className="relative flex-1 flex flex-col items-center justify-center gap-1 py-2.5"
+        whileTap={{ scale: 0.9 }}
+        transition={{ type: 'spring', stiffness: 400, damping: 20 }}
       >
         {active && (
           <motion.div
             layoutId="nav-active"
-            className="absolute inset-0 rounded-xl bg-white/10 backdrop-blur-sm border border-white/[0.08]"
+            className="absolute inset-x-2 inset-y-1 rounded-2xl bg-white/10"
             transition={{ type: 'spring', stiffness: 380, damping: 30 }}
           />
         )}
-        <motion.div
-          className={`relative z-10 transition-colors duration-200 ${
-            active
-              ? 'text-white drop-shadow-[0_0_10px_rgba(var(--accent-rgb),0.9)]'
-              : 'text-white/35 group-hover:text-white/60'
-          }`}
-          animate={active ? {
-            scale: [1, 1.08, 1],
-            transition: { duration: 2, repeat: Infinity, ease: 'easeInOut' },
-          } : {}}
-        >
+        <span className={`relative z-10 transition-colors duration-200 ${active ? 'text-white' : 'text-white/45'}`}>
           {React.cloneElement(icon as React.ReactElement<any>, {
-            size: 20,
-            strokeWidth: active ? 2.5 : 1.8,
+            size: 24,
+            strokeWidth: active ? 2.2 : 1.8,
           })}
-        </motion.div>
+        </span>
+        <span className={`relative z-10 text-[11px] font-semibold leading-none ${active ? 'text-white' : 'text-white/45'}`}>
+          {label}
+        </span>
       </motion.button>
     );
   };
@@ -1159,10 +1151,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
                          initial={{ y: 50, opacity: 0, scale: 0.9 }} animate={{ y: 0, opacity: 1, scale: 1 }} exit={{ y: 50, opacity: 0, scale: 0.9 }}
                          transition={{ type: "spring", damping: 20, stiffness: 300 }}
                          onClick={() => setIsFullPlayerOpen(true)}
-                          className="fixed bottom-[95px] left-4 right-4 z-50 cursor-pointer"
+                          className="fixed bottom-[108px] left-4 right-4 z-50 cursor-pointer"
                       >
                           {/* Mini Player UI */}
-                           <div className="rounded-[28px] px-3 py-2.5 flex items-center gap-3 relative overflow-hidden bg-black/60 backdrop-blur-2xl border border-white/10 shadow-2xl">
+                           <div className="glass-haze rounded-[28px] px-3 py-2.5 flex items-center gap-3 relative overflow-hidden">
                             {(() => {
                               const src = (currentPlayingItem as any).decryptedCoverUrl || (currentPlayingItem as any).decryptedCustomIcon || currentPlayingItem.customIcon || currentPlayingItem.coverUrl;
                               return src && isSafeImageUrl(src) ? (
@@ -1274,37 +1266,28 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   </div>
                 )}
 
-                {activeTab === 'files' && (
+                {activeTab === 'files' && !(currentPlayingItem && !isFullPlayerOpen) && (
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
                     aria-label={t('addFile')}
-                    className="fixed bottom-28 right-5 z-40 w-16 h-16 rounded-full flex items-center justify-center text-primary shadow-xl transition-transform active:scale-95"
+                    className="glass-haze fixed bottom-28 right-5 z-40 w-16 h-16 rounded-full flex items-center justify-center text-primary shadow-xl transition-transform active:scale-95"
                     style={{ backgroundColor: 'var(--onb-surface-strong)', border: '1px solid var(--onb-border)' }}
                   >
                     <SquarePen size={24} />
                   </button>
                 )}
 
-                <nav className="fixed bottom-0 left-0 right-0 z-40 pointer-events-none"
-                  style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom, 16px))' }}
+                <nav className="fixed bottom-4 left-4 right-4 z-40"
+                  style={{ paddingBottom: 'max(0rem, env(safe-area-inset-bottom, 0px))' }}
                 >
-                  <div className="mx-auto max-w-[260px] pointer-events-auto">
-                    <div className="rounded-[28px] px-3 py-2.5 relative overflow-hidden"
-                      style={{
-                        background: 'linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.03) 100%)',
-                        backdropFilter: 'blur(24px) saturate(180%)',
-                        WebkitBackdropFilter: 'blur(24px) saturate(180%)',
-                        boxShadow: '0 12px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.06), inset 0 1px 0 rgba(255,255,255,0.12)',
-                      }}
-                    >
-                      <div className="flex justify-around items-center relative z-10">
+                  <div className="glass-haze rounded-[30px] px-2 py-1.5">
+                      <div className="flex items-stretch relative z-10">
                         <NavButton active={activeTab === 'files'} onClick={() => setActiveTab('files')} icon={<Folder />} label={t('files')} />
                         <NavButton active={activeTab === 'gallery'} onClick={() => setActiveTab('gallery')} icon={<ImageIcon />} label={t('gallery')} />
                         <NavButton active={activeTab === 'music'} onClick={() => setActiveTab('music')} icon={<Music />} label={t('music')} />
                         <NavButton active={activeTab === 'docs'} onClick={() => setActiveTab('docs')} icon={<FileText />} label={t('documentsTab')} />
                       </div>
-                    </div>
                   </div>
                 </nav>
              </motion.div>

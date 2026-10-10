@@ -28,6 +28,34 @@
 
 /* --- Premium Extensions --- */
 
+/* Haze-style frosted chrome: heavy saturate + layered tint + inner top light.
+   Inspired by Telegram/Haze bars: blur(28px) saturate(160%), white 6-16%
+   surface layers, hairline light border. Theme-aware via [data-theme]. */
+:root,
+[data-theme="dark"] {
+  --haze-tint: rgba(12, 12, 16, 0.55);
+  --haze-layer: linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.04) 100%);
+  --haze-border: rgba(255, 255, 255, 0.09);
+  --haze-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  --haze-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+}
+
+[data-theme="light"] {
+  --haze-tint: rgba(255, 255, 255, 0.6);
+  --haze-layer: linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0.2) 100%);
+  --haze-border: rgba(0, 0, 0, 0.08);
+  --haze-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  --haze-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
+}
+
+.glass-haze {
+  background: var(--haze-layer), var(--haze-tint);
+  -webkit-backdrop-filter: blur(28px) saturate(160%);
+  backdrop-filter: blur(28px) saturate(160%);
+  border: 1px solid var(--haze-border);
+  box-shadow: var(--haze-highlight), var(--haze-shadow);
+}
+
 .glass-card-premium {
   position: relative;
   background: var(--glass-card-bg, linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.03) 100%));
