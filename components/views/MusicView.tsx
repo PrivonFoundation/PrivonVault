@@ -201,6 +201,7 @@ export const MusicView: React.FC<MusicViewProps> = ({ items, onPlay, onBack, cur
       <MusicBackButton onBack={onBack} label={t('backButton')} />
 
       <div className="flex-1 overflow-y-auto no-scrollbar pt-[104px] pb-28">
+      <div className="mx-auto w-full max-w-xl">
         {/* Quick picks */}
         {quickPicks.length > 1 && (
           <section className="mt-4">
@@ -315,6 +316,7 @@ export const MusicView: React.FC<MusicViewProps> = ({ items, onPlay, onBack, cur
             {songs.map(renderSongRow)}
           </div>
         </section>
+      </div>
       </div>
 
       {/* Song action sheet */}

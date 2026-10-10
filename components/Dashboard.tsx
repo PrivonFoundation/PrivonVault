@@ -4,7 +4,7 @@ import {
   Plus, FolderPlus, Database, Search, Trash2, Settings, MoreVertical, 
   Folder, Image as ImageIcon, Music, FileText, ArrowLeft, Video, X,
   Pause, Play, SkipBack, SkipForward, ListMusic, ChevronDown, 
-  Shuffle, Heart, Repeat, Share2, Menu, Moon, Copy, Move, Eye, EyeOff, SquarePen
+  Shuffle, Heart, Repeat, Share2, Menu, Moon, Copy, Move, Eye, EyeOff, SquarePen, LayoutGrid
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Virtuoso } from 'react-virtuoso';
@@ -129,12 +129,15 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [currentView, setCurrentView] = useState<ViewState | 'backup'>('dashboard');
   const [appTheme, setAppThemeState] = useState<AppTheme>(() => resolveThemeMode(getSavedThemeMode()));
   const [themeMode, setThemeModeState] = useState<ThemeMode>(() => getSavedThemeMode());
+  const [musicNavOpen, setMusicNavOpen] = useState(false);
   const [profileSheetOpen, setProfileSheetOpen] = useState(false);
   const [addSheetOpen, setAddSheetOpen] = useState(false);
   const setAppTheme = (mode: ThemeMode) => {
     setThemeModeState(mode);
     setAppThemeState(applyThemeMode(mode));
   };
+  useEffect(() => { setMusicNavOpen(false); }, [activeTab]);
+
   const [accentColor, setAccentColor] = useState(() => {
     return localStorage.getItem('app_accent_manual') || localStorage.getItem('theme_accent') || '#E8E8E8';
   });
@@ -1026,6 +1029,17 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   onOpenProfileMenu={() => setProfileSheetOpen(true)}
                   onOpenAddMenu={() => setAddSheetOpen(true)}
                />)}
+               {activeTab === 'music' && (
+                 <button
+                   type="button"
+                   onClick={() => setMusicNavOpen(v => !v)}
+                   aria-label="Menu"
+                   className="fixed right-4 z-[95] w-11 h-11 rounded-full glass-haze flex items-center justify-center text-primary active:scale-90 transition-transform"
+                   style={{ top: 'max(3.25rem, env(safe-area-inset-top, 0px))' }}
+                 >
+                   {musicNavOpen ? <X size={22} /> : <LayoutGrid size={22} />}
+                 </button>
+               )}
                <ProfileSheet
                  open={profileSheetOpen}
                  onClose={() => setProfileSheetOpen(false)}
@@ -1149,7 +1163,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                          initial={{ y: 50, opacity: 0, scale: 0.9 }} animate={{ y: 0, opacity: 1, scale: 1 }} exit={{ y: 50, opacity: 0, scale: 0.9 }}
                          transition={{ type: "spring", damping: 20, stiffness: 300 }}
                          onClick={() => setIsFullPlayerOpen(true)}
-                          className={activeTab === 'music' ? "fixed bottom-4 left-4 right-4 z-50 cursor-pointer" : "fixed bottom-[108px] left-4 right-4 z-50 cursor-pointer"}
+                          className={activeTab === 'music' ? (musicNavOpen ? "fixed bottom-[108px] left-4 right-4 z-50 cursor-pointer" : "fixed bottom-4 left-4 right-4 z-50 cursor-pointer") : "fixed bottom-[108px] left-4 right-4 z-50 cursor-pointer"}
                       >
                           {/* Mini Player UI */}
                            <div className="glass-haze rounded-[28px] px-3 py-2.5 flex items-center gap-3 relative overflow-hidden">
@@ -1276,7 +1290,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   </button>
                 )}
 
-                {activeTab !== 'music' && (<nav className="fixed bottom-4 left-4 right-4 z-40"
+                {(activeTab !== 'music' || musicNavOpen) && (<nav className="fixed bottom-4 left-4 right-4 z-40"
                   style={{ paddingBottom: 'max(0rem, env(safe-area-inset-bottom, 0px))' }}
                 >
                   <div className="glass-haze rounded-[30px] px-2 py-1.5">
