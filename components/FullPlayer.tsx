@@ -121,21 +121,20 @@ export const FullPlayer: React.FC<FullPlayerProps> = ({
         if (dy > 90) onClose();
       }}
     >
-      {/* Blurred cover as background */}
+      {/* Cover as background */}
       <div className="absolute inset-0 overflow-hidden bg-black">
         {art ? (
           <img
             src={art}
             alt=""
-            aria-hidden="true"
             draggable={false}
-            className="absolute inset-0 w-full h-full object-cover blur-[60px] scale-125 opacity-80 select-none"
+            className="absolute inset-0 w-full h-full object-cover select-none"
           />
         ) : (
           <div className="absolute inset-0 bg-gradient-to-b from-zinc-900 via-black to-black" />
         )}
-        <div className="absolute inset-x-0 top-0 h-44 bg-gradient-to-b from-black/70 to-transparent" />
-        <div className="absolute inset-x-0 bottom-0 h-[55%] bg-gradient-to-t from-black via-black/70 to-transparent" />
+        <div className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-black/70 to-transparent" />
+        <div className="absolute inset-x-0 bottom-0 h-[65%] bg-gradient-to-t from-black via-black/70 to-transparent" />
       </div>
 
       {/* Grab handle + source */}
@@ -146,16 +145,9 @@ export const FullPlayer: React.FC<FullPlayerProps> = ({
         </p>
       </div>
 
-      {/* Cover */}
-      <div className="relative z-10 w-full flex-1 min-h-0 mt-1">
-        {art ? (
-          <img src={art} alt="" draggable={false} className="absolute inset-0 w-full h-full object-cover select-none" />
-        ) : (
-          <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-b from-zinc-900 to-black">
-            <Music size={110} className="text-white/15" />
-          </div>
-        )}
-        <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black to-transparent pointer-events-none" />
+      {/* Spacer — cover shows through; fallback glyph when no art */}
+      <div className="relative z-10 w-full flex-1 min-h-0 flex items-center justify-center pointer-events-none">
+        {!art && <Music size={110} className="text-white/15" />}
       </div>
 
       {/* Bottom section */}
