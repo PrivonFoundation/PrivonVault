@@ -98,8 +98,11 @@ const formatTime = (seconds: number) => {
         {active && (
           <motion.div
             layoutId="nav-active"
-            className="absolute inset-x-1.5 inset-y-0.5 rounded-2xl"
-            style={{ backgroundColor: 'rgba(var(--accent-rgb), 0.14)' }}
+            className="absolute inset-x-0.5 inset-y-1 rounded-full"
+            style={{
+              background: 'linear-gradient(180deg, rgba(var(--accent-rgb), 0.26) 0%, rgba(var(--accent-rgb), 0.09) 100%)',
+              boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.3)',
+            }}
             transition={{ type: 'spring', stiffness: 440, damping: 34 }}
           />
         )}
@@ -1251,22 +1254,22 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     className="fixed bottom-4 left-4 right-4 z-40"
                     style={{ paddingBottom: 'max(0rem, env(safe-area-inset-bottom, 0px))' }}
                   >
-                    <div className="glass-haze rounded-[26px] pl-1 pr-1.5 py-1.5 flex items-center gap-0.5">
+                    <div className="glass-pill flex items-center gap-1 pl-1.5 pr-1.5 py-1.5">
                       <div className="flex-1 flex items-stretch relative z-10">
                         <NavButton active={activeTab === 'files'} onClick={() => setActiveTab('files')} icon={<Folder />} label={t('files')} />
                         <NavButton active={activeTab === 'gallery'} onClick={() => setActiveTab('gallery')} icon={<ImageIcon />} label={t('gallery')} />
                         <NavButton active={activeTab === 'music'} onClick={() => setActiveTab('music')} icon={<Music />} label={t('music')} />
                         <NavButton active={activeTab === 'docs'} onClick={() => setActiveTab('docs')} icon={<FileText />} label={t('documentsTab')} />
                       </div>
-                      <div className="w-px self-stretch my-2 shrink-0" style={{ backgroundColor: 'var(--onb-border)' }} />
+                      <div className="relative z-10 w-px self-stretch my-2 shrink-0" style={{ backgroundColor: 'var(--onb-border)' }} />
                       <motion.button
                         type="button"
                         onClick={() => { setActiveTab('files'); setCurrentView('search'); }}
                         aria-label={t('search')}
                         whileTap={{ scale: 0.86 }}
                         transition={{ type: 'spring', stiffness: 520, damping: 30 }}
-                        className="w-12 h-12 rounded-[18px] flex items-center justify-center shrink-0"
-                        style={{ color: 'var(--text-muted)', backgroundColor: 'var(--onb-surface)' }}
+                        className="glass-orb relative z-10 w-12 h-12 flex items-center justify-center shrink-0"
+                        style={{ color: 'var(--text-muted)' }}
                       >
                         <Search size={22} strokeWidth={2} />
                       </motion.button>
