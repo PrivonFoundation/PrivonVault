@@ -5,6 +5,7 @@ import { FileSystemItem, AppTheme } from '../../types';
 import { is_safe_image_url as isSafeImageUrl } from '../../crypto-core/index';
 import { useI18n } from '../../locales/i18nContext';
 import { SettingsRow } from './SettingsView';
+import { Virtuoso } from 'react-virtuoso';
 
 interface MusicViewProps {
   items: FileSystemItem[];
@@ -15,9 +16,15 @@ interface MusicViewProps {
   onAction: (action: string, item: FileSystemItem) => void;
 }
 
+// Cache sanitize results per URL — avoids a WASM call for every song on every render.
+const urlCache = new Map<string, string | null>();
 const coverSrc = (item: FileSystemItem): string | null => {
   const src = (item as any).decryptedCustomIcon || (item as any).decryptedCoverUrl || item.customIcon || item.coverUrl;
-  return src && isSafeImageUrl(src) ? src : null;
+  if (!src) return null;
+  if (urlCache.has(src)) return urlCache.get(src) || null;
+  const safe = isSafeImageUrl(src) ? src : null;
+  urlCache.set(src, safe);
+  return safe;
 };
 
 const songName = (item: FileSystemItem): string => (item as any).decryptedName || item.name;
@@ -165,6 +172,122 @@ export const MusicView: React.FC<MusicViewProps> = ({ items, onPlay, currentSong
     );
   };
 
+  const renderHeader = () => (
+    <div className="mx-auto w-full max-w-xl">
+      {/* Quick picks */}
+      {quickPicks.length > 1 && (
+        <section className="mt-4">
+          <div className="px-5 mb-3 flex items-center justify-between">
+            <h3 className="text-[20px] font-bold tracking-tight text-primary">{t('quickPicksLabel')}</h3>
+            <button
+              type="button"
+              onClick={shufflePlay}
+              aria-label={t('playerShuffle')}
+              className="w-10 h-10 rounded-full flex items-center justify-center text-primary transition-all active:scale-90"
+              style={{ backgroundColor: 'var(--onb-surface-strong)' }}
+            >
+              <Shuffle size={18} />
+            </button>
+          </div>
+          <div className="flex gap-4 overflow-x-auto no-scrollbar px-5 pb-2">
+            {quickPicks.map((item) => (
+              <BigCard
+                key={item.id}
+                title={songName(item)}
+                subtitle={songArtist(item, t('unknownArtist'))}
+                art={coverSrc(item)}
+                playing={currentSong?.id === item.id && isPlaying}
+                fallbackIcon={<Music size={44} />}
+                onPress={() => onPlay(item, songs)}
+                onMore={() => setSheetItem(item)}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Albums */}
+      {albums.length > 0 && (
+        <section className="mt-7">
+          <h3 className="px-5 mb-3 text-[20px] font-bold tracking-tight text-primary capitalize">{t('albums')}</h3>
+          <div className="flex gap-4 overflow-x-auto no-scrollbar px-5 pb-2">
+            {albums.map(([name, list]) => {
+              const art = list.find(s => coverSrc(s));
+              return (
+                <BigCard
+                  key={name}
+                  title={name}
+                  subtitle={`${list.length} ${t('songs')} · ${songArtist(list[0], t('unknownArtist'))}`}
+                  art={art ? coverSrc(art) : null}
+                  fallbackIcon={<Disc size={44} />}
+                  onPress={() => playAlbum(list)}
+                />
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {/* Artists */}
+      {artists.length > 1 && (
+        <section className="mt-7">
+          <h3 className="px-5 mb-3 text-[20px] font-bold tracking-tight text-primary capitalize">{t('artists')}</h3>
+          <div className="flex gap-5 overflow-x-auto no-scrollbar px-5 pb-2">
+            {artists.map(([name, list]) => {
+              const art = list.find(s => coverSrc(s));
+              const artSrc = art ? coverSrc(art) : null;
+              return (
+                <div
+                  key={name}
+                  onClick={() => playAlbum(list)}
+                  className="flex flex-col items-center gap-2 shrink-0 w-20 cursor-pointer active:opacity-70 transition-opacity"
+                >
+                  {artSrc ? (
+                    <img src={artSrc} className="w-20 h-20 rounded-full object-cover" alt="" draggable={false} />
+                  ) : (
+                    <span
+                      className="w-20 h-20 rounded-full flex items-center justify-center text-muted"
+                      style={{ backgroundColor: 'var(--onb-surface-strong)' }}
+                    >
+                      <User size={30} />
+                    </span>
+                  )}
+                  <p className="text-[13px] font-semibold text-primary text-center leading-tight line-clamp-2">{name}</p>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {/* Favorites */}
+      {favorites.length > 0 && (
+        <section className="mt-7">
+          <h3 className="px-5 mb-3 text-[20px] font-bold tracking-tight text-primary capitalize">{t('favorites')}</h3>
+          <div className="flex gap-4 overflow-x-auto no-scrollbar px-5 pb-2">
+            {favorites.map((item) => (
+              <BigCard
+                key={item.id}
+                title={songName(item)}
+                subtitle={songArtist(item, t('unknownArtist'))}
+                art={coverSrc(item)}
+                playing={currentSong?.id === item.id && isPlaying}
+                fallbackIcon={<Heart size={40} />}
+                onPress={() => onPlay(item, favorites)}
+                onMore={() => setSheetItem(item)}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* All songs */}
+      <section className="mt-7 px-3">
+        <h3 className="px-2 mb-2 text-[20px] font-bold tracking-tight text-primary">{t('allSongs')}</h3>
+      </section>
+    </div>
+  );
+
   if (songs.length === 0) {
     return (
       <div className="flex-1 flex flex-col min-h-0 relative">
@@ -184,124 +307,14 @@ export const MusicView: React.FC<MusicViewProps> = ({ items, onPlay, currentSong
 
   return (
     <div className="flex-1 flex flex-col min-h-0 relative">
-      <div className="flex-1 overflow-y-auto no-scrollbar pt-12 pb-28">
-      <div className="mx-auto w-full max-w-xl">
-        {/* Quick picks */}
-        {quickPicks.length > 1 && (
-          <section className="mt-4">
-            <div className="px-5 mb-3 flex items-center justify-between">
-              <h3 className="text-[20px] font-bold tracking-tight text-primary">{t('quickPicksLabel')}</h3>
-              <button
-                type="button"
-                onClick={shufflePlay}
-                aria-label={t('playerShuffle')}
-                className="w-10 h-10 rounded-full flex items-center justify-center text-primary transition-all active:scale-90"
-                style={{ backgroundColor: 'var(--onb-surface-strong)' }}
-              >
-                <Shuffle size={18} />
-              </button>
-            </div>
-            <div className="flex gap-4 overflow-x-auto no-scrollbar px-5 pb-2">
-              {quickPicks.map((item) => (
-                <BigCard
-                  key={item.id}
-                  title={songName(item)}
-                  subtitle={songArtist(item, t('unknownArtist'))}
-                  art={coverSrc(item)}
-                  playing={currentSong?.id === item.id && isPlaying}
-                  fallbackIcon={<Music size={44} />}
-                  onPress={() => onPlay(item, songs)}
-                  onMore={() => setSheetItem(item)}
-                />
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* Albums */}
-        {albums.length > 0 && (
-          <section className="mt-7">
-            <h3 className="px-5 mb-3 text-[20px] font-bold tracking-tight text-primary capitalize">{t('albums')}</h3>
-            <div className="flex gap-4 overflow-x-auto no-scrollbar px-5 pb-2">
-              {albums.map(([name, list]) => {
-                const art = list.find(s => coverSrc(s));
-                return (
-                  <BigCard
-                    key={name}
-                    title={name}
-                    subtitle={`${list.length} ${t('songs')} · ${songArtist(list[0], t('unknownArtist'))}`}
-                    art={art ? coverSrc(art) : null}
-                    fallbackIcon={<Disc size={44} />}
-                    onPress={() => playAlbum(list)}
-                  />
-                );
-              })}
-            </div>
-          </section>
-        )}
-
-        {/* Artists */}
-        {artists.length > 1 && (
-          <section className="mt-7">
-            <h3 className="px-5 mb-3 text-[20px] font-bold tracking-tight text-primary capitalize">{t('artists')}</h3>
-            <div className="flex gap-5 overflow-x-auto no-scrollbar px-5 pb-2">
-              {artists.map(([name, list]) => {
-                const art = list.find(s => coverSrc(s));
-                const artSrc = art ? coverSrc(art) : null;
-                return (
-                  <div
-                    key={name}
-                    onClick={() => playAlbum(list)}
-                    className="flex flex-col items-center gap-2 shrink-0 w-20 cursor-pointer active:opacity-70 transition-opacity"
-                  >
-                    {artSrc ? (
-                      <img src={artSrc} className="w-20 h-20 rounded-full object-cover" alt="" draggable={false} />
-                    ) : (
-                      <span
-                        className="w-20 h-20 rounded-full flex items-center justify-center text-muted"
-                        style={{ backgroundColor: 'var(--onb-surface-strong)' }}
-                      >
-                        <User size={30} />
-                      </span>
-                    )}
-                    <p className="text-[13px] font-semibold text-primary text-center leading-tight line-clamp-2">{name}</p>
-                  </div>
-                );
-              })}
-            </div>
-          </section>
-        )}
-
-        {/* Favorites */}
-        {favorites.length > 0 && (
-          <section className="mt-7">
-            <h3 className="px-5 mb-3 text-[20px] font-bold tracking-tight text-primary capitalize">{t('favorites')}</h3>
-            <div className="flex gap-4 overflow-x-auto no-scrollbar px-5 pb-2">
-              {favorites.map((item) => (
-                <BigCard
-                  key={item.id}
-                  title={songName(item)}
-                  subtitle={songArtist(item, t('unknownArtist'))}
-                  art={coverSrc(item)}
-                  playing={currentSong?.id === item.id && isPlaying}
-                  fallbackIcon={<Heart size={40} />}
-                  onPress={() => onPlay(item, favorites)}
-                  onMore={() => setSheetItem(item)}
-                />
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* All songs */}
-        <section className="mt-7 px-3">
-          <h3 className="px-2 mb-2 text-[20px] font-bold tracking-tight text-primary">{t('allSongs')}</h3>
-          <div className="flex flex-col">
-            {songs.map(renderSongRow)}
-          </div>
-        </section>
-      </div>
-      </div>
+      <Virtuoso
+        style={{ flex: 1 }}
+        className="no-scrollbar pt-12 pb-28"
+        totalCount={songs.length}
+        overscan={14}
+        components={{ Header: renderHeader }}
+        itemContent={(index) => renderSongRow(songs[index])}
+      />
 
       {/* Song action sheet */}
       <AnimatePresence>

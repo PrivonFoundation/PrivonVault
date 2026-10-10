@@ -23,15 +23,11 @@ async function checkTauri(): Promise<boolean> {
   try {
     const { invoke } = await import('@tauri-apps/api/core');
     await invoke('batch_decrypt_metadata', { items: [], key: new Uint8Array(32) });
+    tauriAvailable = true;
+    return true;
+  } catch {
     tauriAvailable = false;
     return false;
-  } catch (e: any) {
-    if (e && typeof e === 'object' && 'message' in e && String(e.message).includes('invoke')) {
-      tauriAvailable = false;
-    } else {
-      tauriAvailable = true;
-    }
-    return tauriAvailable;
   }
 }
 

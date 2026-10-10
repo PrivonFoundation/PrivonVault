@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, useMemo, useEffect } from 'react';
+import React, { useState, useRef, useMemo, useEffect, useCallback, lazy, Suspense } from 'react';
 import { 
   Plus, FolderPlus, Database, Search, Trash2, Settings, MoreVertical, 
   Folder, Image as ImageIcon, Music, FileText, ArrowLeft, Video, X,
@@ -26,7 +26,10 @@ import { PinModal } from './PinModal';
 import { EncryptionModal } from './EncryptionModal';
 import { DecryptModal } from './DecryptModal';
 import { CopyMoveModal } from './CopyMoveModal';
-import { CustomizeModal } from './CustomizeModal';
+// Lazy: CustomizeModal pulls in 7 full icon packs (react-icons) — only loads when opened.
+const CustomizeModal = lazy(() =>
+  import('./CustomizeModal').then((m) => ({ default: m.CustomizeModal }))
+);
 import { AddSheet, ProfileSheet } from './HomeSheets';
 import { FilesGrid } from './FilesGrid';
 import { RecoveryCodesModal } from './RecoveryCodesModal';
@@ -136,6 +139,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [showCodesModal, setShowCodesModal] = useState(false);
   const { t } = useI18n();
   const [activeTab, setActiveTab] = useState('files');
+  const [visitedTabs, setVisitedTabs] = useState<Set<string>>(new Set(['files']));
+  const switchTab = (tab: string) => {
+    setActiveTab(tab);
+    setVisitedTabs((prev) => (prev.has(tab) ? prev : new Set(prev).add(tab)));
+  };
   const [currentView, setCurrentView] = useState<ViewState | 'backup'>('dashboard');
   const [appTheme, setAppThemeState] = useState<AppTheme>(() => resolveThemeMode(getSavedThemeMode()));
   const [themeMode, setThemeModeState] = useState<ThemeMode>(() => getSavedThemeMode());
@@ -188,12 +196,16 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [pendingVaultAction, setPendingVaultAction] = useState<'enable' | 'access' | 'disable' | null>(null);
 
   const [decryptedUrls, setDecryptedUrls] = useState<Record<string, string>>({});
+  // Mirror of decryptedUrls for the unmount cleanup — the effect runs once with [] deps,
+  // so it must read the LIVE map via a ref, not a stale closure.
+  const decryptedUrlsRef = useRef<Record<string, string>>({});
 
   const [currentPlayingItem, setCurrentPlayingItem] = useState<FileSystemItem | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isFullPlayerOpen, setIsFullPlayerOpen] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const lastTimeUpdateRef = useRef(0);
   const [queueIds, setQueueIds] = useState<string[]>([]);
   const [queueIndex, setQueueIndex] = useState(0);
   const [isShuffled, setIsShuffled] = useState(false);
@@ -203,7 +215,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
     return Number.isNaN(v) ? 0.9 : Math.min(1, Math.max(0, v));
   });
   const [allItems, setAllItems] = useState<FileSystemItem[]>([]);
-  const [deviceStorage, setDeviceStorage] = useState<{ quota: number; usage: number } | null>(null);
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [isSelectionMode, setIsSelectionMode] = useState(false);
 
@@ -213,11 +224,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   useEffect(() => {
     ensureClassicFolders().finally(() => loadFiles());
-    if (navigator.storage && navigator.storage.estimate) {
-        navigator.storage.estimate().then(est => {
-            if (est.quota && est.usage) setDeviceStorage({ quota: est.quota, usage: est.usage });
-        });
-    }
     
     // Remove legacy theme config if present
     if (localStorage.getItem('app_theme_config')) {
@@ -225,7 +231,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     }
     
     return () => {
-        Object.values(decryptedUrls).forEach(url => URL.revokeObjectURL(url as string));
+        Object.values(decryptedUrlsRef.current).forEach(url => URL.revokeObjectURL(url));
     };
   }, []);
 
@@ -273,7 +279,27 @@ export const Dashboard: React.FC<DashboardProps> = ({
     window.dispatchEvent(new CustomEvent('pin-setup-done', { detail: pin }));
   };
 
-  const decryptOnDemand = async (item: FileSystemItem): Promise<string | null> => {
+  // Cache a decrypted blob URL, revoking any previous URL for the same item.
+  const cacheDecryptedUrl = useCallback((id: string, url: string) => {
+    const prev = decryptedUrlsRef.current[id];
+    if (prev && prev !== url) URL.revokeObjectURL(prev);
+    const next = { ...decryptedUrlsRef.current, [id]: url };
+    decryptedUrlsRef.current = next;
+    setDecryptedUrls(next);
+  }, []);
+
+  // Drop and revoke a cached URL (used when an item is deleted for good).
+  const revokeDecryptedUrl = useCallback((id: string) => {
+    const prev = decryptedUrlsRef.current[id];
+    if (!prev) return;
+    URL.revokeObjectURL(prev);
+    const next = { ...decryptedUrlsRef.current };
+    delete next[id];
+    decryptedUrlsRef.current = next;
+    setDecryptedUrls(next);
+  }, []);
+
+  const decryptOnDemand = useCallback(async (item: FileSystemItem): Promise<string | null> => {
     if (decryptedUrls[item.id]) return decryptedUrls[item.id];
     if (!item.rawBlob || !item.isEncrypted || !item.iv) return item.url || null;
 
@@ -316,7 +342,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
            const blob = new Blob([arrayBuffer], { type: mimeType });
           const url = URL.createObjectURL(blob);
           
-          setDecryptedUrls(prev => ({ ...prev, [item.id]: url }));
+          cacheDecryptedUrl(item.id, url);
           return url;
       }
     } catch (e) {
@@ -324,7 +350,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       alert(t('decryptionFailed'));
       return null;
     }
-  };
+  }, [decryptedUrls]);
 
   useEffect(() => {
     applyAccent(appTheme, accentColor);
@@ -363,7 +389,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
   }, [currentPlayingItem, isPlaying]);
 
   const handleTimeUpdate = () => {
-    if (audioRef.current) setCurrentTime(audioRef.current.currentTime);
+    if (!audioRef.current) return;
+    const now = performance.now();
+    // Throttle: timeupdate fires ~4x/sec; re-rendering the whole Dashboard at 4Hz is costly.
+    if (now - lastTimeUpdateRef.current < 500) return;
+    lastTimeUpdateRef.current = now;
+    setCurrentTime(audioRef.current.currentTime);
   };
 
   const handleLoadedMetadata = () => {
@@ -524,8 +555,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
     }
   };
 
+  const queueItems = useMemo(
+    () => queueIds.map(id => allItems.find(i => i.id === id)).filter((i): i is FileSystemItem => !!i),
+    [queueIds, allItems]
+  );
+
   const items = useMemo(() => allItems.filter(i => !i.isTrashed), [allItems]);
   const trashItems = useMemo(() => allItems.filter(i => i.isTrashed), [allItems]);
+  const docItems = useMemo(() => items.filter(i => i.category === 'doc'), [items]);
   
   const currentFolder = useMemo(() => items.find(i => i.id === currentFolderId), [items, currentFolderId]);
   const visibleItems = useMemo(() => {
@@ -538,15 +575,37 @@ export const Dashboard: React.FC<DashboardProps> = ({
   }, [items, currentFolderId]);
 
   const storageStats = useMemo(() => {
-    let limit = 64 * 1024 * 1024 * 1024; let used = 0;
+    const limit = 64 * 1024 * 1024 * 1024;
     const breakdown = { image: 0, video: 0, audio: 0, doc: 0, other: 0 };
-    items.forEach(item => { 
-        if(item.type !== 'system') used += 1024 * 1024;
-        if(item.category) breakdown[item.category as keyof typeof breakdown]++;
-    }); 
-    if (deviceStorage) { used = deviceStorage.usage; limit = deviceStorage.quota; }
+    // Parse display sizes ("12.45 MB") into bytes so the breakdown is a real
+    // byte-based total — previously it mixed item COUNTS with byte-based "used".
+    items.forEach(item => {
+        if (item.type === 'system') return;
+        const cat = (item.category && item.category in breakdown)
+          ? item.category as keyof typeof breakdown
+          : 'other';
+        const rawSize = (item as any).size;
+        let bytes = 0;
+        if (typeof rawSize === 'number') {
+            bytes = rawSize;
+        } else if (typeof rawSize === 'string') {
+            const m = rawSize.match(/([\d.]+)\s*(KB|MB|GB|TB|B)?/i);
+            if (m) {
+                const val = parseFloat(m[1]);
+                const unit = (m[2] || 'B').toUpperCase();
+                const mult = unit === 'KB' ? 1024
+                  : unit === 'MB' ? 1024 * 1024
+                  : unit === 'GB' ? 1024 * 1024 * 1024
+                  : unit === 'TB' ? 1024 * 1024 * 1024 * 1024
+                  : 1;
+                bytes = val * mult;
+            }
+        }
+        breakdown[cat] += bytes;
+    });
+    const used = breakdown.image + breakdown.video + breakdown.audio + breakdown.doc + breakdown.other;
     return { used, limit, breakdown };
-  }, [items, deviceStorage]);
+  }, [items]);
 
   const handleItemAction = (action: string, item: FileSystemItem) => {
     if (item.type === 'system') return;
@@ -845,6 +904,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   };
 
   const deletePermanently = async (id: string) => {
+      revokeDecryptedUrl(id);
       await db.deleteItem(id);
       loadFiles();
   };
@@ -853,8 +913,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
     <div className="min-h-screen flex flex-col font-sans relative overflow-hidden text-primary">
       {/* Solid background — deep black in dark mode, clean white in light mode */}
       <div className="absolute inset-0 bg-background" />
-      {/* Accent orb — subtle brand depth */}
-      <div className="absolute w-72 h-72 opacity-[0.07]" style={{ top: '30%', right: '-5%', background: 'radial-gradient(circle, var(--accent-color) 0%, transparent 70%)', borderRadius: '50%', animation: 'blobFloat1 18s ease-in-out infinite', filter: 'blur(50px)' }} />
+      {/* Accent orb — subtle brand depth (static gradient, no per-frame blur filter) */}
+      <div className="absolute w-72 h-72 opacity-[0.07]" style={{ top: '30%', right: '-5%', background: 'radial-gradient(circle, var(--accent-color) 0%, transparent 70%)', borderRadius: '50%' }} />
 
       <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileChange} />
       <audio 
@@ -890,7 +950,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
               a.href = url;
               a.download = t('exportFilename');
               a.click();
-              URL.revokeObjectURL(url);
+              setTimeout(() => URL.revokeObjectURL(url), 1000);
             }}
             onDismiss={() => {
               recoverySettings.dismissCodes();
@@ -935,7 +995,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             }}
             onSuccess={async (blob, mimeType) => {
               const url = URL.createObjectURL(blob);
-              setDecryptedUrls(prev => ({ ...prev, [itemToDecrypt.id]: url }));
+              cacheDecryptedUrl(itemToDecrypt.id, url);
               if (decryptResolveRef.current) {
                 decryptResolveRef.current(url);
                 decryptResolveRef.current = null;
@@ -969,12 +1029,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
       />
 
       {itemToCustomize && (
-        <CustomizeModal
-          item={itemToCustomize}
-          isOpen={true}
-          onClose={() => setItemToCustomize(null)}
-          onSave={handleCustomizeSave}
-        />
+        <Suspense fallback={null}>
+          <CustomizeModal
+            item={itemToCustomize}
+            isOpen={true}
+            onClose={() => setItemToCustomize(null)}
+            onSave={handleCustomizeSave}
+          />
+        </Suspense>
       )}
 
 
@@ -1003,7 +1065,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             onToggleShuffle={toggleShuffle}
             repeatMode={repeatMode}
             onCycleRepeat={cycleRepeat}
-            queue={queueIds.map(id => allItems.find(i => i.id === id)).filter((i): i is FileSystemItem => !!i)}
+            queue={queueItems}
             queueIndex={queueIndex}
             onSelectQueueItem={selectQueueIndex}
             sourceName={(currentPlayingItem as any).decryptedAlbum || currentPlayingItem.album || t('songs')}
@@ -1041,7 +1103,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                  onNewFolder={startFolderCreation}
                />
 
-                <main className="flex-1 px-5 overflow-y-auto pb-8">
+                <main className="flex-1 px-5 overflow-y-auto pb-8 relative">
                    {isSelectionMode && (
                      <motion.div 
                        initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
@@ -1068,9 +1130,16 @@ export const Dashboard: React.FC<DashboardProps> = ({
                      </motion.div>
                    )}
 
-                   <AnimatePresence initial={false}>
-                    {activeTab === 'files' && (
-                      <motion.div key="files" initial={{ opacity: 0, x: 28 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -24 }} transition={{ duration: 0.24, ease: [0.32, 0.72, 0, 1] }} style={{ willChange: 'transform, opacity' }}>
+                   {visitedTabs.has('files') && (
+                      <motion.div
+                        key="files"
+                        initial={false}
+                        animate={activeTab === 'files' ? { opacity: 1, x: 0 } : { opacity: 0, x: 12 }}
+                        transition={{ duration: 0.16, ease: [0.32, 0.72, 0, 1] }}
+                        className={activeTab === 'files' ? 'relative' : 'absolute inset-0 pointer-events-none'}
+                        style={activeTab === 'files' ? { visibility: 'visible' } : { visibility: 'hidden' }}
+                        aria-hidden={activeTab !== 'files'}
+                      >
                         <div className="flex flex-col pb-4" style={{ height: 'calc(100vh - 320px)' }}>
                           {currentFolderId !== null && (
                             <div className="flex items-center gap-2 mb-3 px-2 shrink-0">
@@ -1099,22 +1168,45 @@ export const Dashboard: React.FC<DashboardProps> = ({
                       </motion.div>
                     )}
 
-                   {activeTab === 'gallery' && (
-                     <motion.div key="gallery" initial={{ opacity: 0, x: 28 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -24 }} transition={{ duration: 0.24, ease: [0.32, 0.72, 0, 1] }} style={{ willChange: 'transform, opacity' }}>
+                   {visitedTabs.has('gallery') && (
+                     <motion.div
+                       key="gallery"
+                       initial={{ opacity: 0, x: 14 }}
+                       animate={activeTab === 'gallery' ? { opacity: 1, x: 0 } : { opacity: 0, x: 12 }}
+                       transition={{ duration: 0.16, ease: [0.32, 0.72, 0, 1] }}
+                       className={activeTab === 'gallery' ? 'relative' : 'absolute inset-0 pointer-events-none'}
+                       style={activeTab === 'gallery' ? { visibility: 'visible' } : { visibility: 'hidden' }}
+                       aria-hidden={activeTab !== 'gallery'}
+                     >
                        <GalleryView items={items} onNavigate={handleNavigate} theme={appTheme} onDecrypt={decryptOnDemand} decryptedUrls={decryptedUrls} onAction={(act, item) => handleItemAction(act, item)} />
                      </motion.div>
                    )}
 
-                   {activeTab === 'music' && (
-                     <motion.div key="music" initial={{ opacity: 0, x: 28 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -24 }} transition={{ duration: 0.24, ease: [0.32, 0.72, 0, 1] }} style={{ willChange: 'transform, opacity' }}>
+                   {visitedTabs.has('music') && (
+                     <motion.div
+                       key="music"
+                       initial={{ opacity: 0, x: 14 }}
+                       animate={activeTab === 'music' ? { opacity: 1, x: 0 } : { opacity: 0, x: 12 }}
+                       transition={{ duration: 0.16, ease: [0.32, 0.72, 0, 1] }}
+                       className={activeTab === 'music' ? 'relative' : 'absolute inset-0 pointer-events-none'}
+                       style={activeTab === 'music' ? { visibility: 'visible' } : { visibility: 'hidden' }}
+                       aria-hidden={activeTab !== 'music'}
+                     >
                        <MusicView items={items} onPlay={(item, list) => playSong(item, list)} currentSong={currentPlayingItem} isPlaying={isPlaying} theme={appTheme} onAction={(act, item) => handleItemAction(act, item)} />
                      </motion.div>
                    )}
 
-                    {activeTab === 'docs' && (
-                      <motion.div key="docs" initial={{ opacity: 0, x: 28 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -24 }} transition={{ duration: 0.24, ease: [0.32, 0.72, 0, 1] }} style={{ willChange: 'transform, opacity' }}>
+                    {visitedTabs.has('docs') && (
+                      <motion.div
+                        key="docs"
+                        initial={{ opacity: 0, x: 14 }}
+                        animate={activeTab === 'docs' ? { opacity: 1, x: 0 } : { opacity: 0, x: 12 }}
+                        transition={{ duration: 0.16, ease: [0.32, 0.72, 0, 1] }}
+                        className={activeTab === 'docs' ? 'relative' : 'absolute inset-0 pointer-events-none'}
+                        style={activeTab === 'docs' ? { visibility: 'visible' } : { visibility: 'hidden' }}
+                        aria-hidden={activeTab !== 'docs'}
+                      >
                          {(() => {
-                           const docItems = items.filter(i => i.category === 'doc');
                            return docItems.length === 0 ? (
                              <div className="flex flex-col items-center justify-center px-8 pt-10">
                                <div className="glass-card rounded-[24px] p-4 max-w-xs w-full flex flex-col items-center">
@@ -1143,7 +1235,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
                         })()}
                       </motion.div>
                     )}
-                   </AnimatePresence>
                 </main>
 
                 <AnimatePresence>
@@ -1257,10 +1348,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   >
                     <div className="glass-pill flex items-center gap-1 pl-1.5 pr-1.5 py-1.5">
                       <div className="flex-1 flex items-stretch relative z-10">
-                        <NavButton active={activeTab === 'files'} onClick={() => setActiveTab('files')} icon={<Folder />} label={t('files')} />
-                        <NavButton active={activeTab === 'gallery'} onClick={() => setActiveTab('gallery')} icon={<ImageIcon />} label={t('gallery')} />
-                        <NavButton active={activeTab === 'music'} onClick={() => setActiveTab('music')} icon={<Music />} label={t('music')} />
-                        <NavButton active={activeTab === 'docs'} onClick={() => setActiveTab('docs')} icon={<FileText />} label={t('documentsTab')} />
+                        <NavButton active={activeTab === 'files'} onClick={() => switchTab('files')} icon={<Folder />} label={t('files')} />
+                        <NavButton active={activeTab === 'gallery'} onClick={() => switchTab('gallery')} icon={<ImageIcon />} label={t('gallery')} />
+                        <NavButton active={activeTab === 'music'} onClick={() => switchTab('music')} icon={<Music />} label={t('music')} />
+                        <NavButton active={activeTab === 'docs'} onClick={() => switchTab('docs')} icon={<FileText />} label={t('documentsTab')} />
                       </div>
                       <div className="relative z-10 w-px self-stretch my-2 shrink-0" style={{ backgroundColor: 'var(--onb-border)' }} />
                       <motion.button

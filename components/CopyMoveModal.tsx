@@ -66,16 +66,14 @@ export const CopyMoveModal: React.FC<CopyMoveModalProps> = ({
         const displayName = (item as any).decryptedName || item.name || '';
         const ext = displayName.includes('.') ? '.' + displayName.split('.').pop() : '';
         const baseName = ext ? displayName.slice(0, -ext.length) : displayName;
-        let newName = `${baseName}${ext}`;
-        
-        const existingInTarget = allItems.filter(i => 
-          i.parentId === selectedFolderId && i.name === newName
-        );
         
         let counter = 1;
-        while (existingInTarget.length > 0) {
-          newName = `${baseName} (copy ${counter})${ext}`;
-          counter++;
+        let newName = `${baseName}${ext}`;
+        if (allItems.some(i => i.parentId === selectedFolderId && i.name === newName)) {
+          do {
+            counter++;
+            newName = `${baseName} (copy ${counter})${ext}`;
+          } while (allItems.some(i => i.parentId === selectedFolderId && i.name === newName));
         }
 
         const newItem: DBItem = {

@@ -378,10 +378,11 @@ const App: React.FC = () => {
               <AnimatePresence>
                 {isBlurred && (
                   <motion.div
-                    initial={{ opacity: 0, backdropFilter: "blur(0px)" }}
-                    animate={{ opacity: 1, backdropFilter: "blur(40px)" }}
-                    exit={{ opacity: 0, backdropFilter: "blur(0px)" }}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
                     className="fixed inset-0 z-[100] bg-black/60 cursor-pointer"
+                    style={{ backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)' }}
                     onClick={() => { lastActivityRef.current = Date.now(); setIsBlurred(false); }}
                   />
                 )}

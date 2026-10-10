@@ -1,33 +1,11 @@
-
 import React, { useState, useRef, useEffect } from 'react';
-import * as LucideIcons from 'lucide-react';
-import * as HeroIcons from '@heroicons/react/24/solid';
-import * as FaIcons from 'react-icons/fa';
-import * as MdIcons from 'react-icons/md';
-import * as BsIcons from 'react-icons/bs';
-import * as BiIcons from 'react-icons/bi';
-import * as IoIcons from 'react-icons/io5';
-import * as RiIcons from 'react-icons/ri';
-import * as TbIcons from 'react-icons/tb';
-
+import { File as FileIcon, Image as ImageIcon, Video as VideoIcon, Music as MusicIcon, FileText as FileTextIcon, Lock, Check, MoreVertical, ShieldCheck } from 'lucide-react';
 import { FolderIcon } from './FolderIcon';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { FileSystemItem, AppTheme } from '../types';
 import { is_safe_image_url as isSafeImageUrl } from '../crypto-core/index';
 import { useI18n } from '../locales/i18nContext';
-
-// Map namespaces
-const ICON_PACKS: Record<string, any> = {
-    'lucide': LucideIcons,
-    'hero': HeroIcons,
-    'fa': FaIcons,
-    'md': MdIcons,
-    'bs': BsIcons,
-    'bi': BiIcons,
-    'io': IoIcons,
-    'ri': RiIcons,
-    'tb': TbIcons
-};
+import { loadIconPack } from '../utils/iconPacks';
 
 export const FileItem: React.FC<{
   item: FileSystemItem;
@@ -54,12 +32,62 @@ export const FileItem: React.FC<{
   const { t } = useI18n();
   const renameInputRef = useRef<HTMLInputElement>(null);
 
+  // Custom icon state: resolved lazily (icon packs load on demand, not in the bundle).
+  const [RenderedIcon, setRenderedIcon] = useState<React.ReactNode | null>(null);
+  const [customIconBg, setCustomIconBg] = useState<string | null>(null);
+
   useEffect(() => {
     if (isRenaming) {
         renameInputRef.current?.focus();
         renameInputRef.current?.select();
     }
   }, [isRenaming]);
+
+  useEffect(() => {
+    let alive = true;
+    const iconStr = item.customIcon || '';
+    if (!iconStr) {
+      setRenderedIcon(null);
+      setCustomIconBg(null);
+      return;
+    }
+
+    // 1. Image URL (sanitized)
+    if (isSafeImageUrl(iconStr)) {
+      setRenderedIcon(<img src={iconStr} className="w-full h-full object-cover" />);
+      setCustomIconBg('border border-border bg-surface p-0 overflow-hidden');
+      return;
+    }
+    // 2. Emoji
+    if (iconStr.startsWith('emoji:')) {
+      const emojiChar = iconStr.replace('emoji:', '');
+      setRenderedIcon(<span className="text-2xl leading-none flex items-center justify-center h-full pb-1">{emojiChar}</span>);
+      setCustomIconBg('border border-border bg-surface/50');
+      return;
+    }
+    // 3. Dynamic Icon Packs (prefix:name) — lazy chunk; legacy bare names map to lucide
+    const hasColon = iconStr.includes(':');
+    const [prefix, name] = hasColon ? iconStr.split(':') : ['lucide', iconStr];
+    const packKey = prefix || 'lucide';
+    loadIconPack(packKey)
+      .then((pack) => {
+        if (!alive) return;
+        const IconComp = pack[name];
+        if (IconComp && typeof IconComp === 'function') {
+          setRenderedIcon(<IconComp className={`w-full h-full ${packKey === 'lucide' ? '' : 'p-0.5'} text-black`} size={packKey === 'lucide' ? 24 : '100%'} />);
+          setCustomIconBg('bg-neon-green border-none');
+        } else {
+          setRenderedIcon(null);
+          setCustomIconBg(null);
+        }
+      })
+      .catch(() => {
+        if (!alive) return;
+        setRenderedIcon(null);
+        setCustomIconBg(null);
+      });
+    return () => { alive = false; };
+  }, [item.customIcon]);
 
   // Helper to shorten algo name for display
   const getAlgoDisplay = (algo?: string) => {
@@ -68,60 +96,20 @@ export const FileItem: React.FC<{
   };
 
   // Default fallback
-  let DefaultIcon = LucideIcons.File;
+  let DefaultIcon = FileIcon;
   let iconColorClass = "text-muted";
-  let iconBgClass = "bg-transparent border border-border";
-  
-  // Determine if Custom Icon exists
-  const hasCustomIcon = !!item.customIcon;
-  let RenderedIcon = null;
+  let iconBgClass = RenderedIcon
+    ? (customIconBg ?? "bg-transparent border border-border")
+    : "bg-[var(--onb-surface-strong)] border-none";
 
-  if (hasCustomIcon) {
-     const iconStr = item.customIcon || '';
-
-      // 1. Image URL (sanitized)
-       if (isSafeImageUrl(iconStr)) {
-          RenderedIcon = <img src={iconStr} className="w-full h-full object-cover" />;
-          iconBgClass = "border border-border bg-surface p-0 overflow-hidden";
-      } 
-     // 2. Emoji
-     else if (iconStr.startsWith('emoji:')) {
-         const emojiChar = iconStr.replace('emoji:', '');
-         RenderedIcon = <span className="text-2xl leading-none flex items-center justify-center h-full pb-1">{emojiChar}</span>;
-         iconBgClass = "border border-border bg-surface/50";
-     }
-     // 3. Dynamic Icon Packs (prefix:name)
-      else if (iconStr.includes(':')) {
-          const [prefix, name] = iconStr.split(':');
-          const pack = ICON_PACKS[prefix];
-          if (pack) {
-              const IconComp = pack[name];
-              if (IconComp && (typeof IconComp === 'function' || typeof IconComp === 'object')) {
-                  RenderedIcon = <IconComp className={`w-full h-full ${prefix === 'lucide' ? '' : 'p-0.5'} text-black`} size={prefix === 'lucide' ? 24 : '100%'} />;
-                  iconBgClass = "bg-neon-green border-none";
-              }
-          }
-      }
-      // 4. Legacy Lucide (Fallback)
-      else if (LucideIcons[iconStr as keyof typeof LucideIcons]) {
-          const LucideComp = LucideIcons[iconStr as keyof typeof LucideIcons] as React.ElementType;
-          if (LucideComp && (typeof LucideComp === 'function' || typeof LucideComp === 'object')) {
-             RenderedIcon = <LucideComp size={24} className="text-black" />;
-             iconBgClass = "bg-neon-green border-none";
-          }
-      }
-  }
-
-  // Fallback Logic if no custom icon (system entries render as plain folders)
   if (!RenderedIcon) {
     if (item.type === 'system' || item.type === 'folder') {
-        DefaultIcon = FolderIcon as unknown as typeof LucideIcons.File; iconColorClass = "text-[var(--accent-color)]"; iconBgClass = "bg-[var(--onb-surface-strong)] border-none";
+        DefaultIcon = FolderIcon as unknown as typeof FileIcon; iconColorClass = "text-[var(--accent-color)]";
     } else {
-        if (item.category === 'image') { DefaultIcon = LucideIcons.Image; iconColorClass = "text-[var(--accent-color)]"; }
-        else if (item.category === 'video') { DefaultIcon = LucideIcons.Video; iconColorClass = "text-[var(--accent-color)]"; }
-        else if (item.category === 'audio') { DefaultIcon = LucideIcons.Music; iconColorClass = "text-[var(--accent-color)]"; }
-        else if (item.category === 'doc') { DefaultIcon = LucideIcons.FileText; iconColorClass = "text-[var(--accent-color)]"; }
-        iconBgClass = "bg-[var(--onb-surface-strong)] border-none";
+        if (item.category === 'image') { DefaultIcon = ImageIcon; iconColorClass = "text-[var(--accent-color)]"; }
+        else if (item.category === 'video') { DefaultIcon = VideoIcon; iconColorClass = "text-[var(--accent-color)]"; }
+        else if (item.category === 'audio') { DefaultIcon = MusicIcon; iconColorClass = "text-[var(--accent-color)]"; }
+        else if (item.category === 'doc') { DefaultIcon = FileTextIcon; iconColorClass = "text-[var(--accent-color)]"; }
     }
   }
 
@@ -155,7 +143,7 @@ export const FileItem: React.FC<{
           <h4 className="text-sm font-semibold truncate text-primary">{(item as any).decryptedName || item.name}</h4>
           {item.isEncrypted && item.salt && (
               <div className="flex items-center gap-1 mt-0.5">
-                  <LucideIcons.Lock size={8} className="text-neon-green" />
+                  <Lock size={8} className="text-neon-green" />
                   <span className="text-[8px] font-mono text-neon-green">{getAlgoDisplay(item.algorithm)}</span>
               </div>
           )}
@@ -206,12 +194,12 @@ export const FileItem: React.FC<{
           )}
           {item.isEncrypted && item.salt && (
             <span className="absolute bottom-1 left-1 w-5 h-5 rounded-full bg-black/55 backdrop-blur-sm flex items-center justify-center pointer-events-none">
-              <LucideIcons.Lock size={10} className="text-white" />
+              <Lock size={10} className="text-white" />
             </span>
           )}
           {isSelected ? (
             <span className="absolute -top-1.5 -right-1.5 w-6 h-6 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--accent-color)' }}>
-              <LucideIcons.Check size={13} strokeWidth={3} style={{ color: 'var(--accent-contrast)' }} />
+              <Check size={13} strokeWidth={3} style={{ color: 'var(--accent-contrast)' }} />
             </span>
           ) : !isRenaming && item.type !== 'system' && (
             <button
@@ -219,7 +207,7 @@ export const FileItem: React.FC<{
               aria-label="More"
               className="absolute -top-1.5 -right-1.5 w-6 h-6 rounded-full bg-black/45 backdrop-blur-sm text-white flex items-center justify-center active:scale-90 transition-transform"
             >
-              <LucideIcons.MoreVertical size={13} />
+              <MoreVertical size={13} />
             </button>
           )}
         </div>
@@ -302,7 +290,7 @@ export const FileItem: React.FC<{
               )}
               {item.isEncrypted && item.salt && (
                 <span className="flex items-center gap-1 font-mono font-bold uppercase tracking-widest shrink-0" style={{ color: 'var(--accent-color)', fontSize: '10px' }}>
-                  <LucideIcons.ShieldCheck size={10} />
+                  <ShieldCheck size={10} />
                   {getAlgoDisplay(item.algorithm)}
                 </span>
               )}
@@ -312,7 +300,7 @@ export const FileItem: React.FC<{
 
         {isSelected ? (
           <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: 'var(--accent-color)' }}>
-            <LucideIcons.Check size={13} strokeWidth={3} style={{ color: 'var(--accent-contrast)' }} />
+            <Check size={13} strokeWidth={3} style={{ color: 'var(--accent-contrast)' }} />
           </div>
         ) : !isRenaming && item.type !== 'system' && (
           <button
@@ -320,7 +308,7 @@ export const FileItem: React.FC<{
               aria-label="More"
               className="p-2 -mr-2 rounded-full transition-colors text-muted active:opacity-60"
           >
-              <LucideIcons.MoreVertical size={19} />
+              <MoreVertical size={19} />
           </button>
         )}
       </div>

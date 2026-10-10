@@ -67,7 +67,7 @@ export const GalleryView: React.FC<GalleryViewProps> = ({ items, onNavigate, the
         return next;
       });
     });
-  }, [items, onDecrypt]);
+  }, [items, onDecrypt, decryptedUrls]);
 
   const filteredItems = useMemo(() => {
     return items.filter(item => {
@@ -468,11 +468,11 @@ export const GalleryView: React.FC<GalleryViewProps> = ({ items, onNavigate, the
                     style={{ position: 'absolute', top: 0, left: 0, width: '100%', transform: `translateY(${virtualRow.start}px)` }}
                   >
                     <div className="grid grid-cols-3 gap-[2px]">
-                      {rowItems.map(item => (
+                      {rowItems.map((item, i) => (
                         <button
                           key={item.id}
                           type="button"
-                          onClick={() => openViewer(filteredItems.indexOf(item))}
+                          onClick={() => openViewer(virtualRow.index * COLS + i)}
                           className="relative aspect-square overflow-hidden bg-surface cursor-pointer active:opacity-70 transition-opacity"
                         >
                           {renderTile(item)}

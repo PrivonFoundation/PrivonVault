@@ -98,7 +98,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isLocked && !false) return;
+    if (isLocked) return;
     setError(null);
     setIsProcessing(true);
     await new Promise(r => setTimeout(r, 16));
@@ -131,7 +131,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
           } catch (err) {
             setError(t('wrongPassword'));
             setPassword('');
-            if (!false) onFailedAttempt();
+            onFailedAttempt();
           }
         } else {
           const saltB64 = localStorage.getItem('privon_salt');
@@ -157,7 +157,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
           } catch (err) {
             setError(t('wrongPassword'));
             setPassword('');
-            if (!false) onFailedAttempt();
+            onFailedAttempt();
           }
         }
     } catch (err) {
@@ -1128,7 +1128,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
                 </p>
               </div>
 
-              {isLocked && !false && (
+              {isLocked && (
                 <motion.div
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
@@ -1139,12 +1139,12 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
                 </motion.div>
               )}
 
-              <form onSubmit={handleSubmit} className={`space-y-4 ${isLocked && !false ? 'opacity-30 pointer-events-none grayscale' : ''}`}>
+              <form onSubmit={handleSubmit} className={`space-y-4 ${isLocked ? 'opacity-30 pointer-events-none grayscale' : ''}`}>
                 <div className="space-y-1.5">
                   <label className="text-sm text-muted font-medium ml-1">{t('masterPassword')}</label>
                   <div className="relative group">
                     <input
-                      disabled={isProcessing || (isLocked && !false)}
+                      disabled={isProcessing || isLocked}
                       type={showPassword ? "text" : "password"}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
@@ -1168,7 +1168,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
                   <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="space-y-1.5">
                     <label className="text-sm text-muted font-medium ml-1">{t('confirmPassword')}</label>
                     <input
-                      disabled={isProcessing || (isLocked && !false)}
+                      disabled={isProcessing || isLocked}
                       type={showPassword ? "text" : "password"}
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
@@ -1186,7 +1186,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
 
                 <button
                   type="submit"
-                  disabled={isProcessing || (isLocked && !false)}
+                  disabled={isProcessing || isLocked}
                   className={`w-full text-black font-bold text-base py-3 rounded-xl hover:opacity-90 transition-all flex items-center justify-center gap-2 active:scale-[0.99] disabled:grayscale disabled:opacity-50 ${false ? 'bg-red-500 hover:bg-red-400' : isLocked ? 'bg-zinc-800' : ''}`}
                   style={{ backgroundColor: false ? undefined : (isLocked ? undefined : accentColor), boxShadow: false ? '0 0 20px rgba(239,68,68,0.4)' : (isLocked ? undefined : `0 0 15px rgba(${accentRgb}, 0.3)`) }}
                 >
@@ -1204,7 +1204,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onUnlock, isSetup, lockU
                 </button>
               </form>
 
-              {!isSetup && !isLocked && !false && recoverySettings && recoverySettings.count > 0 && (
+              {!isSetup && !isLocked && recoverySettings && recoverySettings.count > 0 && (
                 <div className="mt-4 pt-4 border-t border-white/10">
                   <button
                     type="button"
