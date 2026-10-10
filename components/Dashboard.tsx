@@ -1077,7 +1077,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
                    <AnimatePresence>
                     {activeTab === 'files' && (
-                      <motion.div key="files" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.15 }}>
+                      <motion.div key="files" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.18, ease: "easeOut" }}>
                         <div className="flex flex-col pb-4" style={{ height: 'calc(100vh - 320px)' }}>
                           {currentFolderId !== null && (
                             <div className="flex items-center gap-2 mb-3 px-2 shrink-0">
@@ -1107,19 +1107,19 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     )}
 
                    {activeTab === 'gallery' && (
-                     <motion.div key="gallery" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.15 }}>
+                     <motion.div key="gallery" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.18, ease: "easeOut" }}>
                        <GalleryView items={items} onNavigate={handleNavigate} theme={appTheme} onDecrypt={decryptOnDemand} decryptedUrls={decryptedUrls} onAction={(act, item) => handleItemAction(act, item)} />
                      </motion.div>
                    )}
 
                    {activeTab === 'music' && (
-                     <motion.div key="music" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.15 }}>
+                     <motion.div key="music" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.18, ease: "easeOut" }}>
                        <MusicView items={items} onPlay={(item) => playSong(item)} currentSong={currentPlayingItem} isPlaying={isPlaying} theme={appTheme} onAction={(act, item) => handleItemAction(act, item)} />
                      </motion.div>
                    )}
 
                     {activeTab === 'docs' && (
-                      <motion.div key="docs" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.15 }}>
+                      <motion.div key="docs" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.18, ease: "easeOut" }}>
                          {(() => {
                            const docItems = items.filter(i => i.category === 'doc');
                            return docItems.length === 0 ? (

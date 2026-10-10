@@ -38,7 +38,9 @@ export const GalleryView: React.FC<GalleryViewProps> = ({ items, onNavigate, the
   const [subTab, setSubTab] = useState<GallerySubTab>('all');
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
   const [decryptingIds, setDecryptingIds] = useState<Set<string>>(new Set());
-  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [isInitialLoading, setIsInitialLoading] = useState(
+    () => !items.some(item => item.category === 'image' || item.category === 'video')
+  );
   const [chromeVisible, setChromeVisible] = useState(true);
   const [showDetails, setShowDetails] = useState(false);
   const [zoomed, setZoomed] = useState(false);
@@ -80,10 +82,8 @@ export const GalleryView: React.FC<GalleryViewProps> = ({ items, onNavigate, the
   }, [items, subTab]);
 
   useEffect(() => {
-    if (filteredItems.length > 0 && isInitialLoading) {
-      setIsInitialLoading(false);
-    }
-  }, [filteredItems]);
+    setIsInitialLoading(false);
+  }, [items]);
 
   // Keep the viewer index valid when the list changes underneath it
   useEffect(() => {
