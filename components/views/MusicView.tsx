@@ -35,6 +35,18 @@ const Equalizer: React.FC = () => (
   </span>
 );
 
+const MusicBackButton: React.FC<{ onBack: () => void; label: string }> = ({ onBack, label }) => (
+  <button
+    type="button"
+    onClick={onBack}
+    aria-label={label}
+    className="absolute left-4 z-20 w-11 h-11 rounded-full glass-haze flex items-center justify-center text-primary active:scale-90 transition-transform"
+    style={{ top: 'max(3.25rem, env(safe-area-inset-top, 0px))' }}
+  >
+    <ChevronLeft size={24} />
+  </button>
+);
+
 const BigCard: React.FC<{
   title: string;
   subtitle: string;
@@ -168,18 +180,9 @@ export const MusicView: React.FC<MusicViewProps> = ({ items, onPlay, onBack, cur
 
   if (songs.length === 0) {
     return (
-      <div className="flex-1 flex flex-col min-h-0">
-        <div className="px-5 pt-12 pb-2 flex items-center gap-2 shrink-0">
-          <button
-            type="button"
-            onClick={onBack}
-            aria-label={t('backButton')}
-            className="-ml-2 w-11 h-11 rounded-full flex items-center justify-center text-primary active:scale-90 transition-all"
-          >
-            <ChevronLeft size={26} />
-          </button>
-        </div>
-        <div className="flex-1 flex flex-col items-center justify-center px-8 text-center">
+      <div className="flex-1 flex flex-col min-h-0 relative">
+      <MusicBackButton onBack={onBack} label={t('backButton')} />
+      <div className="flex-1 flex flex-col items-center justify-center px-8 text-center">
           <div
             className="w-20 h-20 rounded-full flex items-center justify-center mb-4"
             style={{ backgroundColor: 'var(--onb-surface-strong)', color: 'var(--accent-color)' }}
@@ -194,21 +197,10 @@ export const MusicView: React.FC<MusicViewProps> = ({ items, onPlay, onBack, cur
   }
 
   return (
-    <div className="flex-1 flex flex-col min-h-0">
-      {/* Header */}
-      <div className="px-5 pt-12 pb-1 shrink-0">
-        <button
-          type="button"
-          onClick={onBack}
-          aria-label={t('backButton')}
-          className="-ml-2 w-11 h-11 rounded-full flex items-center justify-center text-primary active:scale-90 transition-all"
-        >
-          <ChevronLeft size={26} />
-        </button>
-        <h1 className="mt-1 text-[34px] font-bold tracking-tight text-primary">{t('music')}</h1>
-      </div>
+    <div className="flex-1 flex flex-col min-h-0 relative">
+      <MusicBackButton onBack={onBack} label={t('backButton')} />
 
-      <div className="flex-1 overflow-y-auto no-scrollbar pb-28">
+      <div className="flex-1 overflow-y-auto no-scrollbar pt-[104px] pb-28">
         {/* Quick picks */}
         {quickPicks.length > 1 && (
           <section className="mt-4">
