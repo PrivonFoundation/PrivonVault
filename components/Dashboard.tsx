@@ -4,7 +4,7 @@ import {
   Plus, FolderPlus, Database, Search, Trash2, Settings, MoreVertical, 
   Folder, Image as ImageIcon, Music, FileText, ArrowLeft, Video, X,
   Pause, Play, SkipBack, SkipForward, ListMusic, ChevronDown, 
-  Shuffle, Heart, Repeat, Share2, Menu, Moon, Copy, Move, Eye, EyeOff, SquarePen, LayoutGrid
+  Shuffle, Heart, Repeat, Share2, Menu, Moon, Copy, Move, SquarePen, LayoutGrid
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Virtuoso } from 'react-virtuoso';
@@ -14,7 +14,6 @@ import { is_safe_image_url as isSafeImageUrl, decrypt, base64_encode, metadata_e
 import { FileSystemItem, ViewState, AppTheme } from '../types';
 import { useI18n } from '../locales/i18nContext';
 import { FullPlayer } from './FullPlayer';
-import { seedTestData, clearTestData } from '../utils/seedData';
 import { applyAccent, applyThemeMode, getSavedThemeMode, resolveThemeMode } from '../utils/theme';
 import { classifyUpload, classicRenameFlag, ensureClassicFolders, isClassicFolderId, CLASSIC_FOLDER_NAME_KEYS } from '../utils/defaultFolders';
 import type { ThemeMode } from '../types';
@@ -196,7 +195,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [deviceStorage, setDeviceStorage] = useState<{ quota: number; usage: number } | null>(null);
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [isSelectionMode, setIsSelectionMode] = useState(false);
-  const [devSeedHidden, setDevSeedHidden] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
@@ -218,15 +216,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
     return () => {
         Object.values(decryptedUrls).forEach(url => URL.revokeObjectURL(url as string));
     };
-  }, []);
-
-  // Expose seed function in dev mode for performance testing
-  useEffect(() => {
-    if (import.meta.env.DEV) {
-      (window as any).seedTestData = seedTestData;
-      (window as any).clearTestData = clearTestData;
-      console.log('💾 Run seedTestData(1000) in console to generate test files');
-    }
   }, []);
 
   useEffect(() => {
@@ -1029,17 +1018,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   onOpenProfileMenu={() => setProfileSheetOpen(true)}
                   onOpenAddMenu={() => setAddSheetOpen(true)}
                />)}
-               {activeTab === 'music' && (
-                 <button
-                   type="button"
-                   onClick={() => setMusicNavOpen(v => !v)}
-                   aria-label="Menu"
-                   className="fixed right-4 z-[95] w-11 h-11 rounded-full glass-haze flex items-center justify-center text-primary active:scale-90 transition-transform"
-                   style={{ top: 'max(3.25rem, env(safe-area-inset-top, 0px))' }}
-                 >
-                   {musicNavOpen ? <X size={22} /> : <LayoutGrid size={22} />}
-                 </button>
-               )}
                <ProfileSheet
                  open={profileSheetOpen}
                  onClose={() => setProfileSheetOpen(false)}
@@ -1118,7 +1096,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
                    {activeTab === 'music' && (
                      <motion.div key="music" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.18, ease: "easeOut" }}>
-                       <MusicView items={items} onPlay={(item) => playSong(item)} currentSong={currentPlayingItem} isPlaying={isPlaying} theme={appTheme} onBack={() => setActiveTab('files')} onAction={(act, item) => handleItemAction(act, item)} />
+                       <MusicView items={items} onPlay={(item, list) => playSong(item, list)} currentSong={currentPlayingItem} isPlaying={isPlaying} theme={appTheme} onAction={(act, item) => handleItemAction(act, item)} />
                      </motion.div>
                    )}
 
@@ -1239,45 +1217,16 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   )}
                 </AnimatePresence>
 
-                {/* Dev seed button */}
-                {import.meta.env.DEV && (
-                  <div className="fixed bottom-24 right-6 z-50 flex flex-col items-end gap-2">
-                    <button
-                      onClick={() => setDevSeedHidden((v) => !v)}
-                      aria-label={devSeedHidden ? 'Show test buttons' : 'Hide test buttons'}
-                      className="w-9 h-9 flex items-center justify-center rounded-full bg-black/60 text-white/90 text-sm shadow-lg backdrop-blur"
-                    >
-                      {devSeedHidden ? <EyeOff /> : <Eye />}
-                    </button>
-                    {!devSeedHidden && (
-                      <>
-                        <button
-                          onClick={async () => {
-                            const btn = document.activeElement as HTMLButtonElement;
-                            btn.textContent = '...';
-                            btn.disabled = true;
-                            await seedTestData(1000);
-                            btn.textContent = '1000 files added!';
-                            setTimeout(() => { location.reload(); }, 1500);
-                          }}
-                          className="px-4 py-2 rounded-xl bg-neon-green text-black text-xs font-bold shadow-lg shadow-neon-green/30"
-                        >
-                          +1000 files
-                        </button>
-                        <button
-                          onClick={async () => {
-                            await clearTestData();
-                            location.reload();
-                          }}
-                          className="px-4 py-2 rounded-xl bg-red-500/80 text-white text-xs font-bold shadow-lg"
-                        >
-                          Clear
-                        </button>
-                      </>
-                    )}
-                  </div>
+                {activeTab === 'music' && !musicNavOpen && (
+                  <button
+                    type="button"
+                    onClick={() => setMusicNavOpen(true)}
+                    aria-label="Menu"
+                    className="fixed bottom-6 right-4 z-[95] w-14 h-14 rounded-full glass-haze flex items-center justify-center text-primary shadow-xl transition-transform active:scale-95"
+                  >
+                    <LayoutGrid size={24} />
+                  </button>
                 )}
-
                 {activeTab === 'files' && !(currentPlayingItem && !isFullPlayerOpen) && (
                   <button
                     type="button"

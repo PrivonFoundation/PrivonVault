@@ -9,7 +9,6 @@ import { SettingsRow } from './SettingsView';
 interface MusicViewProps {
   items: FileSystemItem[];
   onPlay: (item: FileSystemItem, list?: FileSystemItem[]) => void;
-  onBack: () => void;
   currentSong: FileSystemItem | null;
   isPlaying: boolean;
   theme: AppTheme;
@@ -33,18 +32,6 @@ const Equalizer: React.FC = () => (
     <motion.span animate={{ height: [8, 14, 8, 4, 12] }} transition={{ duration: 0.4, repeat: Infinity, repeatType: 'reverse', delay: 0.1 }} className="w-[3px] rounded-full" style={{ backgroundColor: 'var(--accent-color)' }} />
     <motion.span animate={{ height: [6, 10, 14, 6, 10] }} transition={{ duration: 0.6, repeat: Infinity, repeatType: 'reverse', delay: 0.2 }} className="w-[3px] rounded-full" style={{ backgroundColor: 'var(--accent-color)' }} />
   </span>
-);
-
-const MusicBackButton: React.FC<{ onBack: () => void; label: string }> = ({ onBack, label }) => (
-  <button
-    type="button"
-    onClick={onBack}
-    aria-label={label}
-    className="absolute left-4 z-20 w-11 h-11 rounded-full glass-haze flex items-center justify-center text-primary active:scale-90 transition-transform"
-    style={{ top: 'max(3.25rem, env(safe-area-inset-top, 0px))' }}
-  >
-    <ChevronLeft size={24} />
-  </button>
 );
 
 const BigCard: React.FC<{
@@ -88,7 +75,7 @@ const BigCard: React.FC<{
   </div>
 );
 
-export const MusicView: React.FC<MusicViewProps> = ({ items, onPlay, onBack, currentSong, isPlaying, theme, onAction }) => {
+export const MusicView: React.FC<MusicViewProps> = ({ items, onPlay, currentSong, isPlaying, theme, onAction }) => {
   const { t } = useI18n();
   const [sheetItem, setSheetItem] = useState<FileSystemItem | null>(null);
 
@@ -181,7 +168,6 @@ export const MusicView: React.FC<MusicViewProps> = ({ items, onPlay, onBack, cur
   if (songs.length === 0) {
     return (
       <div className="flex-1 flex flex-col min-h-0 relative">
-      <MusicBackButton onBack={onBack} label={t('backButton')} />
       <div className="flex-1 flex flex-col items-center justify-center px-8 text-center">
           <div
             className="w-20 h-20 rounded-full flex items-center justify-center mb-4"
@@ -198,9 +184,7 @@ export const MusicView: React.FC<MusicViewProps> = ({ items, onPlay, onBack, cur
 
   return (
     <div className="flex-1 flex flex-col min-h-0 relative">
-      <MusicBackButton onBack={onBack} label={t('backButton')} />
-
-      <div className="flex-1 overflow-y-auto no-scrollbar pt-[104px] pb-28">
+      <div className="flex-1 overflow-y-auto no-scrollbar pt-12 pb-28">
       <div className="mx-auto w-full max-w-xl">
         {/* Quick picks */}
         {quickPicks.length > 1 && (
