@@ -91,24 +91,31 @@ const formatTime = (seconds: number) => {
     return (
       <motion.button
         onClick={onClick}
-        className="relative flex-1 flex flex-col items-center justify-center gap-1 py-2.5"
-        whileTap={{ scale: 0.9 }}
-        transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+        whileTap={{ scale: 0.86 }}
+        transition={{ type: 'spring', stiffness: 520, damping: 30 }}
+        className="relative flex-1 flex flex-col items-center justify-center gap-1 py-2 select-none"
       >
         {active && (
           <motion.div
             layoutId="nav-active"
-            className="absolute inset-x-2 inset-y-1 rounded-2xl bg-white/10"
-            transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+            className="absolute inset-x-1.5 inset-y-0.5 rounded-2xl"
+            style={{ backgroundColor: 'rgba(var(--accent-rgb), 0.14)' }}
+            transition={{ type: 'spring', stiffness: 440, damping: 34 }}
           />
         )}
-        <span className={`relative z-10 transition-colors duration-200 ${active ? 'text-white' : 'text-white/45'}`}>
+        <span
+          className="relative z-10 transition-colors duration-200"
+          style={{ color: active ? 'var(--accent-color)' : 'var(--onb-text-faint)' }}
+        >
           {React.cloneElement(icon as React.ReactElement<any>, {
             size: 24,
-            strokeWidth: active ? 2.2 : 1.8,
+            strokeWidth: active ? 2.3 : 1.85,
           })}
         </span>
-        <span className={`relative z-10 text-[11px] font-semibold leading-none ${active ? 'text-white' : 'text-white/45'}`}>
+        <span
+          className="relative z-10 text-[10.5px] font-semibold leading-none tracking-tight transition-colors duration-200"
+          style={{ color: active ? 'var(--accent-color)' : 'var(--onb-text-faint)' }}
+        >
           {label}
         </span>
       </motion.button>
@@ -1239,18 +1246,33 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   </button>
                 )}
 
-                {(activeTab !== 'music' || musicNavOpen) && (<nav className="fixed bottom-4 left-4 right-4 z-40"
-                  style={{ paddingBottom: 'max(0rem, env(safe-area-inset-bottom, 0px))' }}
-                >
-                  <div className="glass-haze rounded-[30px] px-2 py-1.5">
-                      <div className="flex items-stretch relative z-10">
+                {(activeTab !== 'music' || musicNavOpen) && (
+                  <nav
+                    className="fixed bottom-4 left-4 right-4 z-40"
+                    style={{ paddingBottom: 'max(0rem, env(safe-area-inset-bottom, 0px))' }}
+                  >
+                    <div className="glass-haze rounded-[26px] pl-1 pr-1.5 py-1.5 flex items-center gap-0.5">
+                      <div className="flex-1 flex items-stretch relative z-10">
                         <NavButton active={activeTab === 'files'} onClick={() => setActiveTab('files')} icon={<Folder />} label={t('files')} />
                         <NavButton active={activeTab === 'gallery'} onClick={() => setActiveTab('gallery')} icon={<ImageIcon />} label={t('gallery')} />
                         <NavButton active={activeTab === 'music'} onClick={() => setActiveTab('music')} icon={<Music />} label={t('music')} />
                         <NavButton active={activeTab === 'docs'} onClick={() => setActiveTab('docs')} icon={<FileText />} label={t('documentsTab')} />
                       </div>
-                  </div>
-                </nav>)}
+                      <div className="w-px self-stretch my-2 shrink-0" style={{ backgroundColor: 'var(--onb-border)' }} />
+                      <motion.button
+                        type="button"
+                        onClick={() => { setActiveTab('files'); setCurrentView('search'); }}
+                        aria-label={t('search')}
+                        whileTap={{ scale: 0.86 }}
+                        transition={{ type: 'spring', stiffness: 520, damping: 30 }}
+                        className="w-12 h-12 rounded-[18px] flex items-center justify-center shrink-0"
+                        style={{ color: 'var(--text-muted)', backgroundColor: 'var(--onb-surface)' }}
+                      >
+                        <Search size={22} strokeWidth={2} />
+                      </motion.button>
+                    </div>
+                  </nav>
+                )}
              </motion.div>
           )}
 
