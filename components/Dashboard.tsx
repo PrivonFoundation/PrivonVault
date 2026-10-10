@@ -1162,27 +1162,35 @@ export const Dashboard: React.FC<DashboardProps> = ({
                           className="fixed bottom-[95px] left-4 right-4 z-50 cursor-pointer"
                       >
                           {/* Mini Player UI */}
-                           <div className="glass-card rounded-full p-3 pr-4 flex items-center gap-3 relative overflow-hidden group">
-                            <div className="w-14 h-14 rounded-full bg-black border border-border flex items-center justify-center shrink-0 overflow-hidden relative z-10">
-                                {(() => {
-                                   const src = currentPlayingItem.customIcon || currentPlayingItem.coverUrl;
-                                   return src && isSafeImageUrl(src);
-                                 })() ? (
-                                     <img src={currentPlayingItem.customIcon || currentPlayingItem.coverUrl} className={`w-full h-full object-cover ${isPlaying ? 'animate-[spin_4s_linear_infinite]' : ''}`} />
-                                 ) : (
-                                     <Music size={18} className="text-muted" />
-                                 )}
-                            </div>
+                           <div className="rounded-[28px] px-3 py-2.5 flex items-center gap-3 relative overflow-hidden bg-black/60 backdrop-blur-2xl border border-white/10 shadow-2xl">
+                            {(() => {
+                              const src = (currentPlayingItem as any).decryptedCoverUrl || (currentPlayingItem as any).decryptedCustomIcon || currentPlayingItem.customIcon || currentPlayingItem.coverUrl;
+                              return src && isSafeImageUrl(src) ? (
+                                <img src={src} className="w-10 h-10 rounded-[10px] object-cover shrink-0 relative z-10" alt="" draggable={false} />
+                              ) : (
+                                <span className="w-10 h-10 rounded-[10px] bg-white/10 flex items-center justify-center shrink-0 relative z-10">
+                                  <Music size={18} className="text-white/70" />
+                                </span>
+                              );
+                            })()}
                             <div className="flex-1 min-w-0 flex flex-col justify-center z-10">
-                               <h4 className="text-sm font-bold text-primary truncate">{currentPlayingItem.name}</h4>
-                               <p className="text-xs text-muted truncate">{currentPlayingItem.artist || t('unknownArtist')}</p>
+                               <h4 className="text-[15px] font-bold text-white truncate">{(currentPlayingItem as any).decryptedName || currentPlayingItem.name}</h4>
+                               <p className="text-[13px] text-white/60 truncate">{(currentPlayingItem as any).decryptedArtist || currentPlayingItem.artist || t('unknownArtist')}</p>
                             </div>
-                            <div className="flex items-center gap-2 z-10">
-                               <button 
+                            <div className="flex items-center gap-4 pr-1 z-10">
+                               <button
                                  onClick={(e) => { e.stopPropagation(); setIsPlaying(!isPlaying); }}
-                                 className="w-12 h-12 flex items-center justify-center rounded-full bg-primary text-background hover:scale-105 transition-transform"
+                                 aria-label={isPlaying ? 'Pause' : 'Play'}
+                                 className="text-white active:scale-90 transition-transform"
                                >
-                                 {isPlaying ? <Pause size={20} fill="currentColor" /> : <Play size={20} fill="currentColor" className="ml-0.5" />}
+                                 {isPlaying ? <Pause size={26} fill="currentColor" /> : <Play size={26} fill="currentColor" className="ml-0.5" />}
+                               </button>
+                               <button
+                                 onClick={(e) => { e.stopPropagation(); stepQueue(1, false); }}
+                                 aria-label="Next"
+                                 className="text-white active:scale-90 transition-transform"
+                               >
+                                 <SkipForward size={26} fill="currentColor" />
                                </button>
                             </div>
                          </div>
