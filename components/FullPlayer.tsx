@@ -121,8 +121,25 @@ export const FullPlayer: React.FC<FullPlayerProps> = ({
         if (dy > 90) onClose();
       }}
     >
+      {/* Blurred cover as background */}
+      <div className="absolute inset-0 overflow-hidden bg-black">
+        {art ? (
+          <img
+            src={art}
+            alt=""
+            aria-hidden="true"
+            draggable={false}
+            className="absolute inset-0 w-full h-full object-cover blur-[60px] scale-125 opacity-80 select-none"
+          />
+        ) : (
+          <div className="absolute inset-0 bg-gradient-to-b from-zinc-900 via-black to-black" />
+        )}
+        <div className="absolute inset-x-0 top-0 h-44 bg-gradient-to-b from-black/70 to-transparent" />
+        <div className="absolute inset-x-0 bottom-0 h-[55%] bg-gradient-to-t from-black via-black/70 to-transparent" />
+      </div>
+
       {/* Grab handle + source */}
-      <div className="pt-10 pb-1 flex flex-col items-center shrink-0">
+      <div className="relative z-10 pt-10 pb-1 flex flex-col items-center shrink-0">
         <div className="w-10 h-1 rounded-full bg-white/30" />
         <p className="mt-2 px-8 text-[13px] font-semibold text-white truncate max-w-full">
           {t('nowPlayingFrom').replace('{{source}}', sourceName)}
@@ -130,7 +147,7 @@ export const FullPlayer: React.FC<FullPlayerProps> = ({
       </div>
 
       {/* Cover */}
-      <div className="relative w-full flex-1 min-h-0 mt-1">
+      <div className="relative z-10 w-full flex-1 min-h-0 mt-1">
         {art ? (
           <img src={art} alt="" draggable={false} className="absolute inset-0 w-full h-full object-cover select-none" />
         ) : (
@@ -142,7 +159,7 @@ export const FullPlayer: React.FC<FullPlayerProps> = ({
       </div>
 
       {/* Bottom section */}
-      <div className="shrink-0 px-6 pt-4 pb-8 bg-black" style={{ paddingBottom: 'max(2rem, env(safe-area-inset-bottom, 16px))' }}>
+      <div className="relative z-10 shrink-0 px-6 pt-4 pb-8" style={{ paddingBottom: 'max(2rem, env(safe-area-inset-bottom, 16px))' }}>
         <div className="flex items-center gap-3">
           <div className="flex-1 min-w-0">
             <h2 className="text-[22px] font-bold tracking-tight truncate">{title}</h2>
