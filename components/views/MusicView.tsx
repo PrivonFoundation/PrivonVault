@@ -1,16 +1,15 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Music, ListMusic, Play, Shuffle, Heart, MoreHorizontal, Trash2, X } from 'lucide-react';
+import { Music, Disc, User, Play, Shuffle, Heart, MoreHorizontal, Trash2, X, ChevronLeft } from 'lucide-react';
 import { FileSystemItem, AppTheme } from '../../types';
 import { is_safe_image_url as isSafeImageUrl } from '../../crypto-core/index';
 import { useI18n } from '../../locales/i18nContext';
 import { SettingsRow } from './SettingsView';
 
-type MusicSubTab = 'songs' | 'albums' | 'artists' | 'favorites';
-
 interface MusicViewProps {
   items: FileSystemItem[];
-  onPlay: (item: FileSystemItem) => void;
+  onPlay: (item: FileSystemItem, list?: FileSystemItem[]) => void;
+  onBack: () => void;
   currentSong: FileSystemItem | null;
   isPlaying: boolean;
   theme: AppTheme;
@@ -28,36 +27,57 @@ const songArtist = (item: FileSystemItem, fallback: string): string =>
 const songAlbum = (item: FileSystemItem, fallback: string): string =>
   (item as any).decryptedAlbum || item.album || fallback;
 
-// Animated Equalizer Component
-const Equalizer: React.FC<{ size?: 'sm' | 'md' }> = ({ size = 'md' }) => {
-  const h = size === 'sm' ? 'h-3' : 'h-4';
-  return (
-    <div className={`flex items-end gap-[2px] ${h}`}>
-      <motion.div animate={{ height: [4, 12, 6, 16, 8] }} transition={{ duration: 0.5, repeat: Infinity, repeatType: 'reverse' }} className="w-1 rounded-full" style={{ backgroundColor: 'var(--accent-color)' }} />
-      <motion.div animate={{ height: [8, 16, 8, 4, 12] }} transition={{ duration: 0.4, repeat: Infinity, repeatType: 'reverse', delay: 0.1 }} className="w-1 rounded-full" style={{ backgroundColor: 'var(--accent-color)' }} />
-      <motion.div animate={{ height: [6, 10, 16, 6, 10] }} transition={{ duration: 0.6, repeat: Infinity, repeatType: 'reverse', delay: 0.2 }} className="w-1 rounded-full" style={{ backgroundColor: 'var(--accent-color)' }} />
-    </div>
-  );
-};
+const Equalizer: React.FC = () => (
+  <span className="flex items-end gap-[2px] h-3.5">
+    <motion.span animate={{ height: [4, 12, 6, 14, 8] }} transition={{ duration: 0.5, repeat: Infinity, repeatType: 'reverse' }} className="w-[3px] rounded-full" style={{ backgroundColor: 'var(--accent-color)' }} />
+    <motion.span animate={{ height: [8, 14, 8, 4, 12] }} transition={{ duration: 0.4, repeat: Infinity, repeatType: 'reverse', delay: 0.1 }} className="w-[3px] rounded-full" style={{ backgroundColor: 'var(--accent-color)' }} />
+    <motion.span animate={{ height: [6, 10, 14, 6, 10] }} transition={{ duration: 0.6, repeat: Infinity, repeatType: 'reverse', delay: 0.2 }} className="w-[3px] rounded-full" style={{ backgroundColor: 'var(--accent-color)' }} />
+  </span>
+);
 
-const Artwork: React.FC<{ item?: FileSystemItem; size: string; iconSize: number; dimmed?: boolean; overlay?: React.ReactNode }> = ({ item, size, iconSize, dimmed, overlay }) => {
-  const src = item ? coverSrc(item) : null;
-  return (
-    <div className={`${size} rounded-xl overflow-hidden relative shrink-0 flex items-center justify-center`} style={{ backgroundColor: 'var(--onb-surface-strong)' }}>
-      {src ? (
-        <img src={src} className={`w-full h-full object-cover ${dimmed ? 'opacity-40' : ''}`} alt="" draggable={false} />
+const BigCard: React.FC<{
+  title: string;
+  subtitle: string;
+  art: string | null;
+  playing?: boolean;
+  fallbackIcon?: React.ReactNode;
+  onPress: () => void;
+  onMore?: () => void;
+}> = ({ title, subtitle, art, playing, fallbackIcon, onPress, onMore }) => (
+  <div className="min-w-[168px] max-w-[168px] shrink-0 cursor-pointer active:opacity-80 transition-opacity" onClick={onPress}>
+    <div className="relative w-[168px] h-[168px] rounded-[22px] overflow-hidden" style={{ backgroundColor: 'var(--onb-surface-strong)' }}>
+      {art ? (
+        <img src={art} className="w-full h-full object-cover" alt="" draggable={false} />
       ) : (
-        <Music size={iconSize} className="text-muted" />
+        <span className="w-full h-full flex items-center justify-center text-muted">{fallbackIcon}</span>
       )}
-      {overlay}
+      <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/75 to-transparent pointer-events-none" />
+      {playing && (
+        <span className="absolute bottom-2.5 left-2.5 rounded-full bg-black/55 backdrop-blur-sm px-2 py-1.5">
+          <Equalizer />
+        </span>
+      )}
+      {onMore && (
+        <button
+          type="button"
+          aria-label="More"
+          onClick={(e) => {
+            e.stopPropagation();
+            onMore();
+          }}
+          className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/45 backdrop-blur-sm text-white flex items-center justify-center active:scale-90 transition-transform"
+        >
+          <MoreHorizontal size={16} />
+        </button>
+      )}
     </div>
-  );
-};
+    <p className="mt-2 px-1 text-[15px] font-bold text-primary truncate">{title}</p>
+    <p className="px-1 text-[13px] text-muted truncate">{subtitle}</p>
+  </div>
+);
 
-export const MusicView: React.FC<MusicViewProps> = ({ items, onPlay, currentSong, isPlaying, theme, onAction }) => {
+export const MusicView: React.FC<MusicViewProps> = ({ items, onPlay, onBack, currentSong, isPlaying, theme, onAction }) => {
   const { t } = useI18n();
-  const [subTab, setSubTab] = useState<MusicSubTab>('songs');
-  const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
   const [sheetItem, setSheetItem] = useState<FileSystemItem | null>(null);
 
   void theme;
@@ -86,11 +106,16 @@ export const MusicView: React.FC<MusicViewProps> = ({ items, onPlay, currentSong
     return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]));
   }, [songs, t]);
 
-  const quickPicks = useMemo(() => songs.slice(0, 5), [songs]);
+  const quickPicks = useMemo(() => songs.slice(0, 8), [songs]);
 
   const shufflePlay = () => {
     if (songs.length === 0) return;
-    onPlay(songs[Math.floor(Math.random() * songs.length)]);
+    const pick = songs[Math.floor(Math.random() * songs.length)];
+    onPlay(pick, songs);
+  };
+
+  const playAlbum = (list: FileSystemItem[]) => {
+    if (list.length > 0) onPlay(list[0], list);
   };
 
   const renderSongRow = (item: FileSystemItem) => {
@@ -99,7 +124,7 @@ export const MusicView: React.FC<MusicViewProps> = ({ items, onPlay, currentSong
     return (
       <div
         key={item.id}
-        onClick={() => onPlay(item)}
+        onClick={() => onPlay(item, songs)}
         className="flex items-center gap-3 px-2 py-2 rounded-2xl cursor-pointer transition-all active:opacity-60 hover:bg-[var(--onb-surface)]"
       >
         <div className="w-[52px] h-[52px] rounded-xl overflow-hidden relative shrink-0 flex items-center justify-center" style={{ backgroundColor: 'var(--onb-surface-strong)' }}>
@@ -110,7 +135,7 @@ export const MusicView: React.FC<MusicViewProps> = ({ items, onPlay, currentSong
           )}
           {isCurrent && isPlaying && (
             <span className="absolute inset-0 flex items-center justify-center">
-              <Equalizer size="sm" />
+              <Equalizer />
             </span>
           )}
           {isCurrent && !isPlaying && (
@@ -141,162 +166,164 @@ export const MusicView: React.FC<MusicViewProps> = ({ items, onPlay, currentSong
     );
   };
 
-  const renderGroupRow = (
-    key: string,
-    kind: 'album' | 'artist',
-    title: string,
-    list: FileSystemItem[],
-  ) => {
-    const art = list.find(s => coverSrc(s));
-    const expanded = expandedGroup === `${kind}:${key}`;
+  if (songs.length === 0) {
     return (
-      <div key={`${kind}:${key}`}>
-        <div
-          onClick={() => setExpandedGroup(expanded ? null : `${kind}:${key}`)}
-          className="flex items-center gap-3 px-2 py-2 rounded-2xl cursor-pointer transition-all active:opacity-60 hover:bg-[var(--onb-surface)]"
-        >
-          <Artwork item={art} size="w-[52px] h-[52px]" iconSize={22} />
-          <div className="flex-1 min-w-0">
-            <p className="text-[16px] font-semibold text-primary truncate">{title}</p>
-            <p className="text-[13px] text-muted truncate">
-              {list.length} {t('songs')} {kind === 'album' ? `· ${songArtist(list[0], t('unknownArtist'))}` : ''}
-            </p>
-          </div>
-          <motion.span animate={{ rotate: expanded ? 90 : 0 }} className="text-muted shrink-0 pr-1">
-            <ListMusic size={18} />
-          </motion.span>
+      <div className="flex-1 flex flex-col min-h-0">
+        <div className="px-5 pt-12 pb-2 flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={onBack}
+            aria-label={t('backButton')}
+            className="-ml-2 w-11 h-11 rounded-full flex items-center justify-center text-primary active:scale-90 transition-all"
+          >
+            <ChevronLeft size={26} />
+          </button>
         </div>
-        <AnimatePresence initial={false}>
-          {expanded && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="overflow-hidden"
-            >
-              <div className="pl-4 pb-2">{list.map(renderSongRow)}</div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-    );
-  };
-
-  const tabs: { id: MusicSubTab; label: string }[] = [
-    { id: 'songs', label: t('songs') },
-    { id: 'albums', label: t('albums') },
-    { id: 'artists', label: t('artists') },
-    { id: 'favorites', label: t('favorites') },
-  ];
-
-  const emptyIcon = subTab === 'favorites' ? <Heart size={36} /> : <Music size={36} />;
-  const isEmpty =
-    subTab === 'songs' ? songs.length === 0 :
-    subTab === 'albums' ? albums.length === 0 :
-    subTab === 'artists' ? artists.length === 0 :
-    favorites.length === 0;
-
-  return (
-    <div className="flex flex-col relative font-sans" style={{ height: 'calc(100vh - 320px)' }}>
-      {/* Segmented filter */}
-      <div className="shrink-0 px-5 pb-3">
-        <div className="flex rounded-full p-1" style={{ backgroundColor: 'var(--onb-surface)' }}>
-          {tabs.map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => {
-                setSubTab(tab.id);
-                setExpandedGroup(null);
-              }}
-              className={`flex-1 py-1.5 rounded-full text-[13px] font-semibold transition-all active:scale-[0.97] truncate ${
-                subTab === tab.id ? 'text-primary shadow' : 'text-muted'
-              }`}
-              style={subTab === tab.id ? { backgroundColor: 'var(--onb-surface-strong)' } : undefined}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {isEmpty ? (
         <div className="flex-1 flex flex-col items-center justify-center px-8 text-center">
           <div
             className="w-20 h-20 rounded-full flex items-center justify-center mb-4"
             style={{ backgroundColor: 'var(--onb-surface-strong)', color: 'var(--accent-color)' }}
           >
-            {emptyIcon}
+            <Music size={36} />
           </div>
           <p className="text-[17px] font-semibold text-primary">{t('noMediaFound')}</p>
           <p className="mt-1 text-[14px] text-muted">{t('libraryEmpty')}</p>
         </div>
-      ) : (
-        <div className="flex-1 overflow-y-auto px-3 pb-32 no-scrollbar">
-          {subTab === 'songs' && quickPicks.length > 1 && (
-            <div className="mb-6 pt-1">
-              <div className="flex items-center justify-between mb-3 px-2">
-                <h3 className="text-[20px] font-bold tracking-tight text-primary">{t('quickPicksLabel')}</h3>
-                <button
-                  type="button"
-                  onClick={shufflePlay}
-                  aria-label="Shuffle"
-                  className="w-10 h-10 rounded-full flex items-center justify-center text-primary transition-all active:scale-90"
-                  style={{ backgroundColor: 'var(--onb-surface-strong)' }}
-                >
-                  <Shuffle size={18} />
-                </button>
-              </div>
-              <div className="flex gap-4 overflow-x-auto no-scrollbar px-2 pb-2">
-                {quickPicks.map((item) => {
-                  const isCurrent = currentSong?.id === item.id;
-                  const src = coverSrc(item);
-                  return (
-                    <div
-                      key={item.id}
-                      onClick={() => onPlay(item)}
-                      className="min-w-[148px] max-w-[148px] flex flex-col gap-2 cursor-pointer active:opacity-70 transition-opacity"
-                    >
-                      <div className="w-[148px] h-[148px] rounded-2xl overflow-hidden relative" style={{ backgroundColor: 'var(--onb-surface-strong)' }}>
-                        {src ? (
-                          <img src={src} className="w-full h-full object-cover" alt="" draggable={false} />
-                        ) : (
-                          <span className="w-full h-full flex items-center justify-center">
-                            <Music size={44} className="text-muted" />
-                          </span>
-                        )}
-                        {isCurrent && isPlaying && (
-                          <span className="absolute bottom-2 left-2 rounded-full bg-black/50 backdrop-blur-sm px-2 py-1.5">
-                            <Equalizer size="sm" />
-                          </span>
-                        )}
-                      </div>
-                      <div className="px-0.5">
-                        <p className="text-[14px] font-semibold truncate" style={isCurrent ? { color: 'var(--accent-color)' } : undefined}>
-                          <span className={isCurrent ? '' : 'text-primary'}>{songName(item)}</span>
-                        </p>
-                        <p className="text-[12px] text-muted truncate">{songArtist(item, t('unknownArtist'))}</p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
+      </div>
+    );
+  }
 
-          {subTab === 'songs' && (
-            <div className="px-2 pb-2 flex items-center justify-between">
-              <h3 className="text-[20px] font-bold tracking-tight text-primary">{t('keepListening')}</h3>
-            </div>
-          )}
+  return (
+    <div className="flex-1 flex flex-col min-h-0">
+      {/* Header */}
+      <div className="px-5 pt-12 pb-1 shrink-0">
+        <button
+          type="button"
+          onClick={onBack}
+          aria-label={t('backButton')}
+          className="-ml-2 w-11 h-11 rounded-full flex items-center justify-center text-primary active:scale-90 transition-all"
+        >
+          <ChevronLeft size={26} />
+        </button>
+        <h1 className="mt-1 text-[34px] font-bold tracking-tight text-primary">{t('music')}</h1>
+      </div>
 
+      <div className="flex-1 overflow-y-auto no-scrollbar pb-28">
+        {/* Quick picks */}
+        {quickPicks.length > 1 && (
+          <section className="mt-4">
+            <div className="px-5 mb-3 flex items-center justify-between">
+              <h3 className="text-[20px] font-bold tracking-tight text-primary">{t('quickPicksLabel')}</h3>
+              <button
+                type="button"
+                onClick={shufflePlay}
+                aria-label={t('playerShuffle')}
+                className="w-10 h-10 rounded-full flex items-center justify-center text-primary transition-all active:scale-90"
+                style={{ backgroundColor: 'var(--onb-surface-strong)' }}
+              >
+                <Shuffle size={18} />
+              </button>
+            </div>
+            <div className="flex gap-4 overflow-x-auto no-scrollbar px-5 pb-2">
+              {quickPicks.map((item) => (
+                <BigCard
+                  key={item.id}
+                  title={songName(item)}
+                  subtitle={songArtist(item, t('unknownArtist'))}
+                  art={coverSrc(item)}
+                  playing={currentSong?.id === item.id && isPlaying}
+                  fallbackIcon={<Music size={44} />}
+                  onPress={() => onPlay(item, songs)}
+                  onMore={() => setSheetItem(item)}
+                />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Albums */}
+        {albums.length > 0 && (
+          <section className="mt-7">
+            <h3 className="px-5 mb-3 text-[20px] font-bold tracking-tight text-primary capitalize">{t('albums')}</h3>
+            <div className="flex gap-4 overflow-x-auto no-scrollbar px-5 pb-2">
+              {albums.map(([name, list]) => {
+                const art = list.find(s => coverSrc(s));
+                return (
+                  <BigCard
+                    key={name}
+                    title={name}
+                    subtitle={`${list.length} ${t('songs')} · ${songArtist(list[0], t('unknownArtist'))}`}
+                    art={art ? coverSrc(art) : null}
+                    fallbackIcon={<Disc size={44} />}
+                    onPress={() => playAlbum(list)}
+                  />
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* Artists */}
+        {artists.length > 1 && (
+          <section className="mt-7">
+            <h3 className="px-5 mb-3 text-[20px] font-bold tracking-tight text-primary capitalize">{t('artists')}</h3>
+            <div className="flex gap-5 overflow-x-auto no-scrollbar px-5 pb-2">
+              {artists.map(([name, list]) => {
+                const art = list.find(s => coverSrc(s));
+                const artSrc = art ? coverSrc(art) : null;
+                return (
+                  <div
+                    key={name}
+                    onClick={() => playAlbum(list)}
+                    className="flex flex-col items-center gap-2 shrink-0 w-20 cursor-pointer active:opacity-70 transition-opacity"
+                  >
+                    {artSrc ? (
+                      <img src={artSrc} className="w-20 h-20 rounded-full object-cover" alt="" draggable={false} />
+                    ) : (
+                      <span
+                        className="w-20 h-20 rounded-full flex items-center justify-center text-muted"
+                        style={{ backgroundColor: 'var(--onb-surface-strong)' }}
+                      >
+                        <User size={30} />
+                      </span>
+                    )}
+                    <p className="text-[13px] font-semibold text-primary text-center leading-tight line-clamp-2">{name}</p>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* Favorites */}
+        {favorites.length > 0 && (
+          <section className="mt-7">
+            <h3 className="px-5 mb-3 text-[20px] font-bold tracking-tight text-primary capitalize">{t('favorites')}</h3>
+            <div className="flex gap-4 overflow-x-auto no-scrollbar px-5 pb-2">
+              {favorites.map((item) => (
+                <BigCard
+                  key={item.id}
+                  title={songName(item)}
+                  subtitle={songArtist(item, t('unknownArtist'))}
+                  art={coverSrc(item)}
+                  playing={currentSong?.id === item.id && isPlaying}
+                  fallbackIcon={<Heart size={40} />}
+                  onPress={() => onPlay(item, favorites)}
+                  onMore={() => setSheetItem(item)}
+                />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* All songs */}
+        <section className="mt-7 px-3">
+          <h3 className="px-2 mb-2 text-[20px] font-bold tracking-tight text-primary">{t('allSongs')}</h3>
           <div className="flex flex-col">
-            {subTab === 'songs' && songs.map(renderSongRow)}
-            {subTab === 'albums' && albums.map(([name, list]) => renderGroupRow(name, 'album', name, list))}
-            {subTab === 'artists' && artists.map(([name, list]) => renderGroupRow(name, 'artist', name, list))}
-            {subTab === 'favorites' && favorites.map(renderSongRow)}
+            {songs.map(renderSongRow)}
           </div>
-        </div>
-      )}
+        </section>
+      </div>
 
       {/* Song action sheet */}
       <AnimatePresence>
@@ -322,7 +349,16 @@ export const MusicView: React.FC<MusicViewProps> = ({ items, onPlay, currentSong
                 <div className="w-10 h-1 rounded-full bg-[var(--onb-border)]" />
               </div>
               <div className="px-5 pb-3 flex items-center gap-3">
-                <Artwork item={sheetItem} size="w-12 h-12" iconSize={20} />
+                {coverSrc(sheetItem) ? (
+                  <img src={coverSrc(sheetItem)!} alt="" className="w-12 h-12 rounded-xl object-cover" />
+                ) : (
+                  <span
+                    className="w-12 h-12 rounded-xl flex items-center justify-center text-muted"
+                    style={{ backgroundColor: 'var(--onb-surface)' }}
+                  >
+                    <Music size={20} />
+                  </span>
+                )}
                 <div className="flex-1 min-w-0">
                   <p className="text-[16px] font-semibold text-primary truncate">{songName(sheetItem)}</p>
                   <p className="text-[13px] text-muted truncate">{songArtist(sheetItem, t('unknownArtist'))}</p>
@@ -343,7 +379,7 @@ export const MusicView: React.FC<MusicViewProps> = ({ items, onPlay, currentSong
                     icon={<Play size={19} />}
                     label={t('keepListening')}
                     onClick={() => {
-                      onPlay(sheetItem);
+                      onPlay(sheetItem, songs);
                       setSheetItem(null);
                     }}
                   />

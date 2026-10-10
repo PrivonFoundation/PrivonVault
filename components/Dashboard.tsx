@@ -405,8 +405,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
     }
   };
 
-  const playSong = (item: FileSystemItem) => {
-    const ids = audioSongs.map(s => s.id);
+  const playSong = (item: FileSystemItem, list?: FileSystemItem[]) => {
+    const pool = list && list.length > 0 ? list : audioSongs;
+    const ids = pool.map(s => s.id);
     const order = isShuffled ? [...ids].sort(() => Math.random() - 0.5) : ids;
     const at = order.indexOf(item.id);
     const start = at >= 0 ? at : 0;
@@ -454,10 +455,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       setQueueIds([current, ...rest]);
       setQueueIndex(0);
     } else {
-      const order = audioSongs.map(s => s.id);
-      const current = queueIds[queueIndex];
-      setQueueIds(order);
-      setQueueIndex(Math.max(0, order.indexOf(current)));
+      // keep the current queue order, just play it straight
     }
   };
 
@@ -1014,9 +1012,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
       <div className="flex-1 flex flex-col h-full overflow-hidden">
         <AnimatePresence mode="wait">
           {currentView === 'dashboard' && (
-             <motion.div key="dashboard-view" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col h-full pb-32 relative">
+             <motion.div key="dashboard-view" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className={activeTab === 'music' ? "flex flex-col h-full relative" : "flex flex-col h-full pb-32 relative"}>
                
-               <TopActions 
+               {activeTab !== 'music' && (<TopActions 
                   activeTab={activeTab}
                   isCreatingFolder={isCreatingFolder}
                   newFolderName={newFolderName}
@@ -1027,7 +1025,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   onNavigateView={handleViewNavigation} 
                   onOpenProfileMenu={() => setProfileSheetOpen(true)}
                   onOpenAddMenu={() => setAddSheetOpen(true)}
-               />
+               />)}
                <ProfileSheet
                  open={profileSheetOpen}
                  onClose={() => setProfileSheetOpen(false)}
@@ -1106,7 +1104,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
                    {activeTab === 'music' && (
                      <motion.div key="music" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.18, ease: "easeOut" }}>
-                       <MusicView items={items} onPlay={(item) => playSong(item)} currentSong={currentPlayingItem} isPlaying={isPlaying} theme={appTheme} onAction={(act, item) => handleItemAction(act, item)} />
+                       <MusicView items={items} onPlay={(item) => playSong(item)} currentSong={currentPlayingItem} isPlaying={isPlaying} theme={appTheme} onBack={() => setActiveTab('files')} onAction={(act, item) => handleItemAction(act, item)} />
                      </motion.div>
                    )}
 
@@ -1151,7 +1149,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                          initial={{ y: 50, opacity: 0, scale: 0.9 }} animate={{ y: 0, opacity: 1, scale: 1 }} exit={{ y: 50, opacity: 0, scale: 0.9 }}
                          transition={{ type: "spring", damping: 20, stiffness: 300 }}
                          onClick={() => setIsFullPlayerOpen(true)}
-                          className="fixed bottom-[108px] left-4 right-4 z-50 cursor-pointer"
+                          className={activeTab === 'music' ? "fixed bottom-4 left-4 right-4 z-50 cursor-pointer" : "fixed bottom-[108px] left-4 right-4 z-50 cursor-pointer"}
                       >
                           {/* Mini Player UI */}
                            <div className="glass-haze rounded-[28px] px-3 py-2.5 flex items-center gap-3 relative overflow-hidden">
@@ -1278,7 +1276,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   </button>
                 )}
 
-                <nav className="fixed bottom-4 left-4 right-4 z-40"
+                {activeTab !== 'music' && (<nav className="fixed bottom-4 left-4 right-4 z-40"
                   style={{ paddingBottom: 'max(0rem, env(safe-area-inset-bottom, 0px))' }}
                 >
                   <div className="glass-haze rounded-[30px] px-2 py-1.5">
@@ -1289,7 +1287,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                         <NavButton active={activeTab === 'docs'} onClick={() => setActiveTab('docs')} icon={<FileText />} label={t('documentsTab')} />
                       </div>
                   </div>
-                </nav>
+                </nav>)}
              </motion.div>
           )}
 

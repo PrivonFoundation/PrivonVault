@@ -224,6 +224,7 @@ export const translations: Translations = {
   playerShuffle: 'Shuffle',
   playerRepeat: 'Repeat',
   playerQueue: 'Queue',
+  allSongs: 'All songs',
   settingsProfileName: 'Name',
   settingsGroupApplication: 'Application',
   settingsGroupSecurity: 'Security',

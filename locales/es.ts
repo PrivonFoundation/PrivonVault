@@ -237,6 +237,7 @@ export const translations: Translations = {
   playerShuffle: 'Aleatorio',
   playerRepeat: 'Repetir',
   playerQueue: 'Cola',
+  allSongs: 'Todas las canciones',
   settingsProfileName: 'Nombre',
   settingsGroupApplication: 'Aplicación',
   settingsGroupSecurity: 'Seguridad',

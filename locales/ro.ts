@@ -237,6 +237,7 @@ export const translations: Translations = {
   playerShuffle: 'Amestecă',
   playerRepeat: 'Repetă',
   playerQueue: 'Coadă',
+  allSongs: 'Toate piesele',
   settingsProfileName: 'Nume',
   settingsGroupApplication: 'Aplicație',
   settingsGroupSecurity: 'Securitate',
